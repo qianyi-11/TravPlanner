@@ -1,0 +1,147 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function memberPath(tripId, uid) {
+      return /databases/$(database)/documents/trips/$(tripId)/members/$(uid);
+    }
+
+    function isActiveMember(tripId) {
+      return signedIn()
+        && exists(memberPath(tripId, request.auth.uid))
+        && get(memberPath(tripId, request.auth.uid)).data.status == "ACTIVE";
+    }
+
+    // Private application profile. Backend-owned in the MVP.
+    match /users/{uid} {
+      allow get: if isSelf(uid);
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      // Dashboard/read projection only. Not membership authority.
+      match /tripMemberships/{tripId} {
+        allow get, list: if isSelf(uid);
+        allow create, update, delete: if false;
+      }
+    }
+
+    match /trips/{tripId} {
+      allow get: if isActiveMember(tripId);
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /members/{uid} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      // Never expose invite hashes or future private server state.
+      match /private/{document=**} {
+        allow read, write: if false;
+      }
+
+      match /candidates/{candidateId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /submissions/{submissionId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      // Individual candidate votes are private.
+      match /candidateVotes/{voteId} {
+        allow get: if isActiveMember(tripId)
+          && resource.data.memberId == request.auth.uid;
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
+
+      // Personal budgets are private; the trip document exposes only the
+      // backend-derived safeActivityBudgetCeiling.
+      match /activityBudgets/{uid} {
+        allow get: if isActiveMember(tripId) && isSelf(uid);
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
+
+      match /fixedBookings/{bookingId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /criticalFactProposals/{proposalId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /validationSnapshots/{snapshotId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /itineraryOptions/{optionId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      // Individual option votes are private.
+      match /optionVotes/{uid} {
+        allow get: if isActiveMember(tripId) && isSelf(uid);
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
+
+      match /reviewDrafts/{planningCycle} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /approvals/{approvalId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+
+        // Individual approval responses are private.
+        match /responses/{uid} {
+          allow get: if isActiveMember(tripId) && isSelf(uid);
+          allow list: if false;
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /itineraryVersions/{versionId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /changeRequests/{changeRequestId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      match /backupCandidates/{backupId} {
+        allow get, list: if isActiveMember(tripId);
+        allow create, update, delete: if false;
+      }
+
+      // Provider/cache implementation state stays backend-only.
+      match /externalSnapshots/{snapshotId} {
+        allow read, write: if false;
+      }
+    }
+
+    // Explicit default deny.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

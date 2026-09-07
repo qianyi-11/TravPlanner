@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "externalSnapshots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "cacheKey", "order": "ASCENDING" },
+        { "fieldPath": "fetchedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

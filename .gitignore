@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,6 +20,13 @@
 
 # production
 /build
+/dist/
+**/dist/
+/functions/lib/
+/functions/vendor/*
+!/functions/vendor/shared/
+!/functions/vendor/shared/package.json
+/.firebase/
 
 # misc
 .DS_Store

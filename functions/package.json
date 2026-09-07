@@ -1,0 +1,1 @@
+{"name":"@travel-planner/functions","private":true,"version":"0.1.0","engines":{"node":"22"},"main":"lib/index.js","scripts":{"build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.typecheck.json"},"dependencies":{"@travel-planner/shared":"file:vendor/shared","firebase-admin":"^13.5.0","firebase-functions":"^6.4.0","zod":"^3.25.76"}}

@@ -1,0 +1,2135 @@
+Codex Master Implementation Plan
+
+Project Context
+
+Primary writable repository:
+
+TravPlanner
+
+Secondary read-only reference repository:
+
+TravelPlanner
+
+Working branch:
+
+codex/combine
+
+The primary repository contains the existing Next.js frontend.
+
+The secondary repository contains the authoritative Firebase backend architecture, shared schemas/contracts, Firestore model, callable functions, validation logic, security rules, and tests.
+
+The objective is to turn TravPlanner into the integrated application.
+
+The frontend design should be preserved where practical, but frontend mock-domain behavior must be adapted to the backend contracts.
+
+Global Implementation Rules
+
+Progress
+
+- [x] Phase 2 — Shared Contract Integration
+- [ ] Phase 3 — Firebase Client Foundation
+- [ ] Phase 4 — Authentication
+- [ ] Phase 5 — Typed Callable API Layer
+- [ ] Phase 6 — Firestore Repository Layer
+- [ ] Phase 7 — Data Hooks
+- [ ] Phase 8 — Reduce Zustand to UI State
+- [ ] Phase 9 — My Trips
+- [ ] Phase 10 — Remove Frontend Group Domain
+- [ ] Phase 11 — Create Trip Integration
+- [ ] Phase 12 — Trip Dashboard
+- [ ] Phase 13 — Join and Membership Management
+- [ ] Phase 14 — Candidate / Place Submission
+- [ ] Phase 15 — Personal Budget
+- [ ] Phase 16 — Candidate Voting
+- [ ] Phase 17 — Phase-Aware Navigation
+- [ ] Phase 18 — Planning Generation
+- [ ] Phase 19 — Itinerary Option Comparison
+- [ ] Phase 20 — Option Voting and Winning Option
+- [ ] Phase 21 — Review Workflow
+- [ ] Phase 22 — Finalized Trip Plan
+- [ ] Phase 23 — Fixed Booking and Critical Fact Integration
+- [ ] Phase 24 — Route Normalization
+- [ ] Phase 25 — Remove Mock Domain Data Completely
+- [ ] Phase 26 — Unsupported Prototype Feature Cleanup
+- [ ] Phase 27 — Error Handling
+- [ ] Phase 28 — Loading and Mutation UX
+- [ ] Phase 29 — App Check / Emulator Validation
+- [ ] Phase 30 — Security Rule Validation
+- [ ] Phase 31 — Type and Build Cleanup
+- [ ] Phase 32 — Tests
+- [ ] Phase 33 — Primary End-to-End Acceptance Flow
+- [ ] Phase 34 — Secondary Acceptance Tests
+- [ ] Phase 35 — UI Polish Using Real Data
+- [ ] Phase 36 — Final Repository Cleanup
+- [ ] Phase 37 — Documentation
+- [ ] Phase 38 — Final Validation Report
+
+These rules apply to every phase.
+
+Source of truth
+
+Use the following authority order:
+
+TravelPlanner/shared
+TravelPlanner/functions
+Firestore rules and data model from TravelPlanner
+Existing TravPlanner frontend UI
+Existing mock frontend domain logic
+
+Backend contracts always win when there is a conflict.
+
+Repository constraints
+
+Only modify:
+
+TravPlanner
+
+Do not modify:
+
+TravelPlanner
+
+Treat TravelPlanner as read-only reference material.
+
+Stay on:
+
+codex/combine
+
+Do not merge or push to main.
+
+Architecture
+
+Use:
+
+Browser
+  |
+  +--> Firebase Auth
+  |
+  +--> Firestore ----------> Reads / realtime listeners
+  |
+  +--> Callable Functions -> Domain mutations
+                              validation
+                              phase transitions
+                              authorization
+
+Do not add:
+
+Express API
+custom REST API
+Next.js API proxy
+duplicate backend service
+direct browser domain writes
+
+State ownership
+
+Authoritative state:
+
+Firebase Auth
+Firestore
+Cloud Functions
+
+Frontend-only state:
+
+modals
+tabs
+filters
+map viewport
+form drafts
+temporary selections
+UI preferences
+
+Zustand may only store frontend-only state after integration.
+
+General code requirements
+
+For every phase:
+
+Inspect relevant files before editing.
+Reuse existing components where practical.
+Avoid unnecessary UI redesign.
+Use TypeScript strictly.
+Prefer shared contracts over duplicated types.
+Add loading, error, and empty states.
+Avoid any unless unavoidable.
+Do not swallow Firebase errors.
+Do not expose secrets.
+Run build/typecheck after material changes.
+Fix integration regressions before moving forward.
+Commit logically grouped work.
+Continue automatically to the next phase when validation passes.
+
+Only stop early if there is a genuine blocker that cannot safely be resolved from the two repositories.
+
+Phase 2 — Shared Contract Integration
+
+Objective
+
+Make backend shared contracts the canonical domain model used by the frontend.
+
+Inspect
+
+Primary:
+
+TravPlanner/lib/types.ts
+TravPlanner/lib/store.ts
+TravPlanner/lib/mock-data.ts
+
+Reference:
+
+TravelPlanner/shared/**
+
+Required work
+
+Wire @travel-planner/shared into the frontend build.
+
+Use shared backend contracts/enums for:
+
+Trip
+TripPhase
+Transport
+candidate preferences
+candidate votes
+preferred periods
+planning option types
+review/finalization contracts
+
+Create frontend presentation types only where necessary.
+
+Recommended structure:
+
+lib/types/
+├── ui.ts
+├── view-models.ts
+└── index.ts
+
+Examples of acceptable UI types:
+
+type TripCardViewModel = {
+  id: string;
+  name: string;
+  destinationName: string;
+  dateLabel: string;
+  phaseLabel: string;
+};
+
+Change
+
+Reduce or replace:
+
+lib/types.ts
+
+Do not keep duplicate domain enums.
+
+Required phase mapping
+
+COLLECTING -> setup / preferences / candidate collection
+VOTING     -> candidate voting
+PLANNING   -> itinerary generation and option comparison
+REVIEW     -> review and approval
+FINALIZED  -> final trip
+
+Do not
+
+Do not preserve frontend stages as backend state:
+
+ideas
+preferences
+validation
+route
+itinerary
+
+They may exist only as UI-step labels derived from the backend phase.
+
+Phase 3 — Firebase Client Foundation
+
+Objective
+
+Create a clean browser-side Firebase initialization layer.
+
+Create
+
+lib/firebase/
+├── client.ts
+├── auth.ts
+├── firestore.ts
+├── functions.ts
+├── app-check.ts
+└── emulator.ts
+
+client.ts
+
+Initialize Firebase only once.
+
+Use:
+
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_APP_ID
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+
+Validate required configuration.
+
+auth.ts
+
+Export Firebase Auth and helpers:
+
+signInWithGoogle()
+signOutUser()
+
+firestore.ts
+
+Export initialized Firestore client.
+
+Do not place trip-specific read functions here.
+
+functions.ts
+
+Initialize Firebase Functions using the actual function region used by the backend.
+
+Do not guess the region. Inspect the backend configuration.
+
+app-check.ts
+
+Initialize App Check only in the browser.
+
+Use:
+
+NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY
+
+App Check is required because backend callables such as createTrip enforce it.
+
+emulator.ts
+
+Optional development support for:
+
+Auth emulator
+Firestore emulator
+Functions emulator
+
+Only enable when explicitly configured by environment variables.
+
+Ensure emulator connection is performed once.
+
+Environment
+
+Update:
+
+.env.example
+
+Recommended variables:
+
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY=
+NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY=
+
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false
+
+Do not expose
+
+Never place these in public environment variables:
+
+service account credentials
+Firebase Admin private keys
+server Google Maps secret
+backend function secrets
+App Check secret
+
+Phase 4 — Authentication
+
+Objective
+
+Replace all mock/fixed identities with Firebase Google authentication.
+
+Create
+
+lib/auth/
+├── auth-provider.tsx
+├── auth-context.ts
+└── use-auth.ts
+
+Provider state
+
+Expose:
+
+{
+  user,
+  loading,
+  signIn,
+  signOut
+}
+
+Update
+
+Inspect and modify:
+
+app/layout.tsx
+app/page.tsx
+components/**
+
+Add auth provider at the application root.
+
+Root page behavior
+
+Unauthenticated:
+
+show Google login
+
+Authenticated:
+
+redirect or link to /my-trips
+
+Remove
+
+Search and eliminate authoritative usage of:
+
+CURRENT_USER_ID
+mockUser
+hardcoded UID
+localStorage user ID
+fake login
+
+Requirement
+
+Backend requires Google sign-in and usable user profile information.
+
+Do not use anonymous auth.
+
+Phase 5 — Typed Callable API Layer
+
+Objective
+
+Create one frontend abstraction for Cloud Function mutations.
+
+Pages and components should not call httpsCallable directly.
+
+Create
+
+lib/api/
+├── callable.ts
+├── trips.ts
+├── membership.ts
+├── candidates.ts
+├── voting.ts
+├── budget.ts
+├── planning.ts
+├── review.ts
+├── fixed-bookings.ts
+├── critical-facts.ts
+├── change-requests.ts
+└── index.ts
+
+callable.ts
+
+Create a generic typed callable helper.
+
+Responsibilities:
+
+invoke function
+normalize Firebase errors
+return typed output
+
+Only expose functions actually exported by backend
+
+Verify using:
+
+TravelPlanner/functions/src/index.ts
+
+Expected exported operations include:
+
+createTrip
+joinTrip
+resetInvite
+removeMember
+leaveTrip
+transferOwnership
+
+submitCandidate
+updateSubmission
+removeSubmission
+
+startVoting
+castCandidateVote
+closeVoting
+castOptionVote
+reopenTripPhase
+
+setActivityBudget
+reportFixedBooking
+confirmFixedBooking
+changeFixedBooking
+
+proposeCriticalFact
+confirmCriticalFact
+
+generatePlanningCycle
+selectWinningOption
+
+applyMinorEdit
+submitApproval
+finalizeTrip
+
+createChangeRequest
+reviewChangeRequest
+applyChangeRequest
+
+Do not implement wrappers for documented-but-unexported functions.
+
+Phase 6 — Firestore Repository Layer
+
+Objective
+
+Separate Firestore reads from callable mutations.
+
+Create
+
+lib/repositories/
+├── trips.ts
+├── memberships.ts
+├── members.ts
+├── candidates.ts
+├── submissions.ts
+├── votes.ts
+├── itinerary-options.ts
+├── review.ts
+├── itinerary-versions.ts
+└── index.ts
+
+Architecture
+
+READ -> repository -> Firestore
+WRITE -> API layer -> callable function
+
+Implement
+
+Memberships
+
+Read:
+
+users/{uid}/tripMemberships
+
+Trips
+
+Read:
+
+trips/{tripId}
+
+Members
+
+Read actual trip member collection based on backend data model.
+
+Candidates
+
+Read trip candidates.
+
+Submissions
+
+Read candidate submissions.
+
+Votes
+
+Read only information permitted by Firestore security rules.
+
+Never attempt to expose other members' private votes if rules prohibit them.
+
+Itinerary options
+
+Read generated itinerary alternatives.
+
+Review
+
+Read review draft/state.
+
+Itinerary versions
+
+Read finalized itinerary versions.
+
+Realtime
+
+Use onSnapshot where useful for:
+
+trip phase
+members
+candidate list
+planning options
+review state
+finalized version
+
+Do not use realtime listeners unnecessarily.
+
+Phase 7 — Data Hooks
+
+Objective
+
+Provide reusable React hooks over repositories and API calls.
+
+Create
+
+Recommended:
+
+lib/hooks/
+├── use-my-trips.ts
+├── use-trip.ts
+├── use-trip-members.ts
+├── use-candidates.ts
+├── use-submissions.ts
+├── use-itinerary-options.ts
+├── use-review.ts
+├── use-final-itinerary.ts
+└── use-current-membership.ts
+
+Requirements
+
+Each hook should provide appropriate states:
+
+{
+  data,
+  loading,
+  error
+}
+
+and cleanup realtime subscriptions correctly.
+
+Do not duplicate subscriptions across many nested components unnecessarily.
+
+Phase 8 — Reduce Zustand to UI State
+
+Objective
+
+Remove authoritative domain state from Zustand.
+
+Inspect
+
+lib/store.ts
+lib/mock-data.ts
+
+Remove domain ownership of
+
+groups
+trips
+members
+places
+candidate votes
+itinerary
+budget
+phase
+
+Keep only UI state such as
+
+selectedTab
+openDrawer
+selectedMapItem
+filters
+draft text
+temporary form state
+
+Recommended rename:
+
+lib/store.ts
+    ->
+lib/ui-store.ts
+
+Update imports gradually.
+
+Do not delete mock-data.ts yet until all consuming pages are migrated.
+
+Phase 9 — My Trips
+
+Objective
+
+Make /my-trips the first fully backend-driven route.
+
+Modify
+
+app/my-trips/page.tsx
+components/trip/TripCard.tsx
+
+and supporting hooks.
+
+Data flow
+
+authenticated user
+    ->
+users/{uid}/tripMemberships
+    ->
+trip details
+    ->
+TripCardViewModel
+
+Required UI states
+
+loading
+empty
+loaded
+permission error
+general error
+
+Empty state
+
+Offer:
+
+Create Trip
+Join Trip
+
+Do not read trips from Zustand or mock data.
+
+Phase 10 — Remove Frontend Group Domain
+
+Objective
+
+Align frontend navigation to backend Trip -> Members architecture.
+
+Existing mismatch
+
+Frontend:
+
+Group -> Trips
+
+Backend:
+
+Trip -> Members
+
+Backend model wins.
+
+Inspect
+
+app/groups/page.tsx
+app/groups/new/page.tsx
+app/groups/[groupId]/page.tsx
+app/groups/[groupId]/new-trip/page.tsx
+
+Create canonical routes
+
+app/trips/new/page.tsx
+app/join/page.tsx
+
+Potentially:
+
+app/join/[inviteToken]/page.tsx
+
+if suitable for invite links.
+
+Legacy behavior
+
+Initially redirect:
+
+/groups -> /my-trips
+/groups/new -> /trips/new
+
+Do not create a new backend groups collection.
+
+Phase 11 — Create Trip Integration
+
+Objective
+
+Connect trip creation UI to backend createTrip.
+
+Reuse
+
+Use existing new-trip design from the current frontend.
+
+Do not redesign unless needed for backend compliance.
+
+Backend input
+
+Build exactly the backend contract:
+
+{
+  name,
+  destinationPlaceId,
+  startDate,
+  endDate,
+  baseLocation,
+  defaultDayWindow,
+  dayOverrides,
+  primaryTransport,
+  activityBudgetCurrency
+}
+
+Required frontend changes
+
+Destination
+
+Replace multiple free-text destinations with one canonical destination.
+
+Use Google Places autocomplete.
+
+Store/send provider placeId.
+
+Dates
+
+Validate maximum trip duration:
+
+7 inclusive calendar days
+
+Base location
+
+Build:
+
+{
+  name,
+  lat,
+  lng,
+  placeId?,
+  source: "GOOGLE_PLACES" | "USER_CONFIRMED"
+}
+
+Default to destination when appropriate.
+
+Daily hours
+
+Map frontend start/end to:
+
+defaultDayWindow
+
+Require:
+
+start < end
+
+Transport mapping
+
+Walking          -> WALKING
+Public Transport -> TRANSIT
+Car              -> DRIVING
+Taxi             -> DRIVING
+
+Remove Mixed.
+
+Group size
+
+Remove the group-size input.
+
+Member count is determined by actual memberships.
+
+Currency
+
+Use a valid currency code.
+
+For demo, default to:
+
+MYR
+
+unless UI already provides another valid choice.
+
+Success
+
+Backend returns:
+
+{
+  tripId,
+  inviteToken
+}
+
+Redirect:
+
+/trips/{tripId}
+
+Preserve invite token for immediate share UI.
+
+Phase 12 — Trip Dashboard
+
+Objective
+
+Create a real backend-powered trip home page.
+
+Create or update
+
+app/trips/[tripId]/page.tsx
+
+Load
+
+trip
+members
+current membership
+
+Display
+
+trip name
+destination
+dates
+phase
+owner
+member count
+current user role
+next action
+invite controls
+
+Role-aware actions
+
+Owner-only controls should not appear for normal members.
+
+Do not rely only on UI authorization; backend remains authoritative.
+
+Phase 13 — Join and Membership Management
+
+Objective
+
+Integrate invite/join/member-management functionality.
+
+Join page
+
+Modify/create:
+
+app/join/page.tsx
+
+Accept:
+
+invite token
+
+Call:
+
+joinTrip
+
+Redirect to returned/relevant trip.
+
+Membership actions
+
+Integrate:
+
+resetInvite
+removeMember
+leaveTrip
+transferOwnership
+
+UI requirements
+
+Only show controls appropriate to role.
+
+Handle backend errors such as:
+
+invalid invite
+expired invite
+already a member
+owner cannot leave
+permission denied
+
+Do not
+
+Never directly mutate:
+
+members
+tripMemberships
+ownerId
+
+from the browser.
+
+Phase 14 — Candidate / Place Submission
+
+Objective
+
+Replace mock places with backend candidate submissions.
+
+Preferred trip-scoped routes
+
+/trips/[tripId]/places
+/trips/[tripId]/places/mine
+
+Reuse existing place screens/components where practical.
+
+Backend submission contract
+
+Construct:
+
+{
+  tripId,
+  expectedPlanningCycle,
+  placeId,
+  preference,
+  preferredPeriod,
+  estimatedDurationMinutes,
+  durationSource,
+  notes?
+}
+
+Preference
+
+INTERESTED
+MUST_DO
+
+Preferred period
+
+ANYTIME
+MORNING
+AFTERNOON
+EVENING
+
+Duration source
+
+SYSTEM
+USER_OVERRIDE
+
+Place lookup
+
+Use browser Google Places only to obtain valid place IDs and presentation information.
+
+Backend remains authoritative for candidate resolution.
+
+Existing PlaceCard
+
+Adapt it to real candidate fields.
+
+P0 supported fields:
+
+name
+address
+coordinates
+preference
+preferred period
+duration
+submission state
+
+Do not fabricate
+
+Do not fake:
+
+rating
+review count
+availability
+price
+opening hours
+photos
+
+unless they are genuinely obtained from a supported source.
+
+Presentation enrichment may be added later but must not become authoritative trip state.
+
+Phase 15 — Personal Budget
+
+Objective
+
+Connect frontend budget input to setActivityBudget.
+
+Modify
+
+Likely:
+
+app/trips/[tripId]/preferences/page.tsx
+
+Keep
+
+activity budget
+currency context
+
+Backend write
+
+Use:
+
+setActivityBudget
+
+Support clear/reset if backend contract allows it.
+
+Remove or hide unsupported preference fields
+
+Do not persist generic frontend-only fields such as:
+
+food preferences
+interests
+pace
+dislikes
+generic free-text must-do
+
+unless backend supports them.
+
+Must-do rule
+
+A real must-do attraction should be represented as a candidate with:
+
+preference = MUST_DO
+
+and a valid place ID.
+
+Phase 16 — Candidate Voting
+
+Objective
+
+Replace frontend local multi-select voting with authoritative backend voting.
+
+Candidate vote options
+
+WANT
+NEUTRAL
+AVOID
+
+Modify
+
+app/trips/[tripId]/vote/page.tsx
+app/trips/[tripId]/vote/results/page.tsx
+
+or migrate equivalent legacy routes.
+
+Owner actions
+
+Integrate:
+
+startVoting
+closeVoting
+
+Member action
+
+Integrate:
+
+castCandidateVote
+
+Visibility
+
+Voting UI should only be active when:
+
+trip.phase === "VOTING"
+
+Remove
+
+Remove domain logic such as:
+
+advanceStage
+toggle local votes
+maximum vote selection count
+submit local vote bundle
+
+Critical rule
+
+Frontend must never manually set trip.phase.
+
+Phase 17 — Phase-Aware Navigation
+
+Objective
+
+Make the application route users according to the backend phase.
+
+Create
+
+Recommended helper:
+
+lib/navigation/trip-phase.ts
+
+Example responsibilities:
+
+getPrimaryTripRoute(trip)
+getAvailableTripActions(trip, membership)
+getPhaseLabel(phase)
+
+Mapping
+
+COLLECTING -> places / preferences / setup
+VOTING     -> vote
+PLANNING   -> generating or route/options
+REVIEW     -> itinerary review
+FINALIZED  -> plan
+
+Update
+
+ProgressStepper
+TripHeader
+trip dashboard CTA
+navigation links
+
+The existing UI stepper may retain friendly labels but must derive them from backend phase.
+
+Phase 18 — Planning Generation
+
+Objective
+
+Connect actual backend itinerary generation.
+
+Trigger
+
+Call:
+
+generatePlanningCycle({
+  tripId,
+  expectedPlanningCycle
+})
+
+Modify
+
+app/trips/[tripId]/generating/page.tsx
+app/trips/[tripId]/route/page.tsx
+
+Flow
+
+PLANNING
+   ->
+generatePlanningCycle
+   ->
+itineraryOptions written by backend
+   ->
+Firestore listener receives options
+
+Behavior
+
+Show:
+
+generating state
+backend failure
+existing/reused option state
+generated option cards
+
+Do not assume generation is instantaneous.
+
+Do not fake itinerary data while waiting.
+
+Phase 19 — Itinerary Option Comparison
+
+Objective
+
+Render backend-generated itinerary alternatives.
+
+Read
+
+Use:
+
+lib/repositories/itinerary-options.ts
+
+Backend may return up to
+
+3 options
+
+Display
+
+Use real option contents:
+
+days
+activities
+start/end times
+duration
+locations
+
+and backend score data such as:
+
+mustDo
+votePreference
+travelEfficiency
+gapEfficiency
+budgetEfficiency
+preferredPeriod
+
+Reuse
+
+Existing UI from:
+
+route
+itinerary
+plan
+MapView
+ActivityCard
+
+where useful.
+
+Do not
+
+Do not calculate fake backend scores on the frontend.
+
+Phase 20 — Option Voting and Winning Option
+
+Objective
+
+Allow members to vote on generated itinerary options and select a winner according to backend workflow.
+
+Functions
+
+Integrate:
+
+castOptionVote
+selectWinningOption
+
+Flow
+
+PLANNING
+   ->
+members vote on options
+   ->
+winner selected
+   ->
+REVIEW
+
+Requirements
+
+Keep option voting distinct from candidate voting.
+
+Do not reuse:
+
+WANT
+NEUTRAL
+AVOID
+
+unless the actual option-vote backend contract uses those values.
+
+Inspect shared contracts before building controls.
+
+Phase 21 — Review Workflow
+
+Objective
+
+Integrate selected itinerary review and approval.
+
+Functions
+
+Use:
+
+applyMinorEdit
+submitApproval
+finalizeTrip
+
+where permitted.
+
+Also integrate change-request flow if required by the backend workflow:
+
+createChangeRequest
+reviewChangeRequest
+applyChangeRequest
+
+Read
+
+Use actual review draft data from Firestore.
+
+Modify
+
+app/trips/[tripId]/itinerary/page.tsx
+app/trips/[tripId]/plan/page.tsx
+
+Actions
+
+Show only valid actions such as:
+
+approve
+minor edit
+request change
+review change request
+finalize
+
+according to:
+
+trip phase
+member role
+review state
+backend contract
+
+Do not invent frontend-only approval rules.
+
+Phase 22 — Finalized Trip Plan
+
+Objective
+
+Make the final plan page read authoritative finalized itinerary data.
+
+Data source
+
+Use:
+
+currentItineraryVersionId
+itineraryVersions
+
+from the backend model.
+
+Modify
+
+app/trips/[tripId]/plan/page.tsx
+
+Preserve frontend strengths
+
+Reuse existing:
+
+timeline
+day layout
+activity cards
+map presentation
+trip header
+budget area
+
+Replace mocks
+
+Remove mock:
+
+itinerary
+places
+budget totals
+bookings
+price pressure
+availability
+
+with backend-supported data.
+
+Unsupported tabs
+
+Hide tabs/features if no backend data exists.
+
+Do not show fake information.
+
+Phase 23 — Fixed Booking and Critical Fact Integration
+
+Objective
+
+Integrate secondary backend features only after the core workflow works.
+
+Fixed bookings
+
+Use:
+
+reportFixedBooking
+confirmFixedBooking
+changeFixedBooking
+
+Only expose UI if contracts and Firestore read models are clear.
+
+Critical facts
+
+Use:
+
+proposeCriticalFact
+confirmCriticalFact
+
+Only add UI where there is an existing meaningful frontend location.
+
+Priority
+
+These are P1 features.
+
+Do not block the main trip flow if they are difficult to integrate.
+
+If they require significant new UI and the hackathon core flow is already complete, implement minimally or leave hidden behind a clear feature flag.
+
+Phase 24 — Route Normalization
+
+Objective
+
+Make trip-scoped routes canonical.
+
+Canonical route structure
+
+/
+├── my-trips
+├── join
+└── trips/
+    ├── new
+    └── [tripId]/
+        ├── page.tsx
+        ├── preferences
+        ├── places
+        │   └── mine
+        ├── vote
+        │   └── results
+        ├── generating
+        ├── route
+        ├── itinerary
+        └── plan
+
+Legacy routes to inspect
+
+/groups/**
+/places/**
+/vote
+/vote/results
+/shortlist
+/validate
+/generating
+/route
+/itinerary
+/plan
+/live
+
+Strategy
+
+Move functionality to trip-scoped routes.
+Update internal links.
+Add redirects from legacy paths where possible.
+Delete only when no longer referenced.
+
+Phase 25 — Remove Mock Domain Data Completely
+
+Objective
+
+Eliminate remaining fake authoritative application state.
+
+Search globally for
+
+mock
+MOCK_
+CURRENT_USER_ID
+trippy-store
+createGroup
+addMember
+advanceStage
+toggleVote
+mock itinerary
+mock place
+mock trip
+
+Delete when unused
+
+lib/mock-data.ts
+
+Reduce/remove:
+
+lib/store.ts
+
+or replace it with UI-only:
+
+lib/ui-store.ts
+
+Acceptance condition
+
+Refreshing the browser must not reset or alter real trip domain state.
+
+All trip state must come back from Firebase.
+
+Phase 26 — Unsupported Prototype Feature Cleanup
+
+Objective
+
+Ensure every visible feature is real or clearly non-authoritative.
+
+Hide/remove if unsupported
+
+Likely:
+
+generic groups
+multiple destinations
+Live Mode
+Trip Rescue
+fake price pressure
+fake booking availability
+fake review scores
+fake ratings
+manual frontend shortlist stage
+generic preference profiles
+frontend-only validation phase
+
+Preserve reusable UI components
+
+Do not delete components solely because their initial data source was mock.
+
+Adapt where practical:
+
+TripHeader
+ProgressStepper
+ActivityCard
+BudgetCard
+PlaceCard
+MapView
+TripCard
+
+Phase 27 — Error Handling
+
+Objective
+
+Provide consistent Firebase/backend error handling.
+
+Create
+
+Recommended:
+
+lib/errors/
+├── firebase-error.ts
+└── user-message.ts
+
+Handle common codes
+
+unauthenticated
+permission-denied
+invalid-argument
+failed-precondition
+not-found
+already-exists
+resource-exhausted
+internal
+unavailable
+
+UI requirements
+
+Every backend page should appropriately support:
+
+loading
+empty
+retry
+permission error
+domain validation error
+unexpected failure
+
+Do not render raw stack traces to users.
+
+Phase 28 — Loading and Mutation UX
+
+Objective
+
+Prevent duplicate backend actions and confusing transition states.
+
+Requirements
+
+For every callable mutation:
+
+disable submit while pending
+show progress
+handle success
+handle failure
+avoid duplicate submission
+
+Examples:
+
+Create Trip
+Join Trip
+Submit Candidate
+Set Budget
+Cast Vote
+Start Voting
+Close Voting
+Generate Plans
+Select Winner
+Approve
+Finalize
+
+Do not optimistically modify authoritative domain state unless safely reconciled with Firestore.
+
+Prefer waiting for backend success and realtime state update.
+
+Phase 29 — App Check / Emulator Validation
+
+Objective
+
+Ensure protected callable functions work in both development and deployed environments.
+
+Verify
+
+createTrip
+other enforceAppCheck functions
+
+Local development
+
+If emulator mode is enabled:
+
+Auth emulator
+Firestore emulator
+Functions emulator
+App Check debug support if needed
+
+Do not permanently disable App Check.
+
+Do not commit App Check debug tokens.
+
+Phase 30 — Security Rule Validation
+
+Objective
+
+Confirm frontend reads align with Firestore rules.
+
+Review
+
+firestore.rules
+
+against repository-layer reads.
+
+Verify that:
+
+active members can read allowed trip documents
+private votes remain private
+private budgets remain private
+browser writes remain denied
+backend-owned documents cannot be directly mutated
+
+Do not
+
+Do not loosen Firestore security rules merely to make frontend code easier.
+
+If a read fails, first verify that the frontend is querying the correct authorized path.
+
+Phase 31 — Type and Build Cleanup
+
+Objective
+
+Get the complete integrated monorepo compiling cleanly.
+
+Run
+
+Use actual scripts defined in the integrated repo.
+
+At minimum validate:
+
+npm run build
+npm run lint
+
+Shared package:
+
+npm --workspace shared run build
+
+Functions:
+
+npm --workspace functions run build
+
+Run available typecheck scripts too.
+
+Fix
+
+Resolve:
+
+cross-workspace imports
+ESM/CJS conflicts
+Next.js client/server component boundaries
+Firebase browser-only imports
+shared package resolution
+TypeScript path aliases
+environment variable typing
+
+Do not silence real errors using broad eslint-disable or @ts-ignore.
+
+Phase 32 — Tests
+
+Objective
+
+Preserve backend correctness and add targeted integration coverage.
+
+Preserve
+
+All imported backend tests that still apply.
+
+Add frontend tests for deterministic logic
+
+Examples:
+
+transport mapping
+date-range validation
+7-day maximum validation
+phase-to-route mapping
+backend-to-view-model mapping
+Firebase error mapping
+candidate form transformation
+
+Do not over-focus on snapshots
+
+Prefer behavior and transformation tests.
+
+Phase 33 — Primary End-to-End Acceptance Flow
+
+Objective
+
+Verify one complete real user workflow.
+
+Required scenario
+
+User A signs in with Google
+    ->
+creates a trip
+    ->
+receives an invite
+    ->
+User B signs in with Google
+    ->
+joins using invite
+    ->
+both users see the same trip
+    ->
+both submit candidate places
+    ->
+both set personal activity budgets
+    ->
+owner starts voting
+    ->
+members cast WANT / NEUTRAL / AVOID votes
+    ->
+owner closes voting
+    ->
+trip enters PLANNING
+    ->
+generatePlanningCycle runs
+    ->
+up to 3 itinerary options appear
+    ->
+members cast option votes
+    ->
+winning option is selected
+    ->
+trip enters REVIEW
+    ->
+members review/approve as required
+    ->
+owner finalizes
+    ->
+trip enters FINALIZED
+    ->
+browser refresh
+    ->
+final itinerary still loads from Firestore
+
+This is the main definition of integration success.
+
+Phase 34 — Secondary Acceptance Tests
+
+Also verify:
+
+Authentication
+
+logout
+login again
+session restoration
+unauthenticated protected-page behavior
+
+Membership
+
+invalid invite
+duplicate join
+member leave
+owner restrictions
+
+Trip validation
+
+invalid dates
+more than 7 days
+invalid daily window
+missing destination place ID
+
+Phase restrictions
+
+Attempt invalid actions in wrong phase and confirm backend rejects them cleanly.
+
+Permissions
+
+Normal member must not gain owner-only actions.
+
+Refresh consistency
+
+Refresh during:
+
+COLLECTING
+VOTING
+PLANNING
+REVIEW
+FINALIZED
+
+UI must recover from Firestore rather than local state.
+
+Phase 35 — UI Polish Using Real Data
+
+Objective
+
+Restore frontend visual quality after data integration.
+
+Prioritize
+
+TripCard
+TripHeader
+ProgressStepper
+PlaceCard
+MapView
+ActivityCard
+BudgetCard
+plan timeline
+
+Ensure
+
+mobile responsiveness
+empty states
+long place names
+long trip names
+loading skeletons
+button disabled states
+phase labels
+owner/member role labels
+
+Do not
+
+Do not reintroduce fabricated data for visual completeness.
+
+If data is unavailable, redesign the component to present available information cleanly.
+
+Phase 36 — Final Repository Cleanup
+
+Objective
+
+Prepare branch for team review.
+
+Remove
+
+Unused:
+
+mock data
+obsolete group types
+dead routes
+unused imports
+unused components
+temporary migration helpers
+console debug statements
+prototype fake actions
+
+Keep
+
+Useful redirects if old frontend links may still exist.
+
+Git safety
+
+Ensure these are not tracked:
+
+.env
+.env.local
+service-account*.json
+Firebase credentials
+App Check debug tokens
+node_modules
+.next
+emulator exports unless intended
+
+Phase 37 — Documentation
+
+Objective
+
+Make the integrated architecture understandable to teammates.
+
+Update or create
+
+README.md
+docs/integration.md
+
+Include:
+
+project architecture
+frontend/backend responsibilities
+environment variables
+Firebase setup
+local development
+emulator usage
+build commands
+main trip workflow
+phase mapping
+deployment notes
+
+Include architecture summary
+
+Next.js
+  |
+Firebase Auth
+  |
+Firestore reads
+  |
+Callable Cloud Functions
+  |
+Shared Zod contracts
+  |
+Firestore authoritative state
+
+Phase 38 — Final Validation Report
+
+At the end, produce a structured implementation report.
+
+Include:
+
+1. Completed phases
+
+List all completed phases.
+
+2. Files added
+
+Group by:
+
+Firebase
+API
+repositories
+hooks
+routes
+tests
+config
+
+3. Files significantly modified
+
+List each important file and reason.
+
+4. Files deleted
+
+List removed mock/legacy files.
+
+5. Backend functions integrated
+
+Report which callable functions are actually wired to UI.
+
+6. Routes implemented
+
+Report canonical trip routes.
+
+7. Build results
+
+Report exact outcome for:
+
+Next.js build
+lint
+shared build
+functions build
+tests
+
+8. Remaining unsupported features
+
+Clearly list anything hidden or not implemented.
+
+9. Known risks
+
+Examples:
+
+Google Places browser API setup
+App Check configuration
+emulator differences
+deployment configuration
+functions region
+Firestore indexes
+
+10. Manual test results
+
+Report status of the main end-to-end workflow.
+
+Execution Order
+
+Implement automatically in this order:
+
+Phase 2  Shared contracts
+Phase 3  Firebase client
+Phase 4  Authentication
+Phase 5  Callable API
+Phase 6  Firestore repositories
+Phase 7  Hooks
+Phase 8  Zustand cleanup foundation
+Phase 9  My Trips
+Phase 10 Group removal
+Phase 11 Create Trip
+Phase 12 Trip Dashboard
+Phase 13 Join/Membership
+Phase 14 Candidate submission
+Phase 15 Budget
+Phase 16 Candidate voting
+Phase 17 Phase-aware navigation
+Phase 18 Planning generation
+Phase 19 Option comparison
+Phase 20 Option voting/winner
+Phase 21 Review
+Phase 22 Finalized plan
+Phase 23 Secondary backend features
+Phase 24 Route normalization
+Phase 25 Mock removal
+Phase 26 Unsupported feature cleanup
+Phase 27 Error handling
+Phase 28 Mutation UX
+Phase 29 App Check/emulator
+Phase 30 Security validation
+Phase 31 Build/type cleanup
+Phase 32 Tests
+Phase 33 Main E2E acceptance
+Phase 34 Secondary acceptance
+Phase 35 UI polish
+Phase 36 Cleanup
+Phase 37 Documentation
+Phase 38 Final report
+
+Commit Strategy
+
+Make commits incrementally instead of one large commit.
+
+Recommended commits:
+
+feat: integrate shared backend contracts
+feat: add firebase client foundation
+feat: add google authentication
+feat: add typed callable api layer
+feat: add firestore repository layer
+feat: add firebase data hooks
+refactor: restrict zustand to ui state
+feat: connect my trips to firestore
+refactor: replace group navigation with trip membership
+feat: integrate trip creation
+feat: integrate trip dashboard
+feat: integrate invite and membership flow
+feat: integrate candidate submission
+feat: integrate personal activity budget
+feat: integrate candidate voting
+feat: add backend phase aware navigation
+feat: integrate planning generation
+feat: render generated itinerary options
+feat: integrate itinerary option voting
+feat: integrate review workflow
+feat: integrate finalized trip plan
+feat: integrate supported secondary planning features
+refactor: normalize trip routes
+refactor: remove mock domain state
+refactor: hide unsupported prototype features
+feat: standardize firebase error handling
+feat: improve backend mutation states
+chore: validate app check and emulator support
+chore: verify firestore security integration
+fix: resolve integrated build and type issues
+test: add integration validation
+docs: document integrated architecture
+
+Commit only when the relevant phase builds successfully.
+
+Hard Prohibitions
+
+Do not do any of the following unless there is no viable alternative and the final report explains why:
+
+modify TravelPlanner
+redesign backend contracts
+replace callable functions with REST
+add Express
+create Next.js API proxy routes
+create a groups Firestore model
+write backend-owned Firestore documents directly from browser
+store authoritative trips in Zustand
+store authoritative votes in localStorage
+manually mutate trip phase
+duplicate shared schemas
+expose Firebase Admin credentials
+disable security rules
+permanently disable App Check
+invent unsupported backend functions
+show fake ratings/availability/pricing as real data
+silence type failures using broad any/@ts-ignore
+
+Decision Rules for Ambiguity
+
+When frontend behavior conflicts with backend behavior:
+
+Use backend behavior.
+
+When backend docs conflict with actual exported function code:
+
+Use actual exported code.
+
+When a feature exists only in frontend mocks:
+
+Hide or downgrade it unless there is a valid backend equivalent.
+
+When a backend field is optional:
+
+Do not invent values unless a sensible UI default is explicitly safe.
+
+When required information is missing from the frontend:
+
+Add the smallest UI necessary to collect it.
+
+When a backend feature exists but there is no good current UI location:
+
+Prioritize the core trip workflow before adding it.
+
+Definition of Done
+
+The implementation is complete when all of the following are true:
+
+Google authentication works
+My Trips comes from Firestore
+Create Trip calls the backend
+Invite/join works
+Members persist in Firestore
+Candidate submissions are real
+Personal budgets are real
+Candidate votes are real
+Trip phases are backend-controlled
+Planning generation is real
+Generated itinerary options are real
+Option voting/selection is real
+Review is backend-driven
+Finalization is real
+Final itinerary survives browser refresh
+No authoritative mock trip state remains
+No group backend model was introduced
+No browser direct domain writes exist
+Next.js builds
+shared builds
+functions build
+tests pass or documented blockers remain
+
+At completion, generate the final validation report and do not claim success for any workflow that was not actually validated.
