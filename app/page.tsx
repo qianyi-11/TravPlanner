@@ -1,107 +1,19 @@
 "use client";
 
-import { ArrowRight, Plus, Users2, Vote, Route as RouteIcon } from "lucide-react";
-import { useShallow } from "zustand/react/shallow";
+import { ArrowRight, Plus, Route as RouteIcon, Users2, Vote } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
-import { TripCard } from "@/components/trip/TripCard";
-import { usePlannerStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth/use-auth";
+import { useMyTrips } from "@/lib/hooks/use-my-trips";
 
 export default function HomePage() {
   const { user, loading, error, signIn } = useAuth();
-  const trips = usePlannerStore(useShallow((s) => Object.values(s.trips)));
+  const trips = useMyTrips();
+  const memberships = trips.data ?? [];
 
   if (loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading…</p>;
-  if (!user) return (
-    <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center shadow-[var(--shadow-soft)]">
-      <h1 className="font-display text-3xl font-extrabold">Plan your next trip together.</h1>
-      <p className="mt-3 text-sm text-[var(--color-ink-soft)]">Sign in with Google to create and join trips.</p>
-      <button type="button" onClick={signIn} className="mt-7 rounded-full bg-[var(--color-ink)] px-5 py-3 text-sm font-semibold text-white">Continue with Google</button>
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-    </div>
-  );
+  if (!user) return <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center shadow-[var(--shadow-soft)]"><h1 className="font-display text-3xl font-extrabold">Plan your next trip together.</h1><p className="mt-3 text-sm text-[var(--color-ink-soft)]">Sign in with Google to create and join trips.</p><button type="button" onClick={signIn} className="mt-7 rounded-full bg-[var(--color-ink)] px-5 py-3 text-sm font-semibold text-white">Continue with Google</button>{error && <p className="mt-4 text-sm text-red-600">{error}</p>}</div>;
 
-  return (
-    <div className="space-y-14">
-      <section className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white px-6 py-14 sm:px-14 sm:py-20">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full opacity-70 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--color-primary-soft), transparent 70%)" }}
-        />
-        <div
-          className="pointer-events-none absolute -bottom-32 -left-16 h-72 w-72 rounded-full opacity-70 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--color-teal-soft), transparent 70%)" }}
-        />
-        <div className="relative max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-sand)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">
-            Plan together, not alone
-          </span>
-          <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[var(--color-ink)] sm:text-5xl">
-            Plan your next trip together.
-          </h1>
-          <p className="mt-4 max-w-lg text-base text-[var(--color-ink-soft)] sm:text-lg">
-            Bring everyone&apos;s ideas together, vote on what matters most, and build a
-            smarter itinerary.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <LinkButton href="/trips/new" size="lg" icon={<Plus size={18} />}>
-              Create a Trip
-            </LinkButton>
-            <LinkButton href="/join" size="lg" variant="outline">
-              Join a Trip
-            </LinkButton>
-          </div>
-
-          <div className="mt-10 flex flex-wrap gap-6 text-sm text-[var(--color-ink-soft)]">
-            <Step icon={Users2} label="Everyone suggests" />
-            <Step icon={Vote} label="The group votes" />
-            <Step icon={RouteIcon} label="We build the route" />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold text-[var(--color-ink)]">Upcoming trips</h2>
-          <a href="/my-trips" className="flex items-center gap-1 text-sm font-semibold text-[var(--color-primary)]">
-            View all <ArrowRight size={14} />
-          </a>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {trips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-3xl bg-[var(--color-ink)] px-6 py-12 sm:px-14">
-        <h2 className="font-display text-2xl font-bold text-white">How it works</h2>
-        <div className="mt-8 grid gap-8 sm:grid-cols-4">
-          {[
-            { title: "Suggest", desc: "Every member adds the places they want to visit." },
-            { title: "Vote", desc: "The group votes on the ideas that matter most." },
-            { title: "Validate", desc: "We check real hours, ratings, and availability." },
-            { title: "Build", desc: "We arrange it all into one efficient itinerary." },
-          ].map((s, i) => (
-            <div key={s.title}>
-              <span className="font-display text-3xl font-extrabold text-white/25">{String(i + 1).padStart(2, "0")}</span>
-              <h3 className="mt-2 font-display font-semibold text-white">{s.title}</h3>
-              <p className="mt-1 text-sm text-white/60">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+  return <div className="space-y-14"><section className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-white px-6 py-14 sm:px-14 sm:py-20"><div className="relative max-w-2xl"><span className="inline-flex rounded-full bg-[var(--color-sand)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">Plan together, not alone</span><h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl">Plan your next trip together.</h1><p className="mt-4 max-w-lg text-base text-[var(--color-ink-soft)] sm:text-lg">Bring everyone&apos;s ideas together, vote on what matters most, and build a smarter itinerary.</p><div className="mt-8 flex flex-wrap gap-3"><LinkButton href="/trips/new" size="lg" icon={<Plus size={18} />}>Create a Trip</LinkButton><LinkButton href="/join" size="lg" variant="outline">Join a Trip</LinkButton></div><div className="mt-10 flex flex-wrap gap-6 text-sm text-[var(--color-ink-soft)]"><Step icon={Users2} label="Everyone suggests" /><Step icon={Vote} label="The group votes" /><Step icon={RouteIcon} label="We build the route" /></div></div></section><section><div className="mb-5 flex items-center justify-between"><h2 className="font-display text-xl font-bold">Upcoming trips</h2><a href="/my-trips" className="flex items-center gap-1 text-sm font-semibold text-[var(--color-primary)]">View all <ArrowRight size={14} /></a></div>{trips.loading && <p className="text-sm text-[var(--color-ink-soft)]">Loading trips…</p>}{trips.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{trips.error.message}</p>}{!trips.loading && !trips.error && memberships.length === 0 && <p className="rounded-2xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm text-[var(--color-ink-soft)]">No trips yet.</p>}<div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{memberships.slice(0, 3).map(trip => <LinkButton key={trip.id} href={`/trips/${trip.tripId}`} variant="outline" fullWidth className="flex-col items-start text-left"><span className="font-display text-lg font-bold">{trip.tripName}</span><span className="mt-1 text-xs">{trip.destinationName} · {trip.startDate} → {trip.endDate}</span><span className="mt-3 text-xs font-semibold">Open trip</span></LinkButton>)}</div></section><section className="rounded-3xl bg-[var(--color-ink)] px-6 py-12 sm:px-14"><h2 className="font-display text-2xl font-bold text-white">How it works</h2><div className="mt-8 grid gap-8 sm:grid-cols-4">{[{ title: "Suggest", desc: "Every member adds places they want to visit." }, { title: "Vote", desc: "The group votes on the ideas that matter most." }, { title: "Validate", desc: "The backend validates the plan." }, { title: "Build", desc: "The itinerary is finalized for everyone." }].map((step, index) => <div key={step.title}><span className="font-display text-3xl font-extrabold text-white/25">{String(index + 1).padStart(2, "0")}</span><h3 className="mt-2 font-display font-semibold text-white">{step.title}</h3><p className="mt-1 text-sm text-white/60">{step.desc}</p></div>)}</div></section></div>;
 }
 
-function Step({ icon: Icon, label }: { icon: typeof Users2; label: string }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-sand)]">
-        <Icon size={15} />
-      </div>
-      <span className="font-medium">{label}</span>
-    </div>
-  );
-}
+function Step({ icon: Icon, label }: { icon: typeof Users2; label: string }) { return <div className="flex items-center gap-2"><div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-sand)]"><Icon size={15} /></div><span className="font-medium">{label}</span></div>; }

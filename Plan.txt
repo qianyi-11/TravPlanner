@@ -49,7 +49,7 @@ Progress
 - [x] Phase 22 — Finalized Trip Plan
 - [x] Phase 23 — Fixed Booking and Critical Fact Integration
 - [x] Phase 24 — Route Normalization
-- [ ] Phase 25 — Remove Mock Domain Data Completely
+- [x] Phase 25 — Remove Mock Domain Data Completely
 - [ ] Phase 26 — Unsupported Prototype Feature Cleanup
 - [ ] Phase 27 — Error Handling
 - [ ] Phase 28 — Loading and Mutation UX

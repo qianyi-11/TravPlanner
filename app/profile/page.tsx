@@ -1,96 +1,18 @@
 "use client";
 
-import { useShallow } from "zustand/react/shallow";
-import { MapPin, Sparkles, UtensilsCrossed, Wallet } from "lucide-react";
-import { usePlannerStore } from "@/lib/store";
-import { MemberAvatar } from "@/components/ui/Avatar";
-import { Card, Chip } from "@/components/ui/Card";
-import { GroupCard } from "@/components/trip/GroupCard";
-import { TripCard } from "@/components/trip/TripCard";
-import { EmptyState } from "@/components/ui/States";
+import { useAuth } from "@/lib/auth/use-auth";
+import { useMyTrips } from "@/lib/hooks/use-my-trips";
+import { Button, LinkButton } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 
 export default function ProfilePage() {
-  const me = usePlannerStore((s) => s.members[s.currentUserId]);
-  const groups = usePlannerStore(
-    useShallow((s) => Object.values(s.groups).filter((g) => g.memberIds.includes(s.currentUserId)))
-  );
-  const trips = usePlannerStore(
-    useShallow((s) => Object.values(s.trips).filter((t) => t.memberIds.includes(s.currentUserId)))
-  );
+  const { user, loading, error, signIn, signOut } = useAuth();
+  const trips = useMyTrips();
+  const memberships = trips.data ?? [];
 
-  if (!me) return null;
+  if (loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading profile…</p>;
+  if (!user) return <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center"><h1 className="font-display text-2xl font-bold">Sign in to view your profile</h1><Button className="mt-6" onClick={signIn}>Continue with Google</Button>{error && <p className="mt-4 text-sm text-red-600">{error}</p>}</div>;
 
-  return (
-    <div>
-      <div className="flex items-center gap-5 rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)]">
-        <MemberAvatar member={me} size="lg" />
-        <div>
-          <h1 className="font-display text-2xl font-bold">{me.name}</h1>
-          <p className="text-sm text-[var(--color-ink-soft)]">
-            {groups.length} groups · {trips.length} trips
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="mb-4 font-display text-lg font-bold">Your travel profile</h2>
-        {me.preferences ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Card className="p-5">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--color-ink-soft)]">
-                <Sparkles size={12} /> Interests
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {me.preferences.interests.map((i) => (
-                  <Chip key={i} label={i} selected />
-                ))}
-              </div>
-            </Card>
-            <Card className="p-5">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--color-ink-soft)]">
-                <UtensilsCrossed size={12} /> Food preferences
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {me.preferences.foodPreferences.map((f) => (
-                  <Chip key={f} label={f} selected />
-                ))}
-              </div>
-            </Card>
-            <Card className="p-5">
-              <p className="mb-2 text-xs font-semibold uppercase text-[var(--color-ink-soft)]">Pace</p>
-              <p className="font-display text-lg font-bold">{me.preferences.pace}</p>
-            </Card>
-            <Card className="p-5">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase text-[var(--color-ink-soft)]">
-                <Wallet size={12} /> Typical budget
-              </p>
-              <p className="font-display text-lg font-bold">RM {me.preferences.personalBudget.toLocaleString()}</p>
-            </Card>
-          </div>
-        ) : (
-          <EmptyState icon={Sparkles} title="No preferences set yet" description="Set your preferences from any trip workspace." />
-        )}
-      </div>
-
-      <div className="mt-8">
-        <h2 className="mb-4 font-display text-lg font-bold">Your groups</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {groups.map((g) => (
-            <GroupCard key={g.id} group={g} />
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-8">
-        <h2 className="mb-4 flex items-center gap-1.5 font-display text-lg font-bold">
-          <MapPin size={16} /> Your trips
-        </h2>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {trips.map((t) => (
-            <TripCard key={t.id} trip={t} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  const name = user.displayName || user.email || "Traveler";
+  return <div className="space-y-8"><Card className="flex flex-wrap items-center justify-between gap-4 p-6"><div className="flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-primary)] text-lg font-bold text-white">{name.slice(0, 1).toUpperCase()}</div><div><h1 className="font-display text-2xl font-bold">{name}</h1><p className="text-sm text-[var(--color-ink-soft)]">{user.email || "Google account"}</p></div></div><Button variant="outline" onClick={signOut}>Sign out</Button></Card><section><h2 className="mb-4 font-display text-lg font-bold">Your trips</h2>{trips.loading && <p className="text-sm text-[var(--color-ink-soft)]">Loading trips…</p>}{trips.error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{trips.error.message}</p>}{!trips.loading && !trips.error && memberships.length === 0 && <Card className="p-6"><p className="text-sm text-[var(--color-ink-soft)]">No trips yet.</p><LinkButton className="mt-4" href="/trips/new">Create a trip</LinkButton></Card>}<div className="grid gap-4 sm:grid-cols-2">{memberships.map(trip => <LinkButton key={trip.id} href={`/trips/${trip.tripId}`} variant="outline" fullWidth className="flex-col items-start text-left"><span className="font-display text-lg font-bold">{trip.tripName}</span><span className="mt-1 text-xs">{trip.destinationName} · {trip.startDate} → {trip.endDate}</span><span className="mt-3 text-xs font-semibold">{trip.role}</span></LinkButton>)}</div></section></div>;
 }
