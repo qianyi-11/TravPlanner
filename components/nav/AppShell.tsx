@@ -1,6 +1,6 @@
 "use client";
 
-import { Compass, Home, Users, UserRound } from "lucide-react";
+import { Compass, Home, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/use-auth";
@@ -9,7 +9,6 @@ import { cx } from "@/lib/utils";
 const NAV = [
   { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
   { href: "/my-trips", label: "My Trips", icon: Compass, match: (p: string) => p.startsWith("/my-trips") || p.startsWith("/trips") },
-  { href: "/groups", label: "Groups", icon: Users, match: (p: string) => p.startsWith("/groups") },
   { href: "/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ];
 

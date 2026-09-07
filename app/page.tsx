@@ -44,11 +44,11 @@ export default function HomePage() {
             smarter itinerary.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <LinkButton href="/groups" size="lg" icon={<Plus size={18} />}>
+            <LinkButton href="/trips/new" size="lg" icon={<Plus size={18} />}>
               Create a Trip
             </LinkButton>
-            <LinkButton href="/groups/new" size="lg" variant="outline">
-              Create a Group
+            <LinkButton href="/join" size="lg" variant="outline">
+              Join a Trip
             </LinkButton>
           </div>
 
