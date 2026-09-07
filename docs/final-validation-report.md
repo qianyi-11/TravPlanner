@@ -1,80 +1,120 @@
 # TravPlanner final validation report
 
-Date: 2026-09-08
-Branch: `codex/combine`
+Date: 2026-09-08  
+Branch: `codex/combine`  
+Scope: Phases 39–45; earlier backend integration phases were already present and retained.
 
-## 1. Completed phases
+## Status summary
 
-All planned phases are complete: 2 Shared Contract Integration; 3 Firebase Client Foundation; 4 Authentication; 5 Callable API; 6 Firestore Repositories; 7 Data Hooks; 8 UI-State Store Cleanup; 9 My Trips; 10 Group Domain Removal; 11 Create Trip; 12 Trip Dashboard; 13 Join and Membership; 14 Candidate Submission; 15 Personal Budget; 16 Candidate Voting; 17 Phase-Aware Navigation; 18 Planning Generation; 19 Option Comparison; 20 Option Voting and Winner; 21 Review Workflow; 22 Finalized Trip Plan; 23 Supported Secondary Backend Features; 24 Route Normalization; 25 Mock Domain Removal; 26 Unsupported Feature Cleanup; 27 Error Handling; 28 Mutation UX; 29 App Check and Emulator Support; 30 Security Validation; 31 Build and Type Cleanup; 32 Tests; 33 Primary Acceptance; 34 Secondary Acceptance; 35 UI Polish; 36 Cleanup; 37 Documentation; 38 Final Report.
+| Area | Status | Evidence |
+| --- | --- | --- |
+| Frontend UX restoration | Implemented and validated | Phase 39 commit `1fd231e`; frontend build/typecheck/lint passed |
+| Places Autocomplete | Implemented but externally unvalidated | Phase 40 commit `5dcb976`; browser key/provider account unavailable |
+| Deployment readiness | Implemented and validated locally | Phase 41 commit `a8c20ce`; `build:web`, Functions build, typecheck, lint, tests passed |
+| Production deployment | Prepared but not deployed | No authenticated Firebase/Vercel/Google project access |
+| Production acceptance | Implemented but externally unvalidated | No deployed URL or two-user browser session |
+| Frontend preservation audit | Completed | Phase 44 comparison and classifications in checkpoint |
+| Blockers | None for repository continuation | External access is an operator requirement, not a code blocker |
 
-## 2. Files added
+## 1. Frontend preservation
 
-| Area | Main additions |
-| --- | --- |
-| Firebase/auth | `lib/firebase/*`, `lib/auth/*` |
-| API | `lib/api/*` and typed callable validation in `lib/api/callable.ts` |
-| Repositories | `lib/repositories/*` |
-| Hooks | `lib/hooks/*` |
-| Routes/UI | canonical trip pages under `app/trips/[tripId]`, plus `/join`, `/my-trips`, and `/trips/new` integration |
-| Tests | `tests/frontend/workflow.test.ts` and the backend/security coverage used by the acceptance phases |
-| Config/docs | `.env.example`, `firebase/*`, `docs/integration.md`, and this report |
+Restored/adapted:
 
-## 3. Significant modifications
+- `components/trip/TripCard.tsx`
+- `components/trip/TripHeader.tsx`
+- `components/trip/ProgressStepper.tsx`
+- `components/trip/PlaceCard.tsx`
+- `components/trip/ActivityCard.tsx`
+- `components/trip/BudgetCard.tsx`
+- `components/trip/MapView.tsx`
+- `/my-trips`, trip dashboard, places, and final plan layouts
 
-- `app/trips/[tripId]/places/page.tsx`: Firestore candidates and callable submissions, with phase-aware controls.
-- `app/trips/[tripId]/vote/page.tsx`: real candidate voting and backend phase actions.
-- `app/trips/[tripId]/generating/page.tsx`: planning generation, option reads, option votes, and winner selection.
-- `app/trips/[tripId]/itinerary/page.tsx`: backend-driven review, approvals, minor owner edits, and finalization.
-- `app/trips/[tripId]/plan/page.tsx`: Firestore-backed finalized itinerary that survives refresh.
-- `app/my-trips/page.tsx` and `app/trips/[tripId]/places/page.tsx`: real-data loading and long-text UI polish.
-- `firebase/firestore.rules`: authoritative browser read/write boundaries.
-- `Plan.txt`: all phases marked complete and retained as the implementation specification.
+The theme, typography, cards, navigation shell, spacing, responsive layout, phase stepper, rich plan tabs, and loading/error/empty states remain aligned with the `frontend` branch.
 
-## 4. Deleted files
+Intentional differences:
 
-Removed mock/legacy domain files: `lib/store.ts`, `lib/mock-data.ts`, `lib/types.ts`, and the unused mock trip components under `components/trip/`, plus `components/ui/Avatar.tsx`.
+- Group-only UI was removed because authoritative state is trip membership, not a groups model.
+- Ratings, reviews, photos, pricing, availability, bookings, booking pressure, and fake SVG routes were removed because authoritative provider data is not available in those screens.
+- Backend `TripPhase` and callable actions replace frontend-owned stage transitions.
+- Map UI shows real coordinates and a graceful unavailable state until a browser Maps provider is configured.
 
-## 5. Backend functions wired to UI
+## 2. Places UX
 
-The UI uses typed wrappers for trip creation/reopen, join and membership management, candidate submission/update/removal, activity budgets, candidate and option voting, planning generation, minor review edits, approvals, and finalization. The wrappers call the exported callable functions through `callBackend`; no REST or Next.js API proxy was added.
+`components/places/PlaceAutocomplete.tsx` uses the current Google Maps JavaScript `PlaceAutocompleteElement` widget, normalizes `placeId`, name, latitude, longitude, and address, and is used by Create Trip and candidate submission. The backend still receives the Place ID and validates/resolves it.
 
-## 6. Canonical routes
+The browser key is `NEXT_PUBLIC_GOOGLE_MAPS_BROWSER_KEY`; the server secret remains `GOOGLE_MAPS_API_KEY` in Functions Secrets. Live provider behavior is externally unvalidated.
 
-`/my-trips`, `/trips/new`, `/join`, `/trips/[tripId]`, `/trips/[tripId]/places`, `/trips/[tripId]/vote`, `/trips/[tripId]/generating`, `/trips/[tripId]/itinerary`, and `/trips/[tripId]/plan`.
+## 3. Backend integration and real data
 
-Legacy routes remain compatibility redirects only. They do not own trip state.
+The existing typed callable layer remains in use for:
 
-## 7. Build and test results
+- trip creation and phase reopening;
+- invite join/reset, leave, member removal, and ownership transfer;
+- candidate submission/update/removal;
+- personal activity budgets;
+- candidate and itinerary-option voting, voting transitions, and winner selection;
+- planning generation;
+- review edits, approvals, finalization;
+- supported change requests, fixed bookings, and critical facts.
+
+Firebase Auth, Firestore repositories, and realtime hooks remain authoritative for:
+
+- Auth and memberships;
+- trips and backend-controlled phases;
+- candidates and submissions;
+- private budgets and votes;
+- planning options;
+- review state and approvals;
+- finalized itinerary versions.
+
+No direct browser writes to backend-owned domain documents, REST proxy, duplicate group model, or authoritative Zustand/localStorage state was added.
+
+## 4. Build and test results
 
 | Check | Result |
 | --- | --- |
-| Next.js build | Passed in final run; Next.js 16.3.4 generated all routes |
-| Shared build | Passed as part of `npm.cmd run build` |
-| Functions build | Passed as part of `npm.cmd run build` |
-| Typecheck | Passed: frontend, shared, and Functions |
-| Lint | Passed: `npm.cmd run lint -- --quiet` |
-| Local tests | Passed: 205; 140 emulator-dependent tests skipped without an emulator |
-| Security emulator tests | Passed in Phase 30 with Firestore emulator |
-| Full emulator suite | 344/345 passed in Phase 33; one existing budget concurrency test timed out after 30 seconds |
+| `npm.cmd run typecheck` | Passed frontend, shared, and Functions typechecks |
+| `npm.cmd run lint` | Passed with 7 pre-existing warnings; no errors |
+| `npm.cmd run build:web` | Passed shared plus Next.js frontend build |
+| `npm.cmd run build:functions` | Passed shared packaging plus Functions build |
+| `npm.cmd test` | Passed: 205 tests; 140 emulator-dependent tests skipped by default |
+| `npm.cmd run test:security` | Passed available auth guard tests; Firestore emulator cases skipped without an emulator |
+| `npm.cmd run test:security:emulator` | Passed available Firestore security suite |
+| `npm.cmd run test:emulator` | 344 passed, 1 failed: existing `budgetBackend.test.ts` concurrency test timed out after 30 seconds |
 
-The timed-out test is `tests/integration/budgetBackend.test.ts`, “retries Budget SET against a currency change committed after its authority read”. It reproduced in isolation and was not introduced by the frontend integration. It remains documented rather than falsely marked passed.
+The full emulator timeout was reproduced after clearing a stale emulator process and is unrelated to the Phase 39–44 frontend/deployment changes. Expected `PERMISSION_DENIED` logs are emitted by rules tests that verify denied writes.
 
-## 8. Unsupported or intentionally hidden features
+## 5. Production deployment
 
-- Fixed-booking and critical-fact UI is not exposed in the current primary workflow because there is no clear read-model screen; supported callable wrappers and backend contracts remain available.
-- Rescue/live planning UI is not presented as a real feature; legacy live/route/shortlist/validate paths redirect to supported screens.
-- Ratings, availability, pricing, map, and booking details are not fabricated when authoritative data is unavailable.
+Status: prepared but not deployed; operator action required.
 
-## 9. Known risks
+Repository preparation is complete:
 
-- Live Google sign-in requires Firebase OAuth configuration and authorized domains.
-- Deployed App Check requires a registered site key; emulator debug tokens must stay local.
-- Google Places/Routes use project-specific provider credentials, quotas, and Functions secrets.
-- Firestore indexes and rules must be deployed to the target Firebase project.
-- Emulator behavior is not a substitute for a two-user production-like browser run.
+- `npm run build:web` exists for Vercel.
+- `docs/deployment.md` documents Firebase, Functions, Google provider, App Check, Vercel, environment variables, authorized domains, and rollback.
+- No `.firebaserc` or credentials were added.
+- `GOOGLE_MAPS_API_KEY` is documented as server-only.
 
-## 10. Manual test status
+Deployment was not attempted because Firebase CLI reported no authorized accounts, no `.firebaserc` is present, and Vercel/Google Cloud CLIs are not installed in the environment.
 
-Automated backend/security acceptance and frontend workflow coverage passed as recorded above. A live two-user browser workflow using Google authentication was not run because project credentials, deployed App Check, and external provider configuration were unavailable. Therefore live authentication and deployed-provider behavior are implemented but externally unvalidated, not claimed as fully validated.
+## 6. Production acceptance
 
-Repository safety checks passed: branch is `codex/combine`, the worktree is clean after the final commit, `TravelPlanner` was not modified, and no credentials, App Check debug tokens, `node_modules`, `.next`, or emulator exports are tracked.
+The required two-user workflow was not executed against deployed services. Google login, invite/join, shared trip state, Places provider calls, budgets, votes, planning, review, finalization, App Check, and refresh persistence are therefore implemented but externally unvalidated—not claimed as production-validated.
+
+## 7. Remaining risks and operator actions
+
+- Configure Firebase project binding and Blaze billing.
+- Enable Google Auth and add Vercel/custom domains to Firebase authorized domains.
+- Enable only required Google Places/Routes APIs.
+- Create restricted browser and server keys; set the Functions secret.
+- Register App Check reCAPTCHA v3 and verify legitimate traffic before enforcement changes.
+- Deploy Firestore, Functions, and Vercel, then run the two-user acceptance and security workflow.
+- Confirm provider quotas, Firestore indexes, API-key referrer restrictions, billing alerts, and deployment-environment differences.
+- Investigate the existing budget concurrency timeout before treating the complete emulator suite as green.
+
+## 8. Repository safety
+
+- Branch remains `codex/combine`.
+- `TravelPlanner` was not modified.
+- No credentials, private keys, App Check debug tokens, `node_modules`, `.next`, or emulator exports were committed.
+- `README.md` has unrelated pre-existing working-tree changes and is intentionally not included in the phase commits.
