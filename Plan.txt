@@ -35,7 +35,7 @@ Progress
 - [x] Phase 8 — Reduce Zustand to UI State
 - [x] Phase 9 — My Trips
 - [x] Phase 10 — Remove Frontend Group Domain
-- [ ] Phase 11 — Create Trip Integration
+- [x] Phase 11 — Create Trip Integration
 - [ ] Phase 12 — Trip Dashboard
 - [ ] Phase 13 — Join and Membership Management
 - [ ] Phase 14 — Candidate / Place Submission
