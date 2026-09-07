@@ -53,7 +53,7 @@ Progress
 - [x] Phase 26 — Unsupported Prototype Feature Cleanup
 - [x] Phase 27 — Error Handling
 - [x] Phase 28 — Loading and Mutation UX
-- [ ] Phase 29 — App Check / Emulator Validation
+- [x] Phase 29 — App Check / Emulator Validation
 - [ ] Phase 30 — Security Rule Validation
 - [ ] Phase 31 — Type and Build Cleanup
 - [ ] Phase 32 — Tests
