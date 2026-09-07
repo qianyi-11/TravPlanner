@@ -43,7 +43,7 @@ Progress
 - [x] Phase 16 — Candidate Voting
 - [x] Phase 17 — Phase-Aware Navigation
 - [x] Phase 18 — Planning Generation
-- [ ] Phase 19 — Itinerary Option Comparison
+- [x] Phase 19 — Itinerary Option Comparison
 - [ ] Phase 20 — Option Voting and Winning Option
 - [ ] Phase 21 — Review Workflow
 - [ ] Phase 22 — Finalized Trip Plan
