@@ -1,81 +1,32 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
-import { notFound, useRouter } from "next/navigation";
-import { Check, Loader2 } from "lucide-react";
-import { usePlannerStore } from "@/lib/store";
-
-const STEPS = [
-  "Combining preferences",
-  "Finding places",
-  "Checking suitability",
-  "Ranking candidates",
-];
+import { use, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { generatePlanningCycle } from "@/lib/api/planning";
+import { useItineraryOptions } from "@/lib/hooks/use-itinerary-options";
+import { useTrip } from "@/lib/hooks/use-trip";
 
 export default function GeneratingPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
-  const router = useRouter();
-  const trip = usePlannerStore((s) => s.trips[tripId]);
-  const setStage = usePlannerStore((s) => s.setStage);
-  const [stepIndex, setStepIndex] = useState(0);
+  const trip = useTrip(tripId);
+  const options = useItineraryOptions(tripId, trip.data?.planningCycle);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (stepIndex >= STEPS.length) {
-      const t = setTimeout(() => {
-        setStage(tripId, "voting");
-        router.push(`/trips/${tripId}/vote`);
-      }, 500);
-      return () => clearTimeout(t);
-    }
-    const t = setTimeout(() => setStepIndex((i) => i + 1), 850);
-    return () => clearTimeout(t);
-  }, [stepIndex, router, setStage, tripId]);
+  async function generate() {
+    if (!trip.data) return;
+    setPending(true); setError(null);
+    try { await generatePlanningCycle({ tripId, expectedPlanningCycle: trip.data.planningCycle }); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Planning generation failed."); }
+    finally { setPending(false); }
+  }
 
-  if (!trip) notFound();
+  if (trip.loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading planning state…</p>;
+  if (trip.error || options.error || !trip.data) return <p className="rounded-2xl bg-red-50 p-5 text-sm text-red-700">{trip.error?.message || options.error?.message || "Trip not found."}</p>;
+  return <div className="space-y-6"><div><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{trip.data.name}</p><h1 className="mt-2 font-display text-3xl font-extrabold">Planning options</h1><p className="mt-2 text-sm text-[var(--color-ink-soft)]">The backend generates up to three validated alternatives from the current cycle.</p></div>{error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{trip.data.phase === "PLANNING" && options.data?.length === 0 && <Card className="p-6"><p className="text-sm">No options are available for planning cycle {trip.data.planningCycle}.</p><Button className="mt-4" disabled={pending} onClick={generate}>{pending ? "Generating…" : "Generate planning options"}</Button></Card>}{options.loading && <p className="rounded-2xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm">Waiting for generated options…</p>}{options.data && options.data.length > 0 && <div className="grid gap-5 lg:grid-cols-3">{options.data.map((option) => <OptionCard key={option.id} option={option} />)}</div>}{trip.data.phase !== "PLANNING" && <p className="rounded-2xl border border-dashed border-[var(--color-border)] p-8 text-center text-sm text-[var(--color-ink-soft)]">The trip is currently {trip.data.phase}. Options will appear when the backend enters PLANNING.</p>}</div>;
+}
 
-  return (
-    <div className="mx-auto flex max-w-md flex-col items-center py-24 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--color-primary-soft)]">
-        <Loader2 size={26} className="animate-spin text-[var(--color-primary)]" />
-      </div>
-      <h1 className="mt-6 font-display text-2xl font-bold">Finding the best options for your group…</h1>
-      <p className="mt-2 text-sm text-[var(--color-ink-soft)]">
-        Combining everyone&apos;s preferences and suggestions for {trip.name}.
-      </p>
-
-      <div className="mt-8 w-full space-y-3 text-left">
-        {STEPS.map((step, i) => {
-          const done = i < stepIndex;
-          const active = i === stepIndex;
-          return (
-            <div
-              key={step}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
-                done
-                  ? "border-[var(--color-teal)] bg-[var(--color-teal-soft)]"
-                  : active
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]"
-                  : "border-[var(--color-border)] bg-white opacity-50"
-              }`}
-            >
-              {done ? (
-                <Check size={16} className="text-[var(--color-teal-dark)]" />
-              ) : active ? (
-                <Loader2 size={16} className="animate-spin text-[var(--color-primary)]" />
-              ) : (
-                <div className="h-4 w-4 rounded-full border-2 border-[var(--color-border)]" />
-              )}
-              <span
-                className={`text-sm font-medium ${
-                  done ? "text-[var(--color-teal-dark)]" : active ? "text-[var(--color-primary-dark)]" : "text-[var(--color-ink-soft)]"
-                }`}
-              >
-                {step}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+function OptionCard({ option }: { option: { id: string; variant: string; days: Array<{ date: string; items: Array<{ title: string; startTime: string; endTime: string }> }>; score: { mustDo: number; votePreference: number; travelEfficiency: number; gapEfficiency: number; budgetEfficiency: number; preferredPeriod: number } } }) {
+  return <Card className="p-5"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{option.variant}</p><h2 className="mt-2 font-display text-xl font-bold">Option {option.id.slice(0, 6)}</h2><div className="mt-4 space-y-3">{option.days.map((day) => <div key={day.date}><p className="text-sm font-semibold">{day.date}</p>{day.items.map((item) => <p key={`${day.date}-${item.title}-${item.startTime}`} className="mt-1 text-xs text-[var(--color-ink-soft)]">{item.startTime}–{item.endTime} · {item.title}</p>)}</div>)}</div><p className="mt-4 text-xs text-[var(--color-ink-soft)]">Backend score: must-do {option.score.mustDo} · preference {option.score.votePreference}</p></Card>;
 }
