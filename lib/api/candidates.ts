@@ -1,0 +1,5 @@
+import { submitCandidateInputSchema, submitCandidateResultSchema, updateSubmissionInputSchema, updateSubmissionResultSchema, removeSubmissionInputSchema, removeSubmissionResultSchema, type SubmitCandidateInput, type SubmitCandidateResult, type UpdateSubmissionInput, type UpdateSubmissionResult, type RemoveSubmissionInput, type RemoveSubmissionResult } from "@travel-planner/shared";
+import { callBackend } from "./callable";
+export const submitCandidate = (input: SubmitCandidateInput): Promise<SubmitCandidateResult> => callBackend("submitCandidate", input, submitCandidateInputSchema, submitCandidateResultSchema);
+export const updateSubmission = (input: UpdateSubmissionInput): Promise<UpdateSubmissionResult> => callBackend("updateSubmission", input, updateSubmissionInputSchema, updateSubmissionResultSchema);
+export const removeSubmission = (input: RemoveSubmissionInput): Promise<RemoveSubmissionResult> => callBackend("removeSubmission", input, removeSubmissionInputSchema, removeSubmissionResultSchema);

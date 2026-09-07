@@ -1,0 +1,5 @@
+import { createChangeRequestInputSchema, createChangeRequestResultSchema, reviewChangeRequestInputSchema, reviewChangeRequestResultSchema, applyChangeRequestInputSchema, applyChangeRequestResultSchema, type CreateChangeRequestInput, type CreateChangeRequestResult, type ReviewChangeRequestInput, type ReviewChangeRequestResult, type ApplyChangeRequestInput, type ApplyChangeRequestResult } from "@travel-planner/shared";
+import { callBackend } from "./callable";
+export const createChangeRequest = (input: CreateChangeRequestInput): Promise<CreateChangeRequestResult> => callBackend("createChangeRequest", input, createChangeRequestInputSchema, createChangeRequestResultSchema);
+export const reviewChangeRequest = (input: ReviewChangeRequestInput): Promise<ReviewChangeRequestResult> => callBackend("reviewChangeRequest", input, reviewChangeRequestInputSchema, reviewChangeRequestResultSchema);
+export const applyChangeRequest = (input: ApplyChangeRequestInput): Promise<ApplyChangeRequestResult> => callBackend("applyChangeRequest", input, applyChangeRequestInputSchema, applyChangeRequestResultSchema);

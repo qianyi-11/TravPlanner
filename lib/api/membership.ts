@@ -1,0 +1,7 @@
+import { joinTripInputSchema, joinTripResultSchema, resetInviteInputSchema, resetInviteResultSchema, removeMemberInputSchema, removeMemberResultSchema, leaveTripInputSchema, leaveTripResultSchema, transferOwnershipInputSchema, transferOwnershipResultSchema, type JoinTripInput, type JoinTripResult, type ResetInviteInput, type ResetInviteResult, type RemoveMemberInput, type RemoveMemberResult, type LeaveTripInput, type LeaveTripResult, type TransferOwnershipInput, type TransferOwnershipResult } from "@travel-planner/shared";
+import { callBackend } from "./callable";
+export const joinTrip = (input: JoinTripInput): Promise<JoinTripResult> => callBackend("joinTrip", input, joinTripInputSchema, joinTripResultSchema);
+export const resetInvite = (input: ResetInviteInput): Promise<ResetInviteResult> => callBackend("resetInvite", input, resetInviteInputSchema, resetInviteResultSchema);
+export const removeMember = (input: RemoveMemberInput): Promise<RemoveMemberResult> => callBackend("removeMember", input, removeMemberInputSchema, removeMemberResultSchema);
+export const leaveTrip = (input: LeaveTripInput): Promise<LeaveTripResult> => callBackend("leaveTrip", input, leaveTripInputSchema, leaveTripResultSchema);
+export const transferOwnership = (input: TransferOwnershipInput): Promise<TransferOwnershipResult> => callBackend("transferOwnership", input, transferOwnershipInputSchema, transferOwnershipResultSchema);

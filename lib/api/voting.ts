@@ -1,0 +1,7 @@
+import { startVotingInputSchema, startVotingResultSchema, castCandidateVoteInputSchema, castCandidateVoteResultSchema, closeVotingInputSchema, closeVotingResultSchema, castOptionVoteInputSchema, castOptionVoteResultSchema, selectWinningOptionInputSchema, selectWinningOptionResultSchema, type StartVotingInput, type StartVotingResult, type CastCandidateVoteInput, type CastCandidateVoteResult, type CloseVotingInput, type CloseVotingResult, type CastOptionVoteInput, type CastOptionVoteResult, type SelectWinningOptionInput, type SelectWinningOptionResult } from "@travel-planner/shared";
+import { callBackend } from "./callable";
+export const startVoting = (input: StartVotingInput): Promise<StartVotingResult> => callBackend("startVoting", input, startVotingInputSchema, startVotingResultSchema);
+export const castCandidateVote = (input: CastCandidateVoteInput): Promise<CastCandidateVoteResult> => callBackend("castCandidateVote", input, castCandidateVoteInputSchema, castCandidateVoteResultSchema);
+export const closeVoting = (input: CloseVotingInput): Promise<CloseVotingResult> => callBackend("closeVoting", input, closeVotingInputSchema, closeVotingResultSchema);
+export const castOptionVote = (input: CastOptionVoteInput): Promise<CastOptionVoteResult> => callBackend("castOptionVote", input, castOptionVoteInputSchema, castOptionVoteResultSchema);
+export const selectWinningOption = (input: SelectWinningOptionInput): Promise<SelectWinningOptionResult> => callBackend("selectWinningOption", input, selectWinningOptionInputSchema, selectWinningOptionResultSchema);

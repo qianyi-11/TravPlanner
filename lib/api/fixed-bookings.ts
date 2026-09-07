@@ -1,0 +1,5 @@
+import { reportFixedBookingInputSchema, reportFixedBookingResultSchema, confirmFixedBookingInputSchema, confirmFixedBookingResultSchema, changeFixedBookingInputSchema, changeFixedBookingResultSchema, type ReportFixedBookingInput, type ReportFixedBookingResult, type ConfirmFixedBookingInput, type ConfirmFixedBookingResult, type ChangeFixedBookingInput, type ChangeFixedBookingResult } from "@travel-planner/shared";
+import { callBackend } from "./callable";
+export const reportFixedBooking = (input: ReportFixedBookingInput): Promise<ReportFixedBookingResult> => callBackend("reportFixedBooking", input, reportFixedBookingInputSchema, reportFixedBookingResultSchema);
+export const confirmFixedBooking = (input: ConfirmFixedBookingInput): Promise<ConfirmFixedBookingResult> => callBackend("confirmFixedBooking", input, confirmFixedBookingInputSchema, confirmFixedBookingResultSchema);
+export const changeFixedBooking = (input: ChangeFixedBookingInput): Promise<ChangeFixedBookingResult> => callBackend("changeFixedBooking", input, changeFixedBookingInputSchema, changeFixedBookingResultSchema);
