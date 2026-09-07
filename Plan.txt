@@ -39,7 +39,7 @@ Progress
 - [x] Phase 12 — Trip Dashboard
 - [x] Phase 13 — Join and Membership Management
 - [x] Phase 14 — Candidate / Place Submission
-- [ ] Phase 15 — Personal Budget
+- [x] Phase 15 — Personal Budget
 - [ ] Phase 16 — Candidate Voting
 - [ ] Phase 17 — Phase-Aware Navigation
 - [ ] Phase 18 — Planning Generation
