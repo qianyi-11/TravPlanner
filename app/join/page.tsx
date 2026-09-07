@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { joinTrip } from "@/lib/api/membership";
 
 export default function JoinPage() {
+  return <Suspense fallback={<p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading join form…</p>}><JoinForm /></Suspense>;
+}
+
+function JoinForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [tripId, setTripId] = useState(params.get("tripId") || "");
