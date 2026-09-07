@@ -1,5 +1,6 @@
 export * from "./use-candidates";
 export * from "./use-activity-budget";
+export * from "./use-approvals";
 export * from "./use-current-membership";
 export * from "./use-final-itinerary";
 export * from "./use-itinerary-options";
