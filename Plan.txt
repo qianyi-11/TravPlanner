@@ -54,7 +54,7 @@ Progress
 - [x] Phase 27 — Error Handling
 - [x] Phase 28 — Loading and Mutation UX
 - [x] Phase 29 — App Check / Emulator Validation
-- [ ] Phase 30 — Security Rule Validation
+- [x] Phase 30 — Security Rule Validation
 - [ ] Phase 31 — Type and Build Cleanup
 - [ ] Phase 32 — Tests
 - [ ] Phase 33 — Primary End-to-End Acceptance Flow
