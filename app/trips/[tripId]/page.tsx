@@ -1,213 +1,33 @@
 "use client";
 
-import { use } from "react";
-import { notFound } from "next/navigation";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Circle,
-  Compass,
-  Lightbulb,
-  ListChecks,
-  MapPinned,
-  Route as RouteIcon,
-  Sparkles,
-  Vote,
-} from "lucide-react";
-import { useShallow } from "zustand/react/shallow";
-import { usePlannerStore } from "@/lib/store";
-import { TripHeader } from "@/components/trip/TripHeader";
-import { Card, Badge } from "@/components/ui/Card";
+import { use, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CalendarDays, Copy, MapPin, Users } from "lucide-react";
+import { useAuth } from "@/lib/auth/use-auth";
+import { useTrip } from "@/lib/hooks/use-trip";
+import { useTripMembers } from "@/lib/hooks/use-trip-members";
 import { LinkButton } from "@/components/ui/Button";
-import { MemberAvatar } from "@/components/ui/Avatar";
-import { daysBetween, formatCurrency, pressureTone } from "@/lib/utils";
-import type { PlanningStage } from "@/lib/types";
 
-const STAGE_INFO: Record<
-  PlanningStage,
-  { icon: typeof Lightbulb; title: string; description: string; cta: string; href: string }
-> = {
-  ideas: {
-    icon: Lightbulb,
-    title: "Collect everyone's ideas",
-    description: "Every member adds the places they'd love to visit. The more ideas, the better the vote.",
-    cta: "Add Places",
-    href: "places",
-  },
-  preferences: {
-    icon: Sparkles,
-    title: "Share your travel preferences",
-    description: "Tell the group your interests, food preferences, pace, and budget.",
-    cta: "Set Preferences",
-    href: "preferences",
-  },
-  voting: {
-    icon: Vote,
-    title: "Vote for your favorites",
-    description: "Everyone votes on the suggested places. The most popular ideas move forward.",
-    cta: "Vote Now",
-    href: "vote",
-  },
-  validation: {
-    icon: ListChecks,
-    title: "Validate the shortlist",
-    description: "We check real hours, ratings, pricing and availability for every chosen place.",
-    cta: "Review Places",
-    href: "validate",
-  },
-  route: {
-    icon: RouteIcon,
-    title: "Optimize the route",
-    description: "We group nearby places and sequence them to minimize backtracking.",
-    cta: "View Route",
-    href: "route",
-  },
-  itinerary: {
-    icon: MapPinned,
-    title: "Your itinerary is ready",
-    description: "A full day-by-day plan built from your group's choices.",
-    cta: "View Itinerary",
-    href: "itinerary",
-  },
-};
+const PHASE_LABELS = { COLLECTING: "Collecting ideas", VOTING: "Candidate voting", PLANNING: "Planning options", REVIEW: "Review", FINALIZED: "Finalized" } as const;
+const PHASE_ROUTES = { COLLECTING: "/places", VOTING: "/vote", PLANNING: "/generating", REVIEW: "/itinerary", FINALIZED: "/plan" } as const;
 
-export default function TripWorkspacePage({ params }: { params: Promise<{ tripId: string }> }) {
+export default function TripDashboard({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
-  const trip = usePlannerStore((s) => s.trips[tripId]);
-  const members = usePlannerStore(
-    useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
-  );
-  const places = usePlannerStore(
-    useShallow((s) => (trip ? trip.placeIds.map((id) => s.places[id]).filter(Boolean) : []))
-  );
+  const { user } = useAuth();
+  const trip = useTrip(tripId);
+  const members = useTripMembers(tripId);
+  const invite = useSearchParams().get("invite");
+  const [copied, setCopied] = useState(false);
 
-  if (!trip) notFound();
+  if (!user) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Sign in to open this trip.</p>;
+  if (trip.loading || members.loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading trip…</p>;
+  if (trip.error || members.error) return <p className="rounded-2xl bg-red-50 p-5 text-sm text-red-700">{trip.error?.message || members.error?.message || "Trip could not be loaded."}</p>;
+  if (!trip.data) return <p className="py-20 text-center text-sm">Trip not found or you are not a member.</p>;
 
-  const info = STAGE_INFO[trip.stage];
-  const days = daysBetween(trip.startDate, trip.endDate);
-  const suggestedCount = places.length;
-  const shortlistCount = trip.shortlistPlaceIds.length;
-  const tone = pressureTone(trip.pricePressure.level);
+  const currentMember = members.data?.find((member) => member.id === user.uid);
+  const isOwner = currentMember?.role === "OWNER";
+  const nextRoute = `/trips/${tripId}${PHASE_ROUTES[trip.data.phase]}`;
+  async function copyInvite() { if (!invite) return; await navigator.clipboard?.writeText(`${window.location.origin}/join?invite=${encodeURIComponent(invite)}`); setCopied(true); }
 
-  const suggestedDone = members.filter((m) => m.hasSubmittedSuggestions).length;
-  const votedDone = members.filter((m) => m.hasSubmittedVotes).length;
-
-  return (
-    <div>
-      <TripHeader trip={trip} />
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-6">
-          <Card className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]">
-                <info.icon size={22} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                  What&apos;s next
-                </p>
-                <h2 className="mt-0.5 font-display text-lg font-bold">{info.title}</h2>
-                <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{info.description}</p>
-                <LinkButton href={`/trips/${trip.id}/${info.href}`} className="mt-4" iconRight={<ArrowRight size={15} />}>
-                  {info.cta}
-                </LinkButton>
-              </div>
-            </div>
-          </Card>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Duration" value={`${days} days`} />
-            <StatCard label="Budget" value={formatCurrency(trip.budgetTotal)} />
-            <StatCard label="Places suggested" value={String(suggestedCount)} />
-            <StatCard label="Shortlisted" value={shortlistCount > 0 ? String(shortlistCount) : "—"} />
-          </div>
-
-          {trip.isLive && (
-            <Card className="flex items-center justify-between gap-4 border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-5">
-              <div>
-                <Badge tone="teal">Trip is live</Badge>
-                <p className="mt-2 text-sm font-medium text-[var(--color-ink)]">
-                  Your trip has started — switch to Trip Mode for real-time updates.
-                </p>
-              </div>
-              <LinkButton href={`/trips/${trip.id}/live`} variant="secondary" size="sm">
-                Open Trip Mode
-              </LinkButton>
-            </Card>
-          )}
-
-          <Card className="p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-base font-bold">Booking pressure</h3>
-              <LinkButton href={`/trips/${trip.id}/plan`} variant="ghost" size="sm">
-                View plan
-              </LinkButton>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className="rounded-full px-3 py-1.5 text-xs font-bold"
-                style={{ backgroundColor: tone.bg, color: tone.fg }}
-              >
-                {trip.pricePressure.level}
-              </span>
-              <p className="text-sm text-[var(--color-ink-soft)]">{trip.pricePressure.recommendation}</p>
-            </div>
-          </Card>
-        </div>
-
-        <Card className="h-fit p-5">
-          <h3 className="mb-4 font-display text-base font-bold">Group status</h3>
-          <div className="space-y-4 text-sm">
-            <StatusRow label="Suggestions submitted" done={suggestedDone} total={members.length} />
-            <StatusRow label="Votes submitted" done={votedDone} total={members.length} />
-          </div>
-          <div className="mt-5 space-y-3 border-t border-[var(--color-border-soft)] pt-4">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center gap-3">
-                <MemberAvatar member={m} size="sm" />
-                <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
-                {m.hasSubmittedVotes ? (
-                  <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
-                ) : m.hasSubmittedSuggestions ? (
-                  <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
-                ) : (
-                  <Circle size={16} className="text-[var(--color-border)]" />
-                )}
-              </div>
-            ))}
-          </div>
-          <LinkButton href={`/groups/${trip.groupId}`} variant="ghost" size="sm" fullWidth className="mt-4" icon={<Compass size={14} />}>
-            Back to group room
-          </LinkButton>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-xs font-medium text-[var(--color-ink-soft)]">{label}</p>
-      <p className="mt-1 font-display text-xl font-bold">{value}</p>
-    </Card>
-  );
-}
-
-function StatusRow({ label, done, total }: { label: string; done: number; total: number }) {
-  const pct = total === 0 ? 0 : Math.round((done / total) * 100);
-  return (
-    <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-[var(--color-ink-soft)]">{label}</span>
-        <span className="font-semibold">
-          {done} / {total}
-        </span>
-      </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-sand)]">
-        <div className="h-full rounded-full bg-[var(--color-teal)] transition-all" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
+  return <div className="space-y-6"><section className="rounded-3xl border border-[var(--color-border)] bg-white p-6 shadow-[var(--shadow-soft)] sm:p-8"><div className="flex flex-wrap items-start justify-between gap-5"><div><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{PHASE_LABELS[trip.data.phase]}</p><h1 className="mt-2 font-display text-3xl font-extrabold">{trip.data.name}</h1><p className="mt-2 flex items-center gap-1.5 text-sm text-[var(--color-ink-soft)]"><MapPin size={14} />{trip.data.destination.name}</p></div><LinkButton href={nextRoute}>Next: {PHASE_LABELS[trip.data.phase]}</LinkButton></div><div className="mt-7 grid gap-4 text-sm sm:grid-cols-3"><div className="flex items-center gap-2"><CalendarDays size={16} />{trip.data.startDate} → {trip.data.endDate}</div><div className="flex items-center gap-2"><Users size={16} />{trip.data.activeMemberCount} member{trip.data.activeMemberCount === 1 ? "" : "s"}</div><div><span className="font-semibold">Your role:</span> {currentMember?.role || "Unknown"}</div></div></section>{isOwner && invite && <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-sand)] p-5"><p className="text-sm font-semibold">Share this invite token</p><div className="mt-3 flex flex-wrap items-center gap-3"><code className="rounded-lg bg-white px-3 py-2 text-xs">{invite}</code><button type="button" onClick={copyInvite} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-ink)] px-3 py-2 text-xs font-semibold text-white"><Copy size={13} />{copied ? "Copied" : "Copy invite link"}</button></div></section>}<section><h2 className="mb-4 font-display text-xl font-bold">Members</h2><div className="grid gap-3 sm:grid-cols-2">{(members.data ?? []).filter((member) => member.status === "ACTIVE").map((member) => <div key={member.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-4"><p className="font-semibold">{member.displayName}</p><p className="mt-1 text-xs text-[var(--color-ink-soft)]">{member.role} · {member.uid === user.uid ? "You" : "Active"}</p></div>)}</div></section></div>;
 }
