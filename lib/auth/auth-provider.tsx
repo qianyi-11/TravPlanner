@@ -4,6 +4,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { useEffect, useMemo, useState } from "react";
 import { signInWithGoogle, signOutUser, getFirebaseAuth } from "@/lib/firebase/auth";
 import { initializeFirebaseAppCheck } from "@/lib/firebase/app-check";
+import { toUserMessage } from "@/lib/errors";
 import { AuthContext } from "./auth-context";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -23,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch (cause) {
       queueMicrotask(() => {
-        setError(cause instanceof Error ? cause.message : "Firebase is not configured.");
+        setError(toUserMessage(cause, "Firebase is not configured."));
         setLoading(false);
       });
       return undefined;
@@ -37,12 +38,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signIn: async () => {
       setError(null);
       try { await signInWithGoogle(); } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Google sign-in failed.");
+        setError(toUserMessage(cause, "Google sign-in failed."));
       }
     },
     signOut: async () => {
       try { await signOutUser(); } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Sign-out failed.");
+        setError(toUserMessage(cause, "Sign-out failed."));
       }
     },
   }), [error, loading, user]);

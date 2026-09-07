@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toUserMessage } from "@/lib/errors";
 
 export type AsyncState<T> = { data: T | null; loading: boolean; error: Error | null };
 type Subscribe<T> = (onData: (value: T) => void, onError: (error: Error) => void) => () => void;
@@ -21,7 +22,7 @@ export function useRealtime<T>(subscribe: Subscribe<T>, deps: readonly unknown[]
     });
     const unsubscribe = subscribe(
       (data) => setState({ data, loading: false, error: null }),
-      (error) => setState((current) => ({ ...current, loading: false, error })),
+      (error) => setState((current) => ({ ...current, loading: false, error: new Error(toUserMessage(error, "Realtime subscription failed.")) })),
     );
     return () => { active = false; unsubscribe(); };
     // Dependency values are supplied by each resource hook.

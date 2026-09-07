@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFirebaseFunctions } from "@/lib/firebase/functions";
+import { toUserMessage } from "@/lib/errors";
 
 type Schema<T> = { parse(value: unknown): T };
 
@@ -10,6 +11,10 @@ export async function callBackend<Input, Output>(
   outputSchema: Schema<Output>,
 ): Promise<Output> {
   const payload = inputSchema.parse(input);
-  const result = await httpsCallable<Input, unknown>(getFirebaseFunctions(), name)(payload);
-  return outputSchema.parse(result.data);
+  try {
+    const result = await httpsCallable<Input, unknown>(getFirebaseFunctions(), name)(payload);
+    return outputSchema.parse(result.data);
+  } catch (error) {
+    throw new Error(toUserMessage(error));
+  }
 }
