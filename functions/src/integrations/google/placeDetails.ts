@@ -129,7 +129,7 @@ function normalizeRegularOpeningPeriods(input: {
       if (period.open.day !== weekday || !period.close) continue;
       const openMinute = period.open.hour * 60 + period.open.minute;
       const closeMinute = period.close.hour * 60 + period.close.minute;
-      let closeDayOffset = (period.close.day - period.open.day + 7) % 7;
+      const closeDayOffset = (period.close.day - period.open.day + 7) % 7;
       if (closeDayOffset === 0 && closeMinute <= openMinute) {
         throw new GoogleProviderError("Opening period has a non-positive weekly interval", false);
       }

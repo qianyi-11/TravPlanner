@@ -3,8 +3,7 @@
 import { Compass, Home, Users, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { usePlannerStore } from "@/lib/store";
-import { MemberAvatar } from "@/components/ui/Avatar";
+import { useAuth } from "@/lib/auth/use-auth";
 import { cx } from "@/lib/utils";
 
 const NAV = [
@@ -16,7 +15,7 @@ const NAV = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const me = usePlannerStore((s) => s.members[s.currentUserId]);
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen">
@@ -51,7 +50,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
 
           <Link href="/profile" className="hidden sm:block">
-            {me && <MemberAvatar member={me} size="sm" />}
+            {user && (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">
+                {(user.displayName || user.email || "U").slice(0, 1).toUpperCase()}
+              </span>
+            )}
           </Link>
         </div>
       </header>

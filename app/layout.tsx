@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/nav/AppShell";
 import { ToastHost } from "@/components/ui/Toast";
+import { AuthProvider } from "@/lib/auth/auth-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${jakarta.variable} h-full antialiased`}>
       <body className="min-h-full">
-        <AppShell>{children}</AppShell>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
         <ToastHost />
       </body>
     </html>

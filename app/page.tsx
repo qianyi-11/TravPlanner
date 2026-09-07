@@ -5,9 +5,21 @@ import { useShallow } from "zustand/react/shallow";
 import { LinkButton } from "@/components/ui/Button";
 import { TripCard } from "@/components/trip/TripCard";
 import { usePlannerStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth/use-auth";
 
 export default function HomePage() {
+  const { user, loading, error, signIn } = useAuth();
   const trips = usePlannerStore(useShallow((s) => Object.values(s.trips)));
+
+  if (loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading…</p>;
+  if (!user) return (
+    <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center shadow-[var(--shadow-soft)]">
+      <h1 className="font-display text-3xl font-extrabold">Plan your next trip together.</h1>
+      <p className="mt-3 text-sm text-[var(--color-ink-soft)]">Sign in with Google to create and join trips.</p>
+      <button type="button" onClick={signIn} className="mt-7 rounded-full bg-[var(--color-ink)] px-5 py-3 text-sm font-semibold text-white">Continue with Google</button>
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+    </div>
+  );
 
   return (
     <div className="space-y-14">

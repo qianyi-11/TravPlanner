@@ -28,7 +28,7 @@ Progress
 
 - [x] Phase 2 — Shared Contract Integration
 - [x] Phase 3 — Firebase Client Foundation
-- [ ] Phase 4 — Authentication
+- [x] Phase 4 — Authentication
 - [ ] Phase 5 — Typed Callable API Layer
 - [ ] Phase 6 — Firestore Repository Layer
 - [ ] Phase 7 — Data Hooks
