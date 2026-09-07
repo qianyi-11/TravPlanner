@@ -41,7 +41,7 @@ Progress
 - [x] Phase 14 — Candidate / Place Submission
 - [x] Phase 15 — Personal Budget
 - [x] Phase 16 — Candidate Voting
-- [ ] Phase 17 — Phase-Aware Navigation
+- [x] Phase 17 — Phase-Aware Navigation
 - [ ] Phase 18 — Planning Generation
 - [ ] Phase 19 — Itinerary Option Comparison
 - [ ] Phase 20 — Option Voting and Winning Option
