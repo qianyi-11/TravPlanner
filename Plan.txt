@@ -56,7 +56,7 @@ Progress
 - [x] Phase 29 — App Check / Emulator Validation
 - [x] Phase 30 — Security Rule Validation
 - [x] Phase 31 — Type and Build Cleanup
-- [ ] Phase 32 — Tests
+- [x] Phase 32 — Tests
 - [ ] Phase 33 — Primary End-to-End Acceptance Flow
 - [ ] Phase 34 — Secondary Acceptance Tests
 - [ ] Phase 35 — UI Polish Using Real Data
