@@ -38,7 +38,7 @@ Progress
 - [x] Phase 11 — Create Trip Integration
 - [x] Phase 12 — Trip Dashboard
 - [x] Phase 13 — Join and Membership Management
-- [ ] Phase 14 — Candidate / Place Submission
+- [x] Phase 14 — Candidate / Place Submission
 - [ ] Phase 15 — Personal Budget
 - [ ] Phase 16 — Candidate Voting
 - [ ] Phase 17 — Phase-Aware Navigation
