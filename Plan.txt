@@ -50,7 +50,7 @@ Progress
 - [x] Phase 23 — Fixed Booking and Critical Fact Integration
 - [x] Phase 24 — Route Normalization
 - [x] Phase 25 — Remove Mock Domain Data Completely
-- [ ] Phase 26 — Unsupported Prototype Feature Cleanup
+- [x] Phase 26 — Unsupported Prototype Feature Cleanup
 - [ ] Phase 27 — Error Handling
 - [ ] Phase 28 — Loading and Mutation UX
 - [ ] Phase 29 — App Check / Emulator Validation
