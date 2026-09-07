@@ -111,7 +111,7 @@ Do not reintroduce authoritative trip state into Zustand or localStorage.
 Progress
 
 - [x] Phase 39 — Restore Original Frontend UX
-- [ ] Phase 40 — Google Places Autocomplete
+- [x] Phase 40 — Google Places Autocomplete
 - [ ] Phase 41 — Deployment Readiness
 - [ ] Phase 42 — Production Deployment Checklist
 - [ ] Phase 43 — Production Acceptance Test
