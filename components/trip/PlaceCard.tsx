@@ -1,0 +1,8 @@
+import { Clock, MapPin } from "lucide-react";
+import type { CandidateRecord } from "@/lib/repositories/candidates";
+import type { SubmissionRecord } from "@/lib/repositories/submissions";
+import { Card } from "@/components/ui/Card";
+
+export function PlaceCard({ candidate, submission, footer }: { candidate: CandidateRecord; submission?: SubmissionRecord; footer?: React.ReactNode }) {
+  return <Card className="flex min-w-0 gap-3.5 p-3.5"><div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sand)] text-[var(--color-ink-soft)]"><MapPin size={25} /></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="break-words font-display text-[15px] font-bold">{candidate.name}</h3><p className="mt-0.5 break-words text-xs text-[var(--color-ink-soft)]">{candidate.formattedAddress || "Address unavailable"}</p></div></div><div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--color-ink-soft)]"><span className="flex items-center gap-1"><MapPin size={11} /> {candidate.location.lat.toFixed(4)}, {candidate.location.lng.toFixed(4)}</span><span className="flex items-center gap-1"><Clock size={11} /> {submission?.estimatedDurationMinutes ?? "—"} min</span></div><p className="mt-2 text-xs text-[var(--color-ink-soft)]">{candidate.placeTypes.length ? candidate.placeTypes.join(" · ") : "Place"}</p>{submission && <p className="mt-2 text-xs font-semibold">{submission.preference} · {submission.preferredPeriod}</p>}{footer && <div className="mt-3 flex items-center gap-2">{footer}</div>}</div></Card>;
+}

@@ -4,6 +4,7 @@ import { Compass, LogIn, Plus, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/auth/use-auth";
 import { useMyTrips } from "@/lib/hooks/use-my-trips";
 import { LinkButton } from "@/components/ui/Button";
+import { TripCard } from "@/components/trip/TripCard";
 
 export default function MyTripsPage() {
   const { user, signIn } = useAuth();
@@ -17,7 +18,7 @@ export default function MyTripsPage() {
   return (
     <div>
       <div className="mb-8 flex items-center justify-between gap-4"><div><h1 className="font-display text-2xl font-bold sm:text-3xl">My Trips</h1><p className="mt-1 text-sm text-[var(--color-ink-soft)]">Trips you are actively planning.</p></div><LinkButton href="/trips/new" icon={<Plus size={16} />}>New Trip</LinkButton></div>
-      {activeTrips.length === 0 ? <State title="No trips yet" detail="Create a trip or join one with an invite." icon={<Compass size={18} />} actions={<><LinkButton href="/trips/new">Create Trip</LinkButton><LinkButton href="/join" variant="outline">Join Trip</LinkButton></>} /> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{activeTrips.map((trip) => <article key={trip.id} className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{trip.role === "OWNER" ? "Owner" : "Member"}</p><h2 className="mt-2 break-words font-display text-xl font-bold">{trip.tripName}</h2><p className="mt-1 break-words text-sm text-[var(--color-ink-soft)]">{trip.destinationName}</p><p className="mt-4 text-sm">{trip.startDate} → {trip.endDate}</p><LinkButton className="mt-5" href={`/trips/${trip.id}`}>Open trip</LinkButton></article>)}</div>}
+      {activeTrips.length === 0 ? <State title="No trips yet" detail="Create a trip or join one with an invite." icon={<Compass size={18} />} actions={<><LinkButton href="/trips/new">Create Trip</LinkButton><LinkButton href="/join" variant="outline">Join Trip</LinkButton></>} /> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{activeTrips.map((trip) => <TripCard key={trip.id} trip={{ id: trip.id, name: trip.tripName, destinationName: trip.destinationName, startDate: trip.startDate, endDate: trip.endDate, role: trip.role }} />)}</div>}
     </div>
   );
 }
