@@ -34,7 +34,7 @@ Progress
 - [x] Phase 7 — Data Hooks
 - [x] Phase 8 — Reduce Zustand to UI State
 - [x] Phase 9 — My Trips
-- [ ] Phase 10 — Remove Frontend Group Domain
+- [x] Phase 10 — Remove Frontend Group Domain
 - [ ] Phase 11 — Create Trip Integration
 - [ ] Phase 12 — Trip Dashboard
 - [ ] Phase 13 — Join and Membership Management
