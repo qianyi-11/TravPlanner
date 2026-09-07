@@ -4,6 +4,7 @@ export * from "./use-current-membership";
 export * from "./use-final-itinerary";
 export * from "./use-itinerary-options";
 export * from "./use-my-trips";
+export * from "./use-own-candidate-vote";
 export * from "./use-review";
 export * from "./use-submissions";
 export * from "./use-trip-members";
