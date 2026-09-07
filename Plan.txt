@@ -44,7 +44,7 @@ Progress
 - [x] Phase 17 — Phase-Aware Navigation
 - [x] Phase 18 — Planning Generation
 - [x] Phase 19 — Itinerary Option Comparison
-- [ ] Phase 20 — Option Voting and Winning Option
+- [x] Phase 20 — Option Voting and Winning Option
 - [ ] Phase 21 — Review Workflow
 - [ ] Phase 22 — Finalized Trip Plan
 - [ ] Phase 23 — Fixed Booking and Critical Fact Integration
