@@ -1,54 +1,27 @@
 "use client";
 
-import { useShallow } from "zustand/react/shallow";
-import { Plus } from "lucide-react";
-import { usePlannerStore } from "@/lib/store";
-import { TripCard } from "@/components/trip/TripCard";
+import { Compass, LogIn, Plus, RefreshCw } from "lucide-react";
+import { useAuth } from "@/lib/auth/use-auth";
+import { useMyTrips } from "@/lib/hooks/use-my-trips";
 import { LinkButton } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/States";
-import { Compass } from "lucide-react";
 
 export default function MyTripsPage() {
-  const trips = usePlannerStore(useShallow((s) => Object.values(s.trips)));
-  const live = trips.filter((t) => t.isLive);
-  const planning = trips.filter((t) => !t.isLive);
+  const { user, signIn } = useAuth();
+  const trips = useMyTrips();
 
+  if (!user) return <section className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center"><LogIn className="mx-auto" /><h1 className="mt-4 font-display text-2xl font-bold">Sign in to see your trips</h1><button type="button" onClick={signIn} className="mt-6 rounded-full bg-[var(--color-ink)] px-5 py-3 text-sm font-semibold text-white">Continue with Google</button></section>;
+  if (trips.loading) return <p className="py-20 text-center text-sm text-[var(--color-ink-soft)]">Loading your trips…</p>;
+  if (trips.error) return <State title="Could not load your trips" detail={trips.error.message} icon={<RefreshCw size={18} />} />;
+
+  const activeTrips = (trips.data ?? []).filter((trip) => trip.status === "ACTIVE");
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold sm:text-3xl">My Trips</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Every trip you&apos;re planning or currently on.</p>
-        </div>
-        <LinkButton href="/groups" icon={<Plus size={16} />}>
-          New Trip
-        </LinkButton>
-      </div>
-
-      {trips.length === 0 ? (
-        <EmptyState icon={Compass} title="No trips yet" description="Create a group to start planning your first trip." />
-      ) : (
-        <div className="space-y-10">
-          {live.length > 0 && (
-            <section>
-              <h2 className="mb-4 font-display text-lg font-bold">Live now</h2>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {live.map((t) => (
-                  <TripCard key={t.id} trip={t} />
-                ))}
-              </div>
-            </section>
-          )}
-          <section>
-            <h2 className="mb-4 font-display text-lg font-bold">Planning</h2>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {planning.map((t) => (
-                <TripCard key={t.id} trip={t} />
-              ))}
-            </div>
-          </section>
-        </div>
-      )}
+      <div className="mb-8 flex items-center justify-between gap-4"><div><h1 className="font-display text-2xl font-bold sm:text-3xl">My Trips</h1><p className="mt-1 text-sm text-[var(--color-ink-soft)]">Trips you are actively planning.</p></div><LinkButton href="/trips/new" icon={<Plus size={16} />}>New Trip</LinkButton></div>
+      {activeTrips.length === 0 ? <State title="No trips yet" detail="Create a trip or join one with an invite." icon={<Compass size={18} />} actions={<><LinkButton href="/trips/new">Create Trip</LinkButton><LinkButton href="/join" variant="outline">Join Trip</LinkButton></>} /> : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{activeTrips.map((trip) => <article key={trip.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]"><p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">{trip.role === "OWNER" ? "Owner" : "Member"}</p><h2 className="mt-2 font-display text-xl font-bold">{trip.tripName}</h2><p className="mt-1 text-sm text-[var(--color-ink-soft)]">{trip.destinationName}</p><p className="mt-4 text-sm">{trip.startDate} → {trip.endDate}</p><LinkButton className="mt-5" href={`/trips/${trip.id}`}>Open trip</LinkButton></article>)}</div>}
     </div>
   );
+}
+
+function State({ title, detail, icon, actions }: { title: string; detail: string; icon: React.ReactNode; actions?: React.ReactNode }) {
+  return <div className="mx-auto max-w-lg rounded-3xl border border-[var(--color-border)] bg-white p-10 text-center"><div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-sand)]">{icon}</div><h2 className="mt-4 font-display text-xl font-bold">{title}</h2><p className="mt-2 text-sm text-[var(--color-ink-soft)]">{detail}</p>{actions && <div className="mt-6 flex justify-center gap-3">{actions}</div>}</div>;
 }

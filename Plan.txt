@@ -33,7 +33,7 @@ Progress
 - [x] Phase 6 — Firestore Repository Layer
 - [x] Phase 7 — Data Hooks
 - [x] Phase 8 — Reduce Zustand to UI State
-- [ ] Phase 9 — My Trips
+- [x] Phase 9 — My Trips
 - [ ] Phase 10 — Remove Frontend Group Domain
 - [ ] Phase 11 — Create Trip Integration
 - [ ] Phase 12 — Trip Dashboard
