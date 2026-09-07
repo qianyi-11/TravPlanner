@@ -2,11 +2,11 @@
 
 import { CheckCircle2 } from "lucide-react";
 import { useEffect } from "react";
-import { usePlannerStore } from "@/lib/store";
+import { useUiStore } from "@/lib/ui-store";
 
 export function ToastHost() {
-  const toast = usePlannerStore((s) => s.toast);
-  const clearToast = usePlannerStore((s) => s.clearToast);
+  const toast = useUiStore((s) => s.toast);
+  const clearToast = useUiStore((s) => s.clearToast);
 
   useEffect(() => {
     if (!toast) return;
