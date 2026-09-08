@@ -27,6 +27,9 @@
 !/functions/vendor/shared/
 !/functions/vendor/shared/package.json
 /.firebase/
+functions/.secret.local
+functions/.secret.local.*
+!functions/.secret.local.example
 
 # misc
 .DS_Store
@@ -34,6 +37,8 @@
 
 # debug
 npm-debug.log*
+firebase-debug.log
+firestore-debug.log
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*

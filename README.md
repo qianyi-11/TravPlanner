@@ -836,6 +836,15 @@ Project architecture, contracts and implementation details belong in the reposit
 
 # Documentation
 
+## Local Prototype — Mode A
+
+Run `run-local.bat` to start Next.js and the Firebase Auth, Firestore, Functions, and Emulator UI services locally.
+
+Frontend: http://localhost:3000
+Emulator UI: http://localhost:4000
+
+See [docs/local-mode-a.md](docs/local-mode-a.md).
+
 Additional technical documentation:
 
 ```text
