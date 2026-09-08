@@ -33,10 +33,32 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo.
+echo Starting Firebase emulators...
 start "Trippy Firebase Emulators" /D "%~dp0" "%ComSpec%" /k ""%~f0" emulators"
+
+echo Waiting for Auth Emulator...
+call :wait_for_port 9099 "Auth Emulator"
+if errorlevel 1 goto startup_failed
+echo Auth Emulator ready.
+
+echo.
+echo Waiting for Firestore Emulator...
+call :wait_for_port 8080 "Firestore Emulator"
+if errorlevel 1 goto startup_failed
+echo Firestore Emulator ready.
+
+echo.
+echo Waiting for Functions Emulator...
+call :wait_for_port 5001 "Functions Emulator"
+if errorlevel 1 goto startup_failed
+echo Functions Emulator ready.
+
+echo.
+echo Starting Next.js...
 start "Trippy Next.js" /D "%~dp0" "%ComSpec%" /k ""%~f0" frontend"
 
-timeout /t 8 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 start "" "http://localhost:3000"
 start "" "http://localhost:4000"
@@ -55,6 +77,24 @@ echo.
 
 pause
 exit /b 0
+
+:wait_for_port
+set "wait_port=%~1"
+set "wait_name=%~2"
+for /l %%N in (1,1,60) do (
+    curl.exe --silent --output NUL --connect-timeout 1 --max-time 1 "http://127.0.0.1:%wait_port%/"
+    if not errorlevel 1 exit /b 0
+    timeout /t 1 /nobreak >nul
+)
+echo ERROR: %wait_name% did not become ready on port %wait_port%.
+exit /b 1
+
+:startup_failed
+echo.
+echo ERROR: Required Firebase emulator startup failed.
+echo The emulator terminal remains open for inspection.
+pause
+exit /b 1
 
 :emulators
 set "FIREBASE_PROJECT=demo-codenection-2026-trippy"

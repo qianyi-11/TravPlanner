@@ -1,0 +1,387 @@
+Codex Implementation Plan — Fix Mode A Emulator Startup Race
+
+Objective
+
+Fix the local Mode A startup flow so Next.js does not initialize before the Firebase emulators, especially Firestore, are ready.
+
+Keep the change minimal.
+
+Do not redesign the launcher.
+Do not change backend contracts.
+Do not change production Firebase behavior.
+Do not deploy anything.
+
+Primary repository:
+TravPlanner
+
+Working branch:
+codex/combine
+
+Reference:
+TravelPlanner remains read-only.
+
+Progress Tracker:
+Step 1: FINISHED — inspected launcher, Firebase config, and client emulator helpers; confirmed startup race and ports.
+Step 2: FINISHED — launcher now starts emulators before frontend.
+Step 3: FINISHED — launcher waits for each port with curl.exe TCP/HTTP reachability checks.
+Step 4: FINISHED — Auth, Firestore, and Functions ports are all required before Next.js starts.
+Step 5: FINISHED — each port has a 60-second timeout and clear failure handling.
+Step 6: FINISHED — concise startup progress and readiness output added.
+Step 7: FINISHED — configured flag is set only after all emulator connections succeed.
+Step 8: FINISHED — successful emulator configuration remains idempotent; helper callers do not reconnect.
+Step 9: FINISHED — CodeGraph/inspection found Firestore access routed through getFirebaseFirestore(); no relevant bypass exists.
+Step 10: FINISHED — App Check behavior unchanged; emulator mode still returns before initialization.
+Step 11: ATTEMPTED — Firestore-only emulator exited before port 8080; Java/Netty loopback selector failed.
+Step 12: BLOCKED — full emulator startup cannot verify ports because Firestore fails during startup.
+Step 13: ATTEMPTED — run-local.bat built Functions, started emulators, and waited before Next.js; emulator failure prevented frontend startup.
+Step 14: BLOCKED — browser console check requires a running emulator/frontend flow.
+Step 15: BLOCKED — Emulator UI traffic check requires a running emulator/frontend flow.
+Step 16: BLOCKED — production-access check cannot be completed through the failed local runtime.
+Step 17: FINISHED — typecheck, lint, Functions build, and frontend build passed; lint has seven existing warnings.
+Step 18: FINISHED — diff reviewed; only launcher, emulator helper, and progress tracker are changed.
+Step 19: FINISHED — committed as fdb49a9 (`fix: wait for Firebase emulators before starting frontend`).
+Step 20: FINISHED — final report follows; emulator runtime checks remain blocked by the local Java/Netty loopback failure.
+
+
+Step 1 — Inspect Current Startup Flow
+
+Use Code Graph and repository inspection.
+
+Inspect:
+
+run-local.bat
+firebase.json
+lib/firebase/emulator.ts
+lib/firebase/firestore.ts
+lib/firebase/auth.ts
+lib/firebase/functions.ts
+
+Confirm:
+
+run-local.bat currently starts Firebase emulators and Next.js almost at the same time.
+
+Confirm Firestore Emulator target:
+
+127.0.0.1:8080
+
+Confirm Auth target:
+
+127.0.0.1:9099
+
+Confirm Functions target:
+
+127.0.0.1:5001
+
+Do not modify anything until the startup sequence is understood.
+
+Step 2 — Fix Launcher Startup Ordering
+
+Update run-local.bat so the sequence becomes:
+
+build backend
+start Firebase emulators
+wait for emulator readiness
+start Next.js
+open browser
+
+Do not start Next.js immediately after starting the emulator process.
+
+Step 3 — Add Firestore Readiness Check
+
+Use a real readiness check rather than only a fixed timeout.
+
+Preferred approach:
+
+loop until TCP port 8080 accepts connections.
+
+Use a Windows-compatible command that does not depend on PowerShell execution policy.
+
+Possible implementation options:
+
+curl.exe against http://127.0.0.1:8080
+
+or
+
+a small Node.js TCP readiness script
+
+Prefer the smallest reliable option already available in the development environment.
+
+Do not assume a successful HTTP response body is required.
+The goal is only to confirm the Firestore emulator is listening.
+
+Step 4 — Check All Required Emulator Ports
+
+Prefer waiting for all three required services:
+
+Auth:
+9099
+
+Firestore:
+8080
+
+Functions:
+5001
+
+Do not start Next.js until all required emulator ports are reachable.
+
+If Emulator UI 4000 is slightly delayed, it does not need to block frontend startup unless necessary.
+
+Step 5 — Add Timeout and Failure Handling
+
+The readiness loop must not wait forever.
+
+Use a reasonable timeout, for example 30 to 60 seconds.
+
+If an emulator does not become ready:
+
+print a clear error such as:
+
+ERROR: Firestore Emulator did not become ready on port 8080.
+
+Then stop launcher progression.
+
+Do not start Next.js if required emulators failed.
+
+Keep the emulator terminal open so the user can inspect the actual Firebase error.
+
+Step 6 — Improve Launcher Output
+
+Print concise startup progress:
+
+Starting Firebase emulators...
+Waiting for Auth Emulator...
+Auth Emulator ready.
+
+Waiting for Firestore Emulator...
+Firestore Emulator ready.
+
+Waiting for Functions Emulator...
+Functions Emulator ready.
+
+Starting Next.js...
+
+This should make failures obvious.
+
+Step 7 — Harden configureFirebaseEmulators()
+
+Inspect lib/firebase/emulator.ts.
+
+Current risk:
+
+configured = true
+
+is set before all connectAuthEmulator, connectFirestoreEmulator, and connectFunctionsEmulator calls finish.
+
+Change this so:
+
+configured = true
+
+is assigned only after all emulator connections succeed.
+
+Conceptually:
+
+if already configured, return
+
+create app
+resolve hosts
+connect auth
+connect firestore
+connect functions
+configured = true
+
+Do not change production behavior.
+
+Step 8 — Preserve Idempotency
+
+Ensure configureFirebaseEmulators() remains safe if called from:
+
+getFirebaseAuth()
+getFirebaseFirestore()
+getFirebaseFunctions()
+
+Multiple calls must not reconnect emulators after successful configuration.
+
+Do not introduce duplicate emulator connections.
+
+Step 9 — Verify No Firestore Operation Happens Before Emulator Configuration
+
+Use Code Graph to inspect all callers of:
+
+getFirebaseFirestore()
+
+Confirm application Firestore operations always obtain the instance through this helper.
+
+If any code directly uses:
+
+getFirestore(getFirebaseApp())
+
+outside the wrapper, identify it.
+
+Only fix direct bypasses if they are relevant to the startup error.
+
+Do not perform broad unrelated refactoring.
+
+Step 10 — Keep App Check Behavior Unchanged
+
+Confirm emulator mode still skips App Check.
+
+Do not modify App Check unless required by the fix.
+
+Expected condition:
+
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true
+
+should remain sufficient to avoid production App Check initialization.
+
+Step 11 — Test Firestore Emulator Alone
+
+Before testing the full launcher, verify manually:
+
+npx.cmd firebase emulators:start --only firestore --project demo-codenection-2026-trippy
+
+Confirm port 8080 becomes reachable.
+
+Stop it after verification.
+
+Step 12 — Test Full Emulator Startup
+
+Run:
+
+npx.cmd firebase emulators:start --only auth,firestore,functions --project demo-codenection-2026-trippy
+
+Confirm:
+
+9099 reachable
+8080 reachable
+5001 reachable
+4000 available
+
+Stop after verification.
+
+Step 13 — Test Updated run-local.bat
+
+Actually execute:
+
+run-local.bat
+
+Confirm the order is:
+
+Firebase emulator process starts
+ports become ready
+Next.js starts
+browser opens
+
+The frontend must not open before required emulator services are ready.
+
+Step 14 — Verify Firestore Console Error
+
+Open:
+
+http://localhost:3000
+
+Watch the browser console.
+
+Confirm the previous error does not appear:
+
+Could not reach Cloud Firestore backend
+
+If it still appears, inspect whether it is transient or persistent.
+
+Do not claim success if the error continues repeatedly.
+
+Step 15 — Verify Emulator Traffic
+
+Use Firebase Emulator UI:
+
+http://localhost:4000
+
+Confirm the frontend is using local:
+
+Auth
+Firestore
+Functions
+
+Perform a simple read/write action.
+
+Confirm Firestore documents appear in the emulator UI.
+
+Step 16 — Confirm No Production Firestore Access
+
+Verify Mode A still uses:
+
+demo-codenection-2026-trippy
+
+and:
+
+NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true
+
+Confirm no test data appears in production Firestore.
+
+Step 17 — Validation
+
+Run:
+
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run build:functions
+npm.cmd run build:frontend
+
+Fix only regressions related to this change.
+
+Step 18 — Review Diff
+
+Run:
+
+git status
+git diff
+
+Expected modified files should be small, likely:
+
+run-local.bat
+lib/firebase/emulator.ts
+
+Possibly documentation if startup behavior changed.
+
+Avoid unrelated changes.
+
+Step 19 — Commit
+
+Commit with a clear message such as:
+
+fix: wait for Firebase emulators before starting frontend
+
+Step 20 — Final Report
+
+Report:
+
+Root cause identified:
+startup race between emulator startup and Next.js initialization
+
+Files changed:
+- ...
+
+Readiness strategy:
+- ...
+
+Timeout behavior:
+- ...
+
+configureFirebaseEmulators hardening:
+- ...
+
+Validation:
+- typecheck
+- lint
+- Functions build
+- frontend build
+- run-local.bat runtime test
+- Firestore connection test
+
+Firestore console error:
+resolved / still present
+
+Production Firestore touched:
+No
+
+Known limitations:
+- ...
