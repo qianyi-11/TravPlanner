@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/server/prisma";
 import { mapCatalogPlace, mapGroup, mapMember, mapTrip } from "@/lib/server/mappers";
 import type { Group, Member, Place, Trip } from "@/lib/types";
@@ -71,7 +72,10 @@ export async function GET() {
     );
   }
 
-  const currentUserId = memberRows.find((m) => m.isYou)?.id ?? memberRows[0]?.id ?? "";
+  const selectedUserId = (await cookies()).get("travplanner_demo_user")?.value;
+  const currentUserId = memberRows.some((member) => member.id === selectedUserId)
+    ? selectedUserId
+    : memberRows.find((m) => m.isYou)?.id ?? memberRows[0]?.id ?? "";
 
   return NextResponse.json({ groups, members, trips, places, currentUserId });
 }

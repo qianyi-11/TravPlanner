@@ -36,6 +36,7 @@ interface PlannerState {
   hydrating: boolean;
 
   hydrate: () => Promise<void>;
+  switchDemoUser: (memberId: string) => Promise<boolean>;
   showToast: (msg: string) => void;
   clearToast: () => void;
 
@@ -94,6 +95,19 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     } catch {
       set({ hydrating: false, toast: "Couldn't reach the server. Is it running?" });
     }
+  },
+
+  switchDemoUser: async (memberId) => {
+    const result = await api("/api/demo-session", {
+      method: "POST",
+      body: JSON.stringify({ memberId }),
+    });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't switch traveller" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
   },
 
   showToast: (msg) => set({ toast: msg }),

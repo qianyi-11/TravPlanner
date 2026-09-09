@@ -3,7 +3,8 @@
 import { Compass, Home, Receipt, Users, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { MemberAvatar } from "@/components/ui/Avatar";
 import { LoadingState } from "@/components/ui/States";
@@ -32,9 +33,19 @@ const NAV = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
+  const currentUserId = usePlannerStore((s) => s.currentUserId);
   const initialized = usePlannerStore((s) => s.initialized);
   const hydrate = usePlannerStore((s) => s.hydrate);
+  const switchDemoUser = usePlannerStore((s) => s.switchDemoUser);
+  const [switchingUser, setSwitchingUser] = useState(false);
   const startedRef = useRef(false);
+
+  const tripId = pathname.startsWith("/trips/") ? pathname.split("/")[2] : undefined;
+  const trip = usePlannerStore((s) => (tripId ? s.trips[tripId] : undefined));
+  const tripMembers = usePlannerStore(
+    useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
+  );
+  const activeTripMember = tripMembers.find((member) => member.id === currentUserId);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -74,9 +85,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
-          <Link href="/profile" className="hidden sm:block">
-            {me && <MemberAvatar member={me} size="sm" />}
-          </Link>
+          <div className="flex items-center gap-3">
+            {trip && tripMembers.length > 0 && (
+              <div className="flex items-center gap-2 text-sm">
+                <label htmlFor="demo-traveller" className="hidden text-[var(--color-ink-soft)] sm:inline">
+                  Demo as:
+                </label>
+                <select
+                  id="demo-traveller"
+                  value={activeTripMember?.id ?? ""}
+                  disabled={switchingUser}
+                  onChange={async (event) => {
+                    const memberId = event.target.value;
+                    if (!memberId || memberId === currentUserId) return;
+                    setSwitchingUser(true);
+                    try {
+                      await switchDemoUser(memberId);
+                    } finally {
+                      setSwitchingUser(false);
+                    }
+                  }}
+                  className="max-w-32 rounded-full border border-[var(--color-border)] bg-white px-3 py-1.5 text-sm font-semibold text-[var(--color-ink)] outline-none"
+                >
+                  {!activeTripMember && <option value="">Select traveller</option>}
+                  {tripMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+                </select>
+                {switchingUser && <span className="hidden text-xs text-[var(--color-ink-soft)] sm:inline">Switching…</span>}
+              </div>
+            )}
+            <Link href="/profile" className="hidden sm:block">
+              {me && <MemberAvatar member={me} size="sm" />}
+            </Link>
+          </div>
         </div>
       </header>
 
