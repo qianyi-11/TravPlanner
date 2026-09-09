@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { usePlannerStore } from "@/lib/store";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
+import { MapView } from "@/components/trip/MapView";
 import { Badge, Card } from "@/components/ui/Card";
 import { MemberStack } from "@/components/ui/Avatar";
 import { formatMinutes } from "@/lib/utils";
@@ -129,8 +130,8 @@ export default function PlaceDetailsPage({
 
           <Section title="Location">
             <p className="mb-3 text-sm text-[var(--color-ink-soft)]">{place.address}</p>
-            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-sand)] text-sm text-[var(--color-ink-soft)]">
-              <MapPin size={16} className="mr-1.5" /> {place.coordinates.lat.toFixed(4)}, {place.coordinates.lng.toFixed(4)}
+            <div className="h-52 overflow-hidden rounded-2xl">
+              <MapView places={[place]} showRoute={false} />
             </div>
           </Section>
 

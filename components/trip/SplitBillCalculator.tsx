@@ -1,0 +1,367 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { Calculator, Plus, Trash2, UserPlus, X } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { Card, Chip } from "@/components/ui/Card";
+import { cx } from "@/lib/utils";
+
+interface Item {
+  id: string;
+  name: string;
+  price: string;
+  qty: string;
+}
+
+interface Person {
+  id: string;
+  name: string;
+  items: Item[];
+}
+
+interface Fees {
+  deliveryEnabled: boolean;
+  deliveryAmount: string;
+  sstEnabled: boolean;
+  serviceEnabled: boolean;
+  discountEnabled: boolean;
+  discountPercent: string;
+  roundingEnabled: boolean;
+  roundingAmount: string;
+}
+
+const SST_RATE = 0.1;
+const SERVICE_RATE = 0.06;
+
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function blankItem(): Item {
+  return { id: uid(), name: "", price: "", qty: "1" };
+}
+
+function blankPerson(name: string): Person {
+  return { id: uid(), name, items: [blankItem()] };
+}
+
+function num(v: string): number {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function money(n: number): string {
+  return `RM ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function itemTotal(item: Item): number {
+  return num(item.price) * (parseInt(item.qty, 10) || 0);
+}
+
+function personSubtotal(person: Person): number {
+  return person.items.reduce((s, i) => s + itemTotal(i), 0);
+}
+
+const DEFAULT_FEES: Fees = {
+  deliveryEnabled: false,
+  deliveryAmount: "0.00",
+  sstEnabled: false,
+  serviceEnabled: false,
+  discountEnabled: false,
+  discountPercent: "0",
+  roundingEnabled: false,
+  roundingAmount: "0",
+};
+
+export function SplitBillCalculator({
+  storageKey,
+  defaultNames = [],
+}: {
+  storageKey: string;
+  defaultNames?: string[];
+}) {
+  const [people, setPeople] = useState<Person[]>(() => {
+    const names = defaultNames.length > 0 ? defaultNames.slice(0, 2) : ["Person 1", "Person 2"];
+    return names.length > 0 ? names.map(blankPerson) : [blankPerson("Person 1")];
+  });
+  const [fees, setFees] = useState<Fees>(DEFAULT_FEES);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Restore + persist a work-in-progress split per trip so it isn't lost on navigation.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { people: Person[]; fees: Fees };
+        if (parsed.people?.length) setPeople(parsed.people);
+        if (parsed.fees) setFees(parsed.fees);
+      }
+    } catch {
+      // ignore malformed/unavailable storage
+    }
+    setHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ people, fees }));
+    } catch {
+      // ignore quota/private-mode errors
+    }
+  }, [people, fees, storageKey, hydrated]);
+
+  function addPerson() {
+    setPeople((p) => [...p, blankPerson(`Person ${p.length + 1}`)]);
+    setShowBreakdown(false);
+  }
+  function removePerson(id: string) {
+    setPeople((p) => (p.length > 1 ? p.filter((x) => x.id !== id) : p));
+    setShowBreakdown(false);
+  }
+  function renamePerson(id: string, name: string) {
+    setPeople((p) => p.map((x) => (x.id === id ? { ...x, name } : x)));
+  }
+  function addItem(personId: string) {
+    setPeople((p) => p.map((x) => (x.id === personId ? { ...x, items: [...x.items, blankItem()] } : x)));
+    setShowBreakdown(false);
+  }
+  function removeItem(personId: string, itemId: string) {
+    setPeople((p) =>
+      p.map((x) => (x.id === personId ? { ...x, items: x.items.filter((i) => i.id !== itemId) } : x))
+    );
+    setShowBreakdown(false);
+  }
+  function updateItem(personId: string, itemId: string, patch: Partial<Item>) {
+    setPeople((p) =>
+      p.map((x) =>
+        x.id === personId
+          ? { ...x, items: x.items.map((i) => (i.id === itemId ? { ...i, ...patch } : i)) }
+          : x
+      )
+    );
+    setShowBreakdown(false);
+  }
+
+  const subtotal = useMemo(() => people.reduce((s, p) => s + personSubtotal(p), 0), [people]);
+  const discountAmount = fees.discountEnabled ? subtotal * (num(fees.discountPercent) / 100) : 0;
+  const taxable = Math.max(0, subtotal - discountAmount);
+  const sstAmount = fees.sstEnabled ? taxable * SST_RATE : 0;
+  const serviceAmount = fees.serviceEnabled ? taxable * SERVICE_RATE : 0;
+  const deliveryAmount = fees.deliveryEnabled ? num(fees.deliveryAmount) : 0;
+  const roundingAmount = fees.roundingEnabled ? num(fees.roundingAmount) : 0;
+  const totalPaid = taxable + sstAmount + serviceAmount + deliveryAmount + roundingAmount;
+
+  const perPerson = people.map((p) => {
+    const sub = personSubtotal(p);
+    const share = subtotal > 0 ? sub / subtotal : 1 / people.length;
+    return { person: p, subtotal: sub, amount: totalPaid * share };
+  });
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-4">
+        {people.map((person) => (
+          <Card key={person.id} className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <input
+                value={person.name}
+                onChange={(e) => renamePerson(person.id, e.target.value)}
+                placeholder="Name"
+                className="rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-sm font-bold font-display outline-none focus:border-[var(--color-border)] focus:bg-[var(--color-sand)]"
+              />
+              {people.length > 1 && (
+                <button
+                  onClick={() => removePerson(person.id)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)]"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            <div className="hidden grid-cols-[1fr_90px_70px_90px_28px] gap-2 px-1 pb-1.5 text-xs font-semibold text-[var(--color-ink-soft)] sm:grid">
+              <span>Item Name</span>
+              <span>Price</span>
+              <span>Quantity</span>
+              <span className="text-right">Total</span>
+              <span />
+            </div>
+
+            <div className="space-y-2">
+              {person.items.map((item) => (
+                <div key={item.id} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_90px_70px_90px_28px] sm:items-center">
+                  <input
+                    value={item.name}
+                    onChange={(e) => updateItem(person.id, item.id, { name: e.target.value })}
+                    placeholder="Item name"
+                    className="col-span-2 rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-primary)] sm:col-span-1"
+                  />
+                  <input
+                    value={item.price}
+                    onChange={(e) => updateItem(person.id, item.id, { price: e.target.value })}
+                    placeholder="0.00"
+                    inputMode="decimal"
+                    className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-primary)]"
+                  />
+                  <input
+                    value={item.qty}
+                    onChange={(e) => updateItem(person.id, item.id, { qty: e.target.value })}
+                    placeholder="1"
+                    inputMode="numeric"
+                    className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-primary)]"
+                  />
+                  <span className="text-right text-sm font-semibold">{money(itemTotal(item))}</span>
+                  <button
+                    onClick={() => removeItem(person.id, item.id)}
+                    className="flex h-7 w-7 items-center justify-self-end rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] sm:justify-self-center"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                onClick={() => addItem(person.id)}
+                className="flex items-center gap-1 text-sm font-semibold text-[var(--color-primary)]"
+              >
+                <Plus size={14} /> Add Item
+              </button>
+              <span className="text-sm text-[var(--color-ink-soft)]">
+                Total <span className="ml-1.5 font-display font-bold text-[var(--color-ink)]">{money(personSubtotal(person))}</span>
+              </span>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Button variant="outline" fullWidth icon={<UserPlus size={15} />} onClick={addPerson}>
+        Add Person
+      </Button>
+
+      <div className="flex items-center justify-end gap-3 text-sm">
+        <span className="text-[var(--color-ink-soft)]">Subtotal:</span>
+        <span className="font-display text-xl font-bold">{money(subtotal)}</span>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Chip
+          label="Delivery Fee"
+          selected={fees.deliveryEnabled}
+          onClick={() => setFees((f) => ({ ...f, deliveryEnabled: !f.deliveryEnabled }))}
+        />
+        <Chip label="SST Tax (10%)" selected={fees.sstEnabled} onClick={() => setFees((f) => ({ ...f, sstEnabled: !f.sstEnabled }))} />
+        <Chip
+          label="Service Tax (6%)"
+          selected={fees.serviceEnabled}
+          onClick={() => setFees((f) => ({ ...f, serviceEnabled: !f.serviceEnabled }))}
+        />
+        <Chip label="Discount" selected={fees.discountEnabled} onClick={() => setFees((f) => ({ ...f, discountEnabled: !f.discountEnabled }))} />
+        <Chip
+          label="Rounding Adjustment"
+          selected={fees.roundingEnabled}
+          onClick={() => setFees((f) => ({ ...f, roundingEnabled: !f.roundingEnabled }))}
+        />
+      </div>
+
+      {(fees.deliveryEnabled || fees.sstEnabled || fees.serviceEnabled || fees.discountEnabled || fees.roundingEnabled) && (
+        <Card className="space-y-3 p-5">
+          <h3 className="text-center font-display text-sm font-bold">Additional Fees</h3>
+
+          {fees.deliveryEnabled && (
+            <FeeRow label="Delivery Fee">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-[var(--color-ink-soft)]">RM</span>
+                <input
+                  value={fees.deliveryAmount}
+                  onChange={(e) => setFees((f) => ({ ...f, deliveryAmount: e.target.value }))}
+                  inputMode="decimal"
+                  className="w-20 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm outline-none focus:border-[var(--color-primary)]"
+                />
+              </div>
+              <span className="w-20 text-right text-sm font-semibold">{money(deliveryAmount)}</span>
+            </FeeRow>
+          )}
+          {fees.sstEnabled && (
+            <FeeRow label="SST Tax">
+              <span className="text-sm text-[var(--color-ink-soft)]">10%</span>
+              <span className="w-20 text-right text-sm font-semibold">{money(sstAmount)}</span>
+            </FeeRow>
+          )}
+          {fees.serviceEnabled && (
+            <FeeRow label="Service Tax">
+              <span className="text-sm text-[var(--color-ink-soft)]">6%</span>
+              <span className="w-20 text-right text-sm font-semibold">{money(serviceAmount)}</span>
+            </FeeRow>
+          )}
+          {fees.discountEnabled && (
+            <FeeRow label="Discount">
+              <div className="flex items-center gap-1.5">
+                <input
+                  value={fees.discountPercent}
+                  onChange={(e) => setFees((f) => ({ ...f, discountPercent: e.target.value }))}
+                  inputMode="decimal"
+                  className="w-14 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm outline-none focus:border-[var(--color-primary)]"
+                />
+                <span className="text-xs text-[var(--color-ink-soft)]">%</span>
+              </div>
+              <span className="w-20 text-right text-sm font-semibold text-[var(--color-danger)]">
+                −{money(discountAmount)}
+              </span>
+            </FeeRow>
+          )}
+          {fees.roundingEnabled && (
+            <FeeRow label="Rounding Adjustment">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-[var(--color-ink-soft)]">RM</span>
+                <input
+                  value={fees.roundingAmount}
+                  onChange={(e) => setFees((f) => ({ ...f, roundingAmount: e.target.value }))}
+                  inputMode="decimal"
+                  className="w-16 rounded-lg border border-[var(--color-border)] px-2 py-1 text-sm outline-none focus:border-[var(--color-primary)]"
+                />
+              </div>
+              <span className="w-20 text-right text-sm font-semibold">{money(roundingAmount)}</span>
+            </FeeRow>
+          )}
+        </Card>
+      )}
+
+      <div className="flex items-center justify-end gap-3">
+        <span className="text-sm text-[var(--color-ink-soft)]">Total Paid:</span>
+        <span className="font-display text-2xl font-bold text-[var(--color-primary)]">{money(totalPaid)}</span>
+      </div>
+
+      <Button fullWidth size="lg" icon={<Calculator size={16} />} onClick={() => setShowBreakdown(true)}>
+        Calculate
+      </Button>
+
+      {showBreakdown && (
+        <div className="animate-fade-in-up">
+          <h3 className="mb-3 font-display text-lg font-bold">Total Amount to Pay</h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {perPerson.map(({ person, amount }) => (
+              <Card key={person.id} className="p-4">
+                <p className="truncate text-xs font-semibold text-[var(--color-ink-soft)]">{person.name || "Unnamed"}</p>
+                <p className="mt-1 font-display text-xl font-bold">{money(amount)}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FeeRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className={cx("flex items-center justify-between gap-3")}>
+      <span className="text-sm font-medium text-[var(--color-ink-soft)]">{label}:</span>
+      <div className="flex items-center gap-3">{children}</div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
 import { MapView } from "@/components/trip/MapView";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
+import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { Card, Badge } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { Place } from "@/lib/types";
@@ -139,28 +140,14 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
             <h2 className="font-display text-lg font-bold">Suggested route sequence</h2>
           </div>
           <Card className="p-5">
-            <div className="space-y-0">
-              {trip.itinerary[0].activities.map((act, i, arr) => {
-                const place = act.placeId ? placesMap[act.placeId] : null;
-                return (
-                  <div key={act.id} className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs font-semibold text-[var(--color-ink-soft)]">{act.time}</span>
-                      <div className="my-1 h-2 w-2 rounded-full bg-[var(--color-ink)]" />
-                      {i < arr.length - 1 && <div className="w-px flex-1 bg-[var(--color-border)]" style={{ minHeight: 28 }} />}
-                    </div>
-                    <div className="pb-6">
-                      <p className="text-sm font-bold">{place ? place.name : act.label}</p>
-                      {i < arr.length - 1 && (
-                        <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
-                          Travel: {arr[i + 1].travelFromPrevMinutes} min
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <ItineraryTimeline
+              activities={trip.itinerary[0].activities}
+              places={placesMap}
+              transport={trip.transport}
+              tripId={tripId}
+              selectedId={selected}
+              onSelect={setSelected}
+            />
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Showing Day 1 as an example — full days appear in your itinerary.</p>
           </Card>
         </div>

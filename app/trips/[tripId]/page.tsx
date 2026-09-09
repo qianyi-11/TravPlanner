@@ -1,7 +1,7 @@
 "use client";
 
-import { use } from "react";
-import { notFound } from "next/navigation";
+import { use, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
 import {
   ArrowRight,
   CheckCircle2,
@@ -12,14 +12,16 @@ import {
   MapPinned,
   Route as RouteIcon,
   Sparkles,
+  Trash2,
   Vote,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
 import { Card, Badge } from "@/components/ui/Card";
-import { LinkButton } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { MemberAvatar } from "@/components/ui/Avatar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { daysBetween, formatCurrency, pressureTone } from "@/lib/utils";
 import type { PlanningStage } from "@/lib/types";
 
@@ -73,6 +75,7 @@ const STAGE_INFO: Record<
 
 export default function TripWorkspacePage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
+  const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const members = usePlannerStore(
     useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
@@ -80,6 +83,9 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
   const places = usePlannerStore(
     useShallow((s) => (trip ? trip.placeIds.map((id) => s.places[id]).filter(Boolean) : []))
   );
+  const deleteTrip = usePlannerStore((s) => s.deleteTrip);
+  const showToast = usePlannerStore((s) => s.showToast);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!trip) notFound();
 
@@ -156,32 +162,65 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
           </Card>
         </div>
 
-        <Card className="h-fit p-5">
-          <h3 className="mb-4 font-display text-base font-bold">Group status</h3>
-          <div className="space-y-4 text-sm">
-            <StatusRow label="Suggestions submitted" done={suggestedDone} total={members.length} />
-            <StatusRow label="Votes submitted" done={votedDone} total={members.length} />
-          </div>
-          <div className="mt-5 space-y-3 border-t border-[var(--color-border-soft)] pt-4">
-            {members.map((m) => (
-              <div key={m.id} className="flex items-center gap-3">
-                <MemberAvatar member={m} size="sm" />
-                <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
-                {m.hasSubmittedVotes ? (
-                  <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
-                ) : m.hasSubmittedSuggestions ? (
-                  <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
-                ) : (
-                  <Circle size={16} className="text-[var(--color-border)]" />
-                )}
-              </div>
-            ))}
-          </div>
-          <LinkButton href={`/groups/${trip.groupId}`} variant="ghost" size="sm" fullWidth className="mt-4" icon={<Compass size={14} />}>
-            Back to group room
-          </LinkButton>
-        </Card>
+        <div className="space-y-6">
+          <Card className="h-fit p-5">
+            <h3 className="mb-4 font-display text-base font-bold">Group status</h3>
+            <div className="space-y-4 text-sm">
+              <StatusRow label="Suggestions submitted" done={suggestedDone} total={members.length} />
+              <StatusRow label="Votes submitted" done={votedDone} total={members.length} />
+            </div>
+            <div className="mt-5 space-y-3 border-t border-[var(--color-border-soft)] pt-4">
+              {members.map((m) => (
+                <div key={m.id} className="flex items-center gap-3">
+                  <MemberAvatar member={m} size="sm" />
+                  <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
+                  {m.hasSubmittedVotes ? (
+                    <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
+                  ) : m.hasSubmittedSuggestions ? (
+                    <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
+                  ) : (
+                    <Circle size={16} className="text-[var(--color-border)]" />
+                  )}
+                </div>
+              ))}
+            </div>
+            <LinkButton href={`/groups/${trip.groupId}`} variant="ghost" size="sm" fullWidth className="mt-4" icon={<Compass size={14} />}>
+              Back to group room
+            </LinkButton>
+          </Card>
+
+          <Card className="p-5">
+            <h3 className="mb-1 font-display text-sm font-bold text-[var(--color-danger)]">Danger zone</h3>
+            <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
+              Permanently delete this trip and everything in it. This can&apos;t be undone.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              fullWidth
+              icon={<Trash2 size={14} />}
+              className="border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
+              onClick={() => setConfirmOpen(true)}
+            >
+              Delete Trip
+            </Button>
+          </Card>
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Delete this trip?"
+        description={`"${trip.name}" and everything in it — suggestions, votes, and the itinerary — will be permanently deleted. This can't be undone.`}
+        confirmLabel="Delete Trip"
+        danger
+        onConfirm={async () => {
+          await deleteTrip(trip.id);
+          showToast(`${trip.name} was deleted`);
+          router.push(`/groups/${trip.groupId}`);
+        }}
+      />
     </div>
   );
 }

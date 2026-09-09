@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
-import { Check, Plus, Search } from "lucide-react";
+import { Check, Globe, Loader2, Plus, Search } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
@@ -10,18 +10,56 @@ import { PlaceCard } from "@/components/trip/PlaceCard";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/States";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { enrichGooglePlace, searchGooglePlaces } from "@/lib/google-places-client";
+import type { Place } from "@/lib/types";
 
 export default function AddPlacesPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const allPlaces = usePlannerStore(useShallow((s) => Object.values(s.places)));
+  const allPlacesById = usePlannerStore((s) => s.places);
   const addSuggestion = usePlannerStore((s) => s.addPlaceSuggestion);
+  const importAndSuggest = usePlannerStore((s) => s.importAndSuggestPlace);
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
   const showToast = usePlannerStore((s) => s.showToast);
 
   const [query, setQuery] = useState("");
   const [destFilter, setDestFilter] = useState<string>("All");
+  const [mapsReady, setMapsReady] = useState(false);
+  const [liveResults, setLiveResults] = useState<Place[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addingId, setAddingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadGoogleMaps()
+      .then(() => setMapsReady(true))
+      .catch(() => {});
+  }, []);
+
+  const searchDestination = destFilter !== "All" ? destFilter : trip?.destinations[0] ?? "";
+
+  useEffect(() => {
+    if (!mapsReady || !query.trim() || !searchDestination) {
+      setLiveResults([]);
+      return;
+    }
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      searchGooglePlaces(query, searchDestination).then((results) => {
+        if (!cancelled) {
+          setLiveResults(results);
+          setSearching(false);
+        }
+      });
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, searchDestination, mapsReady]);
 
   if (!trip) notFound();
 
@@ -41,9 +79,57 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
       .sort((a, b) => b.rating - a.rating);
   }, [allPlaces, trip.destinations, destFilter, query]);
 
+  const catalogIds = new Set(candidates.map((p) => p.id));
+  const freshLiveResults = liveResults.filter((p) => !catalogIds.has(p.id));
+
   const myCount = allPlaces.filter(
     (p) => trip.placeIds.includes(p.id) && p.suggestedBy.includes(currentUserId)
   ).length;
+
+  async function handleAdd(place: Place) {
+    const alreadyImported = Boolean(allPlacesById[place.id]);
+    if (alreadyImported) {
+      await addSuggestion(tripId, place.id);
+      showToast(`${place.name} added to your suggestions`);
+      return;
+    }
+    setAddingId(place.id);
+    const enriched = (await enrichGooglePlace(place.id.replace(/^g-/, ""), place.destination)) ?? place;
+    await importAndSuggest(tripId, enriched);
+    setAddingId(null);
+    showToast(`${place.name} added to your suggestions`);
+  }
+
+  function renderCard(place: Place) {
+    const added = allPlacesById[place.id]
+      ? place.suggestedBy.includes(currentUserId) || allPlacesById[place.id].suggestedBy.includes(currentUserId)
+      : false;
+    const isAdding = addingId === place.id;
+    return (
+      <PlaceCard
+        key={place.id}
+        place={allPlacesById[place.id] ?? place}
+        footer={
+          <Button
+            size="sm"
+            variant={added ? "outline" : "primary"}
+            icon={isAdding ? <Loader2 size={14} className="animate-spin" /> : added ? <Check size={14} /> : <Plus size={14} />}
+            disabled={isAdding}
+            onClick={() => {
+              if (added) {
+                removeSuggestion(tripId, place.id);
+              } else {
+                handleAdd(place);
+              }
+            }}
+            className={added ? "border-[var(--color-teal)] text-[var(--color-teal-dark)]" : ""}
+          >
+            {isAdding ? "Adding..." : added ? "Added" : "Add"}
+          </Button>
+        }
+      />
+    );
+  }
 
   return (
     <div>
@@ -62,8 +148,11 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={`Search ${trip.destinations[0]} places...`}
-              className="w-full rounded-xl border border-[var(--color-border)] py-3 pl-11 pr-4 text-sm outline-none focus:border-[var(--color-primary)]"
+              className="w-full rounded-xl border border-[var(--color-border)] py-3 pl-11 pr-10 text-sm outline-none focus:border-[var(--color-primary)]"
             />
+            {searching && (
+              <Loader2 size={15} className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-[var(--color-ink-soft)]" />
+            )}
           </div>
           {trip.destinations.length > 1 && (
             <div className="mt-3 flex flex-wrap gap-2">
@@ -75,37 +164,20 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
           )}
         </div>
 
-        <div className="mt-5 space-y-3">
-          {candidates.length === 0 ? (
+        <div className={`mt-5 space-y-3 ${myCount > 0 ? "pb-24 sm:pb-20" : ""}`}>
+          {candidates.length === 0 && freshLiveResults.length === 0 ? (
             <EmptyState icon={Search} title="No places found" description="Try a different search term or destination." />
           ) : (
-            candidates.map((place) => {
-              const added = place.suggestedBy.includes(currentUserId);
-              return (
-                <PlaceCard
-                  key={place.id}
-                  place={place}
-                  footer={
-                    <Button
-                      size="sm"
-                      variant={added ? "outline" : "primary"}
-                      icon={added ? <Check size={14} /> : <Plus size={14} />}
-                      onClick={() => {
-                        if (added) {
-                          removeSuggestion(tripId, place.id);
-                        } else {
-                          addSuggestion(tripId, place.id);
-                          showToast(`${place.name} added to your suggestions`);
-                        }
-                      }}
-                      className={added ? "border-[var(--color-teal)] text-[var(--color-teal-dark)]" : ""}
-                    >
-                      {added ? "Added" : "Add"}
-                    </Button>
-                  }
-                />
-              );
-            })
+            candidates.map(renderCard)
+          )}
+
+          {freshLiveResults.length > 0 && (
+            <div className="pt-2">
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                <Globe size={13} /> More results from Google
+              </div>
+              <div className="space-y-3">{freshLiveResults.map(renderCard)}</div>
+            </div>
           )}
         </div>
       </div>

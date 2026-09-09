@@ -7,12 +7,13 @@ import {
   ChevronDown,
   ListTree,
   MapPinned,
+  Receipt,
   Ticket,
   Wallet,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
-import { ActivityCard } from "@/components/trip/ActivityCard";
+import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { MapView } from "@/components/trip/MapView";
 import { PlaceCard } from "@/components/trip/PlaceCard";
 import { BudgetCard } from "@/components/trip/BudgetCard";
@@ -118,10 +119,8 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
                     </div>
                   </button>
                   {openDay === i && (
-                    <div className="space-y-2.5 border-t border-[var(--color-border-soft)] p-4">
-                      {day.activities.map((act) => (
-                        <ActivityCard key={act.id} activity={act} place={act.placeId ? placesMap[act.placeId] : null} />
-                      ))}
+                    <div className="border-t border-[var(--color-border-soft)] p-4">
+                      <ItineraryTimeline activities={day.activities} places={placesMap} transport={trip.transport} tripId={tripId} />
                     </div>
                   )}
                 </Card>
@@ -142,9 +141,14 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
           ))}
 
         {tab === "budget" && (
-          <div className="grid gap-5 lg:grid-cols-2">
-            <BudgetCard trip={trip} />
-            <PressureRadar pressure={trip.pricePressure} />
+          <div className="space-y-5">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <BudgetCard trip={trip} />
+              <PressureRadar pressure={trip.pricePressure} />
+            </div>
+            <LinkButton href={`/trips/${tripId}/split-bill`} variant="outline" icon={<Receipt size={15} />}>
+              Split a Bill
+            </LinkButton>
           </div>
         )}
 

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
-import { ActivityCard } from "@/components/trip/ActivityCard";
+import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { MapView } from "@/components/trip/MapView";
 import { LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
@@ -17,6 +17,7 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
   const [dayIndex, setDayIndex] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
 
   if (!trip) notFound();
 
@@ -85,14 +86,19 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
             <h2 className="font-display text-lg font-bold">{day.title}</h2>
             <span className="text-sm font-semibold text-[var(--color-ink-soft)]">~RM {dayCost} today</span>
           </div>
-          {day.activities.map((act) => (
-            <ActivityCard key={act.id} activity={act} place={act.placeId ? placesMap[act.placeId] : null} />
-          ))}
+          <ItineraryTimeline
+            activities={day.activities}
+            places={placesMap}
+            transport={trip.transport}
+            tripId={tripId}
+            selectedId={selected}
+            onSelect={setSelected}
+          />
         </div>
 
         <div className="lg:sticky lg:top-24">
           {dayPlaces.length > 0 ? (
-            <MapView places={dayPlaces} />
+            <MapView places={dayPlaces} selectedId={selected} onSelect={setSelected} />
           ) : (
             <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-[var(--color-border)] text-sm text-[var(--color-ink-soft)]">
               No stops to map today

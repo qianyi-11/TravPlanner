@@ -24,12 +24,23 @@ export default function CreateGroupPage() {
   const [description, setDescription] = useState("");
   const [emoji, setEmoji] = useState(EMOJIS[0]);
   const [cover, setCover] = useState(COVERS[0]);
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    const id = createGroup({ name: name.trim(), emoji, description: description.trim() || undefined, coverColor: cover });
-    router.push(`/groups/${id}`);
+    if (!name.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const id = await createGroup({
+        name: name.trim(),
+        emoji,
+        description: description.trim() || undefined,
+        coverColor: cover,
+      });
+      router.push(`/groups/${id}`);
+    } catch {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -111,8 +122,8 @@ export default function CreateGroupPage() {
             />
           </div>
 
-          <Button type="submit" fullWidth size="lg" disabled={!name.trim()}>
-            Create Group
+          <Button type="submit" fullWidth size="lg" disabled={!name.trim() || submitting}>
+            {submitting ? "Creating..." : "Create Group"}
           </Button>
         </form>
       </Card>

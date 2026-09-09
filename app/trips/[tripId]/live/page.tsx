@@ -11,8 +11,10 @@ import {
   Radio,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
+import { Receipt } from "lucide-react";
 import { usePlannerStore } from "@/lib/store";
-import { ActivityCard } from "@/components/trip/ActivityCard";
+import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -186,17 +188,32 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
         </Card>
       </div>
 
+      <Link
+        href={`/trips/${tripId}/split-bill`}
+        className="mt-4 flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-soft)] transition-shadow hover:shadow-[var(--shadow-card)]"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]">
+          <Receipt size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-sm font-bold">Split a bill</p>
+          <p className="text-xs text-[var(--color-ink-soft)]">Just paid for a meal or a ride? Break down who owes what.</p>
+        </div>
+        <ArrowRight size={16} className="shrink-0 text-[var(--color-ink-soft)]" />
+      </Link>
+
       <div className="mt-6">
         <h2 className="mb-3 font-display text-lg font-bold">Today&apos;s itinerary</h2>
         <div className="space-y-2.5">
-          {day?.activities.map((act, i) => (
-            <ActivityCard
-              key={act.id}
-              activity={act}
-              place={act.placeId ? placesMap[act.placeId] : null}
-              selected={i === (currentActivityIdx ?? -1)}
+          {day && (
+            <ItineraryTimeline
+              activities={day.activities}
+              places={placesMap}
+              transport={trip?.transport}
+              tripId={tripId}
+              activeIndex={currentActivityIdx ?? undefined}
             />
-          ))}
+          )}
         </div>
       </div>
     </div>

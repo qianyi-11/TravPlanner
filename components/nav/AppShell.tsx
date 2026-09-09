@@ -1,22 +1,46 @@
 "use client";
 
-import { Compass, Home, Users, UserRound } from "lucide-react";
+import { Compass, Home, Receipt, Users, UserRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { usePlannerStore } from "@/lib/store";
 import { MemberAvatar } from "@/components/ui/Avatar";
+import { LoadingState } from "@/components/ui/States";
 import { cx } from "@/lib/utils";
 
 const NAV = [
-  { href: "/", label: "Home", icon: Home, match: (p: string) => p === "/" },
-  { href: "/my-trips", label: "My Trips", icon: Compass, match: (p: string) => p.startsWith("/my-trips") || p.startsWith("/trips") },
-  { href: "/groups", label: "Groups", icon: Users, match: (p: string) => p.startsWith("/groups") },
-  { href: "/profile", label: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
+  { href: "/", label: "Home", shortLabel: "Home", icon: Home, match: (p: string) => p === "/" },
+  {
+    href: "/my-trips",
+    label: "My Trips",
+    shortLabel: "Trips",
+    icon: Compass,
+    match: (p: string) => p.startsWith("/my-trips") || p.startsWith("/trips"),
+  },
+  { href: "/groups", label: "Groups", shortLabel: "Groups", icon: Users, match: (p: string) => p.startsWith("/groups") },
+  {
+    href: "/split-bill",
+    label: "Split Bill",
+    shortLabel: "Split",
+    icon: Receipt,
+    match: (p: string) => p === "/split-bill",
+  },
+  { href: "/profile", label: "Profile", shortLabel: "Profile", icon: UserRound, match: (p: string) => p.startsWith("/profile") },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
+  const initialized = usePlannerStore((s) => s.initialized);
+  const hydrate = usePlannerStore((s) => s.hydrate);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    hydrate();
+  }, [hydrate]);
 
   return (
     <div className="min-h-screen">
@@ -56,9 +80,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-12">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 sm:pb-12">
+        {initialized ? children : <LoadingState label="Loading your trips..." />}
+      </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-[var(--color-border)] bg-white/95 py-2 backdrop-blur sm:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center border-t border-[var(--color-border)] bg-white/95 py-2 backdrop-blur sm:hidden">
         {NAV.map((item) => {
           const active = item.match(pathname);
           return (
@@ -66,12 +92,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               key={item.href}
               href={item.href}
               className={cx(
-                "flex flex-col items-center gap-1 rounded-xl px-4 py-1.5 text-[11px] font-medium",
+                "flex flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-medium",
                 active ? "text-[var(--color-primary)]" : "text-[var(--color-ink-soft)]"
               )}
             >
-              <item.icon size={20} strokeWidth={active ? 2.4 : 2} />
-              {item.label}
+              <item.icon size={19} strokeWidth={active ? 2.4 : 2} />
+              {item.shortLabel}
             </Link>
           );
         })}

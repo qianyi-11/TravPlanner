@@ -34,6 +34,7 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
   const [dailyStart, setDailyStart] = useState("08:00");
   const [dailyEnd, setDailyEnd] = useState("22:00");
   const [transport, setTransport] = useState<TransportMode>("Mixed");
+  const [submitting, setSubmitting] = useState(false);
 
   if (!group) notFound();
 
@@ -43,21 +44,26 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
     setDestInput("");
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (destinations.length === 0 || !startDate || !endDate) return;
-    const id = createTrip(groupId, {
-      name: name.trim() || destinations.join(" & "),
-      destinations,
-      startDate,
-      endDate,
-      budgetTotal: budget,
-      groupSize,
-      dailyStart,
-      dailyEnd,
-      transport,
-    });
-    router.push(`/trips/${id}`);
+    if (destinations.length === 0 || !startDate || !endDate || submitting) return;
+    setSubmitting(true);
+    try {
+      const id = await createTrip(groupId, {
+        name: name.trim() || destinations.join(" & "),
+        destinations,
+        startDate,
+        endDate,
+        budgetTotal: budget,
+        groupSize,
+        dailyStart,
+        dailyEnd,
+        transport,
+      });
+      router.push(`/trips/${id}`);
+    } catch {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -226,8 +232,13 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
           </div>
         </Card>
 
-        <Button type="submit" fullWidth size="lg" disabled={destinations.length === 0 || !startDate || !endDate}>
-          Create Trip
+        <Button
+          type="submit"
+          fullWidth
+          size="lg"
+          disabled={destinations.length === 0 || !startDate || !endDate || submitting}
+        >
+          {submitting ? "Creating..." : "Create Trip"}
         </Button>
       </form>
     </div>
