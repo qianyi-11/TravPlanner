@@ -37,6 +37,7 @@ interface PlannerState {
 
   hydrate: () => Promise<void>;
   switchDemoUser: (memberId: string) => Promise<boolean>;
+  resetDemoUser: () => Promise<boolean>;
   showToast: (msg: string) => void;
   clearToast: () => void;
 
@@ -104,6 +105,16 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't switch traveller" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
+  },
+
+  resetDemoUser: async () => {
+    const result = await api("/api/demo-session", { method: "DELETE" });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't reset demo session" });
       return false;
     }
     await get().hydrate();

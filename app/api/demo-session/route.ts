@@ -30,3 +30,14 @@ export async function POST(req: Request) {
   });
   return response;
 }
+
+export async function DELETE() {
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(COOKIE_NAME, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
+}
