@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { Check, Vote as VoteIcon } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -25,15 +25,32 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
   );
   const toggleVote = usePlannerStore((s) => s.toggleVote);
   const submitVotes = usePlannerStore((s) => s.submitMyVotes);
+  const [pendingPlaceId, setPendingPlaceId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   if (!trip || !me) notFound();
 
   const myVotes = (me.votedPlaceIds ?? []).filter((id) => trip.placeIds.includes(id));
   const limit = trip.votesPerMember;
 
-  function handleSubmit() {
-    submitVotes(tripId);
-    router.push(`/trips/${tripId}/vote/results`);
+  async function handleToggleVote(placeId: string) {
+    if (pendingPlaceId || submitting) return;
+    setPendingPlaceId(placeId);
+    try {
+      await toggleVote(tripId, placeId);
+    } finally {
+      setPendingPlaceId(null);
+    }
+  }
+
+  async function handleSubmit() {
+    if (submitting || pendingPlaceId) return;
+    setSubmitting(true);
+    try {
+      if (await submitVotes(tripId)) router.push(`/trips/${tripId}/vote/results`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -51,8 +68,8 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
               {myVotes.length} <span className="text-sm font-medium text-[var(--color-ink-soft)]">/ {limit} votes used</span>
             </p>
           </div>
-          <Button onClick={handleSubmit} disabled={myVotes.length === 0} icon={<VoteIcon size={15} />}>
-            Submit Votes
+          <Button onClick={handleSubmit} disabled={myVotes.length === 0 || submitting || pendingPlaceId !== null} icon={<VoteIcon size={15} />}>
+            {submitting ? "Submitting…" : "Submit Votes"}
           </Button>
         </div>
 
@@ -72,9 +89,10 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
                     size="sm"
                     variant={voted ? "secondary" : "outline"}
                     icon={voted ? <Check size={14} /> : <VoteIcon size={14} />}
-                    onClick={() => toggleVote(tripId, place.id)}
+                    onClick={() => handleToggleVote(place.id)}
+                    disabled={pendingPlaceId !== null || submitting}
                   >
-                    {voted ? "Voted" : "Vote"}
+                    {pendingPlaceId === place.id ? "Saving…" : voted ? "Voted" : "Vote"}
                   </Button>
                 }
               />

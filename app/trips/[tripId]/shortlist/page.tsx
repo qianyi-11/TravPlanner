@@ -33,8 +33,11 @@ export default function ShortlistPage({ params }: { params: Promise<{ tripId: st
           <h1 className="font-display text-2xl font-bold">Your Group&apos;s Top Choices</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">{places.length} places made the shortlist.</p>
         </div>
-        <LinkButton href={`/trips/${tripId}/validate`} iconRight={<ArrowRight size={15} />}>
-          Continue to Validation
+        <LinkButton
+          href={trip.stage === "itinerary" ? `/trips/${tripId}/plan` : `/trips/${tripId}/validate`}
+          iconRight={<ArrowRight size={15} />}
+        >
+          {trip.stage === "itinerary" ? "View Final Plan" : "Continue to Validation"}
         </LinkButton>
       </div>
 

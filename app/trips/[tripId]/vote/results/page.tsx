@@ -25,16 +25,22 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
     )
   );
   const confirmShortlist = usePlannerStore((s) => s.confirmShortlist);
+  const [submitting, setSubmitting] = useState(false);
 
   const rec = trip ? recommendPlaceCount(trip) : { count: 8, reasoning: "" };
   const [count, setCount] = useState(trip?.recommendedPlaceCount || rec.count);
 
   if (!trip) notFound();
 
-  function handleConfirm() {
+  async function handleConfirm() {
+    if (submitting) return;
     const topIds = places.slice(0, count).map((p) => p.id);
-    confirmShortlist(tripId, topIds);
-    router.push(`/trips/${tripId}/shortlist`);
+    setSubmitting(true);
+    try {
+      if (await confirmShortlist(tripId, topIds)) router.push(`/trips/${tripId}/shortlist`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -100,8 +106,8 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
             Top {count} of {places.length} suggested places will move forward.
           </p>
 
-          <Button fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0}>
-            Confirm &amp; Continue
+          <Button fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0 || submitting}>
+            {submitting ? "Saving…" : "Confirm & Continue"}
           </Button>
         </Card>
       </div>

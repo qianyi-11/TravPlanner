@@ -80,6 +80,14 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
         </div>
       </div>
 
+      {trip.rescueEvents.length > 0 && (
+        <div className="mt-4">
+          <LinkButton href={`/trips/${tripId}/live`} variant="outline">
+            Open Trip Rescue
+          </LinkButton>
+        </div>
+      )}
+
       <div className="mt-5 flex gap-1.5 overflow-x-auto scrollbar-none rounded-2xl border border-[var(--color-border)] bg-white p-1.5 shadow-[var(--shadow-soft)]">
         {TABS.map((t) => (
           <button

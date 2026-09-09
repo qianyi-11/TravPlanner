@@ -65,14 +65,14 @@ interface PlannerState {
   removePlaceSuggestion: (tripId: string, placeId: string, memberId?: string) => Promise<void>;
   submitMySuggestions: (tripId: string, memberId?: string) => Promise<void>;
 
-  toggleVote: (tripId: string, placeId: string, memberId?: string) => Promise<void>;
-  submitMyVotes: (tripId: string, memberId?: string) => Promise<void>;
+  toggleVote: (tripId: string, placeId: string, memberId?: string) => Promise<boolean>;
+  submitMyVotes: (tripId: string, memberId?: string) => Promise<boolean>;
 
-  confirmShortlist: (tripId: string, placeIds: string[]) => Promise<void>;
+  confirmShortlist: (tripId: string, placeIds: string[]) => Promise<boolean>;
   setStage: (tripId: string, stage: PlanningStage) => Promise<void>;
   advanceStage: (tripId: string) => Promise<void>;
 
-  resolveRescue: (tripId: string, eventId: string) => Promise<void>;
+  resolveRescue: (tripId: string, eventId: string) => Promise<boolean>;
 }
 
 export const usePlannerStore = create<PlannerState>((set, get) => ({
@@ -218,9 +218,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't update vote" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
   submitMyVotes: async (tripId, memberId) => {
@@ -231,9 +232,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't submit votes" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
   confirmShortlist: async (tripId, placeIds) => {
@@ -243,9 +245,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't confirm shortlist" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
   setStage: async (tripId, stage) => {
@@ -273,8 +276,9 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     const result = await api(`/api/trips/${tripId}/rescue/${eventId}/resolve`, { method: "POST" });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't resolve this" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 }));

@@ -31,6 +31,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
 
   const openEvent = trip?.rescueEvents.find((e) => e.status === "open");
   const [phase, setPhase] = useState<RescuePhase>("alert");
+  const [saving, setSaving] = useState(false);
 
   const dayIndex = useMemo(() => {
     if (!trip) return 0;
@@ -59,12 +60,20 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
   const nextActivity = day?.activities[Math.max(0, currentActivityIdx ?? 1) + 1];
   const remaining = day ? day.activities.length - Math.max(0, currentActivityIdx ?? 1) - 1 : 0;
 
-  function handleAccept() {
-    if (!openEvent) return;
-    resolveRescue(tripId, openEvent.id);
-    setPhase("resolved");
-    showToast("Trip itinerary updated for everyone.");
+  async function handleAccept() {
+    if (!openEvent || saving) return;
+    setSaving(true);
+    try {
+      if (await resolveRescue(tripId, openEvent.id)) {
+        setPhase("resolved");
+        showToast("Trip itinerary updated for everyone.");
+      }
+    } finally {
+      setSaving(false);
+    }
   }
+
+  const isResolved = phase === "resolved" || trip.rescueEvents.some((event) => event.status === "resolved");
 
   return (
     <div>
@@ -136,11 +145,8 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                   <Sparkles size={12} /> {openEvent.alternative.note}
                 </p>
                 <div className="mt-4 flex gap-2">
-                  <Button size="sm" onClick={handleAccept} icon={<CheckCircle2 size={14} />}>
-                    Accept Change
-                  </Button>
-                  <Button size="sm" variant="outline">
-                    View Alternatives
+                  <Button size="sm" onClick={handleAccept} disabled={saving} icon={<CheckCircle2 size={14} />}>
+                    {saving ? "Saving…" : "Accept Change"}
                   </Button>
                 </div>
               </div>
@@ -149,7 +155,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
         </Card>
       )}
 
-      {phase === "resolved" && (
+      {isResolved && (
         <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-4">
           <CheckCircle2 size={16} className="text-[var(--color-teal-dark)]" />
           <p className="text-sm font-medium text-[var(--color-teal-dark)]">

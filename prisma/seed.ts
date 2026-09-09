@@ -4,11 +4,18 @@ import { ALL_PLACES, GROUPS, MEMBERS, TRIPS } from "../lib/mock-data";
 const prisma = new PrismaClient();
 
 async function main() {
-  const existing = await prisma.group.count();
-  if (existing > 0) {
-    console.log(`Database already has ${existing} group(s) — skipping seed.`);
-    return;
-  }
+  console.log("Resetting database...");
+  await prisma.$transaction([
+    prisma.vote.deleteMany(),
+    prisma.suggestion.deleteMany(),
+    prisma.tripPlace.deleteMany(),
+    prisma.rescueEvent.deleteMany(),
+    prisma.trip.deleteMany(),
+    prisma.groupMember.deleteMany(),
+    prisma.group.deleteMany(),
+    prisma.place.deleteMany(),
+    prisma.member.deleteMany(),
+  ]);
 
   console.log("Seeding members...");
   for (const member of Object.values(MEMBERS)) {
@@ -130,6 +137,7 @@ async function main() {
           affectedActivityId: event.affectedActivityId,
           status: event.status,
           alternativeJson: event.alternative ? JSON.stringify(event.alternative) : null,
+          createdAt: new Date(event.createdAt),
         },
       });
     }

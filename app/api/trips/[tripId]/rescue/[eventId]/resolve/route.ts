@@ -5,10 +5,12 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ tripId: string; eventId: string }> }
 ) {
-  const { eventId } = await params;
+  const { tripId, eventId } = await params;
 
   const event = await prisma.rescueEvent.findUnique({ where: { id: eventId } });
-  if (!event) return NextResponse.json({ error: "Rescue event not found" }, { status: 404 });
+  if (!event || event.tripId !== tripId) {
+    return NextResponse.json({ error: "Rescue event not found" }, { status: 404 });
+  }
 
   await prisma.rescueEvent.update({ where: { id: eventId }, data: { status: "resolved" } });
   return NextResponse.json({ ok: true });
