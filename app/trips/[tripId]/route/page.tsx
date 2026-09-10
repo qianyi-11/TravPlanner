@@ -17,8 +17,9 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
   const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
-  const setStage = usePlannerStore((s) => s.setStage);
+  const buildItinerary = usePlannerStore((s) => s.buildItinerary);
   const [selected, setSelected] = useState<string | null>(null);
+  const [building, setBuilding] = useState(false);
 
   const shortlist: Place[] = useMemo(
     () => (trip ? trip.shortlistPlaceIds.map((id) => placesMap[id]).filter(Boolean) : []),
@@ -58,9 +59,11 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
 
   if (!trip) notFound();
 
-  function handleContinue() {
-    setStage(tripId, "itinerary");
-    router.push(`/trips/${tripId}/itinerary`);
+  async function handleContinue() {
+    setBuilding(true);
+    const ok = await buildItinerary(tripId);
+    setBuilding(false);
+    if (ok) router.push(`/trips/${tripId}/itinerary`);
   }
 
   let runningIndex = 0;
@@ -76,8 +79,8 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
             We grouped nearby places together to minimize backtracking between stops.
           </p>
         </div>
-        <Button onClick={handleContinue} iconRight={<ArrowRight size={15} />}>
-          Build Itinerary
+        <Button onClick={handleContinue} disabled={building} iconRight={<ArrowRight size={15} />}>
+          {building ? "Building..." : "Build Itinerary"}
         </Button>
       </div>
 

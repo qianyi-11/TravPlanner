@@ -41,14 +41,14 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   const searchDestination = destFilter !== "All" ? destFilter : trip?.destinations[0] ?? "";
 
   useEffect(() => {
-    if (!mapsReady || !query.trim() || !searchDestination) {
+    if (!mapsReady || !query.trim()) {
       setLiveResults([]);
       return;
     }
     let cancelled = false;
     setSearching(true);
     const timer = setTimeout(() => {
-      searchGooglePlaces(query, searchDestination).then((results) => {
+      searchGooglePlaces(query, searchDestination || undefined).then((results) => {
         if (!cancelled) {
           setLiveResults(results);
           setSearching(false);
@@ -64,8 +64,13 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   if (!trip) notFound();
 
   const candidates = useMemo(() => {
-    return allPlaces
-      .filter((p) => trip.destinations.includes(p.destination))
+    // Before the group settles on a destination, only show what's already been
+    // suggested for this trip — everything else comes from live search.
+    const pool =
+      trip.destinations.length > 0
+        ? allPlaces.filter((p) => trip.destinations.includes(p.destination))
+        : allPlaces.filter((p) => trip.placeIds.includes(p.id));
+    return pool
       .filter((p) => destFilter === "All" || p.destination === destFilter)
       .filter((p) => {
         const q = query.trim().toLowerCase();
@@ -77,7 +82,7 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
         );
       })
       .sort((a, b) => b.rating - a.rating);
-  }, [allPlaces, trip.destinations, destFilter, query]);
+  }, [allPlaces, trip.destinations, trip.placeIds, destFilter, query]);
 
   const catalogIds = new Set(candidates.map((p) => p.id));
   const freshLiveResults = liveResults.filter((p) => !catalogIds.has(p.id));
@@ -94,7 +99,8 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
       return;
     }
     setAddingId(place.id);
-    const enriched = (await enrichGooglePlace(place.id.replace(/^g-/, ""), place.destination)) ?? place;
+    const enriched =
+      (await enrichGooglePlace(place.id.replace(/^g-/, ""), place.destination || undefined)) ?? place;
     await importAndSuggest(tripId, enriched);
     setAddingId(null);
     showToast(`${place.name} added to your suggestions`);
@@ -147,7 +153,11 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={`Search ${trip.destinations[0]} places...`}
+              placeholder={
+                trip.destinations.length > 0
+                  ? `Search ${trip.destinations[0]} places...`
+                  : "Search anywhere — try “Tokyo temples” or “Bali beach club”"
+              }
               className="w-full rounded-xl border border-[var(--color-border)] py-3 pl-11 pr-10 text-sm outline-none focus:border-[var(--color-primary)]"
             />
             {searching && (

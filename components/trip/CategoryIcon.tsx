@@ -55,11 +55,13 @@ export function PlaceCover({
   category,
   className,
   iconSize = 34,
+  fit = "cover",
 }: {
   photo: string;
   category: string;
   className?: string;
   iconSize?: number;
+  fit?: "cover" | "contain";
 }) {
   const [broken, setBroken] = useState(false);
   const Icon = getCategoryIcon(category);
@@ -73,7 +75,7 @@ export function PlaceCover({
         <img
           src={photo}
           alt=""
-          className="h-full w-full object-cover"
+          className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`}
           onError={() => setBroken(true)}
         />
       ) : (

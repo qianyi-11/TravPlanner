@@ -2,12 +2,12 @@
 
 import { use, useState } from "react";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { MapView } from "@/components/trip/MapView";
-import { LinkButton } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/States";
 import { CalendarX } from "lucide-react";
 import { cx, formatWeekday } from "@/lib/utils";
@@ -16,21 +16,36 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
+  const buildItinerary = usePlannerStore((s) => s.buildItinerary);
   const [dayIndex, setDayIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
+  const [building, setBuilding] = useState(false);
 
   if (!trip) notFound();
 
   if (trip.itinerary.length === 0) {
+    const hasShortlist = trip.shortlistPlaceIds.length > 0;
     return (
       <div>
         <TripHeader trip={trip} />
         <div className="mt-6">
           <EmptyState
-            icon={CalendarX}
-            title="Itinerary not built yet"
-            description="Finish route optimization first, then we'll build your day-by-day plan."
-            action={<LinkButton href={`/trips/${tripId}/route`}>Go to Route</LinkButton>}
+            icon={building ? Loader2 : CalendarX}
+            title={building ? "Building your itinerary..." : "Itinerary not built yet"}
+            description={
+              hasShortlist
+                ? "Your shortlist is ready — build the day-by-day plan from it now."
+                : "Finish route optimization first, then we'll build your day-by-day plan."
+            }
+            action={
+              hasShortlist ? (
+                <Button disabled={building} onClick={() => { setBuilding(true); buildItinerary(tripId).finally(() => setBuilding(false)); }}>
+                  {building ? "Building..." : "Build Itinerary Now"}
+                </Button>
+              ) : (
+                <LinkButton href={`/trips/${tripId}/route`}>Go to Route</LinkButton>
+              )
+            }
           />
         </div>
       </div>

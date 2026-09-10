@@ -70,8 +70,8 @@ export type PlanningStage =
   | "itinerary";
 
 export const STAGE_ORDER: PlanningStage[] = [
-  "ideas",
   "preferences",
+  "ideas",
   "voting",
   "validation",
   "route",
@@ -108,7 +108,8 @@ export interface Place {
   destination: string;
   coordinates: { lat: number; lng: number };
   address: string;
-  photo: string; // gradient token or image url
+  photo: string; // gradient token or image url — the cover
+  photos?: string[]; // additional gallery photos, when the source provides them
   rating: number;
   reviewCount: number;
   priceLevel: 1 | 2 | 3 | 4;

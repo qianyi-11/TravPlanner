@@ -29,6 +29,7 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
     useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
   );
   const updatePrefs = usePlannerStore((s) => s.updateMemberPreferences);
+  const setStage = usePlannerStore((s) => s.setStage);
   const showToast = usePlannerStore((s) => s.showToast);
 
   const [interests, setInterests] = useState<Interest[]>(me?.preferences?.interests ?? []);
@@ -52,7 +53,9 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
     clear();
   }
 
-  function handleSave() {
+  async function handleSave() {
+    // Saving preferences moves the trip on to collecting ideas.
+    if (trip?.stage === "preferences") void setStage(tripId, "ideas");
     updatePrefs(currentUserId, {
       interests,
       foodPreferences: food,

@@ -102,6 +102,7 @@ model Place {
   source                   String   @default("catalog") // "catalog" | "google"
   googlePlaceId            String?
   photoRef                 String?
+  photosJson               String?  // JSON string[] — gallery photos, photo[0] is the cover
   createdAt                DateTime @default(now())
 
   tripPlaces TripPlace[]

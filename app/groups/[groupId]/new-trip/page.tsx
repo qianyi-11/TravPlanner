@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Car, Footprints, MapPin, Plus, TrainFront, Shuffle, X, CarTaxiFront } from "lucide-react";
+import { ArrowLeft, Car, Footprints, MapPin, TrainFront, Shuffle, CarTaxiFront } from "lucide-react";
 import Link from "next/link";
 import { usePlannerStore } from "@/lib/store";
 import type { TransportMode } from "@/lib/types";
@@ -24,8 +24,6 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
   const group = usePlannerStore((s) => s.groups[groupId]);
   const createTrip = usePlannerStore((s) => s.createTrip);
 
-  const [destinations, setDestinations] = useState<string[]>([]);
-  const [destInput, setDestInput] = useState("");
   const [name, setName] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -38,20 +36,15 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
 
   if (!group) notFound();
 
-  function addDestination() {
-    const v = destInput.trim();
-    if (v && !destinations.includes(v)) setDestinations([...destinations, v]);
-    setDestInput("");
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (destinations.length === 0 || !startDate || !endDate || submitting) return;
+    if (!name.trim() || !startDate || !endDate || submitting) return;
     setSubmitting(true);
     try {
       const id = await createTrip(groupId, {
-        name: name.trim() || destinations.join(" & "),
-        destinations,
+        name: name.trim(),
+        // Where you're going is decided together in the Ideas stage, not here.
+        destinations: [],
         startDate,
         endDate,
         budgetTotal: budget,
@@ -87,52 +80,14 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Japan Adventure"
+            autoFocus
             className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
           />
-        </Card>
-
-        <Card className="p-5">
-          <label className="mb-2 block text-sm font-semibold">Destination(s)</label>
-          <p className="mb-3 text-xs text-[var(--color-ink-soft)]">Add one or multiple cities.</p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <MapPin size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-ink-soft)]" />
-              <input
-                value={destInput}
-                onChange={(e) => setDestInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addDestination();
-                  }
-                }}
-                placeholder="e.g. Tokyo"
-                className="w-full rounded-xl border border-[var(--color-border)] py-3 pl-10 pr-4 text-sm outline-none focus:border-[var(--color-primary)]"
-              />
-            </div>
-            <Button type="button" variant="outline" icon={<Plus size={15} />} onClick={addDestination}>
-              Add
-            </Button>
-          </div>
-          {destinations.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {destinations.map((d) => (
-                <span
-                  key={d}
-                  className="flex items-center gap-1.5 rounded-full bg-[var(--color-teal-soft)] px-3 py-1.5 text-sm font-medium text-[var(--color-teal-dark)]"
-                >
-                  {d}
-                  <button
-                    type="button"
-                    onClick={() => setDestinations(destinations.filter((x) => x !== d))}
-                    className="cursor-pointer"
-                  >
-                    <X size={13} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
+          <p className="mt-2 flex items-start gap-1.5 text-xs text-[var(--color-ink-soft)]">
+            <MapPin size={13} className="mt-0.5 shrink-0" />
+            No need to pick a destination yet — the group decides where to go together in the Ideas
+            stage, and it fills in from the places everyone adds.
+          </p>
         </Card>
 
         <Card className="grid grid-cols-2 gap-4 p-5">
@@ -236,7 +191,7 @@ export default function NewTripPage({ params }: { params: Promise<{ groupId: str
           type="submit"
           fullWidth
           size="lg"
-          disabled={destinations.length === 0 || !startDate || !endDate || submitting}
+          disabled={!name.trim() || !startDate || !endDate || submitting}
         >
           {submitting ? "Creating..." : "Create Trip"}
         </Button>

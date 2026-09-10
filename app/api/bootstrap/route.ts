@@ -14,7 +14,7 @@ export async function GET() {
     prisma.groupMember.findMany(),
     prisma.trip.findMany({
       include: {
-        tripPlaces: { select: { placeId: true } },
+        tripPlaces: { select: { placeId: true, place: { select: { destination: true } } } },
         rescueEvents: true,
         group: { select: { members: { select: { memberId: true } } } },
       },

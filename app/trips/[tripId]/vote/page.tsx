@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
 import { PlaceCard } from "@/components/trip/PlaceCard";
+import { DemoVotingShortcut } from "@/components/trip/DemoVotingShortcut";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Card";
 
@@ -54,6 +55,10 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
           <Button onClick={handleSubmit} disabled={myVotes.length === 0} icon={<VoteIcon size={15} />}>
             Submit Votes
           </Button>
+        </div>
+
+        <div className="mt-5">
+          <DemoVotingShortcut tripId={tripId} />
         </div>
 
         <div className="mt-5 space-y-3">

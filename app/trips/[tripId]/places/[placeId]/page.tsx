@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePlannerStore } from "@/lib/store";
-import { PlaceCover } from "@/components/trip/CategoryIcon";
+import { PlaceGallery } from "@/components/trip/PlaceGallery";
 import { MapView } from "@/components/trip/MapView";
 import { Badge, Card } from "@/components/ui/Card";
 import { MemberStack } from "@/components/ui/Avatar";
@@ -51,13 +51,12 @@ export default function PlaceDetailsPage({
         <ArrowLeft size={15} /> Back
       </Link>
 
-      <div className="grid gap-3 sm:grid-cols-4 sm:grid-rows-2">
-        <PlaceCover photo={place.photo} category={place.category} className="col-span-4 h-56 rounded-3xl sm:col-span-2 sm:row-span-2 sm:h-full" iconSize={44} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-80 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-60 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-80 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-60 sm:block" iconSize={26} />
-      </div>
+      <PlaceGallery
+        photos={place.photos}
+        cover={place.photo}
+        category={place.category}
+        name={place.name}
+      />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-6">

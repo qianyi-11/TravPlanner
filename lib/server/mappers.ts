@@ -62,6 +62,7 @@ function basePlaceFields(row: PPlace) {
     coordinates: { lat: row.lat, lng: row.lng },
     address: row.address,
     photo: row.photo,
+    photos: row.photosJson ? (JSON.parse(row.photosJson) as string[]) : undefined,
     rating: row.rating,
     reviewCount: row.reviewCount,
     priceLevel: row.priceLevel as Place["priceLevel"],
@@ -105,16 +106,23 @@ function mapRescueEvent(row: PRescueEvent): TripRescueEvent {
 
 export function mapTrip(
   row: PTrip & {
-    tripPlaces: { placeId: string }[];
+    tripPlaces: { placeId: string; place?: { destination: string } }[];
     rescueEvents: PRescueEvent[];
   },
   memberIds: string[]
 ): Trip {
+  // A trip no longer names its destination up front — it fills in from wherever
+  // the group's suggested places actually are. An explicit list still wins.
+  const stored = JSON.parse(row.destinationsJson) as string[];
+  const derived = Array.from(
+    new Set(row.tripPlaces.map((tp) => tp.place?.destination).filter((d): d is string => Boolean(d)))
+  );
+
   return {
     id: row.id,
     groupId: row.groupId,
     name: row.name,
-    destinations: JSON.parse(row.destinationsJson),
+    destinations: stored.length > 0 ? stored : derived,
     coverColor: row.coverColor,
     startDate: row.startDate,
     endDate: row.endDate,

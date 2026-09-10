@@ -30,6 +30,32 @@ function priceLabelFor(level: number): string {
   return ["Free", "$", "$$", "$$$", "$$$$"][level] ?? "$$";
 }
 
+/**
+ * Pull a city out of a formatted address when the trip hasn't named one yet.
+ * "…Asakusa, Taito City, Tokyo 111-0032, Japan" → "Tokyo"
+ *
+ * Prefers a "<postcode> <City>" segment when one exists (common in Malaysian,
+ * Japanese and many other addresses) — that's more reliable than a fixed
+ * position, since some addresses carry an extra state/territory segment
+ * after the city ("...Kuala Lumpur, Wilayah Persekutuan Kuala Lumpur,
+ * Malaysia") that would otherwise get picked up instead.
+ */
+export function guessDestination(address: string | undefined): string {
+  if (!address) return "Unknown";
+  const parts = address.split(",").map((s) => s.trim()).filter(Boolean);
+
+  for (const part of parts) {
+    // Requires a real postcode shape (4-6 digits + a space before the city) so
+    // a house/unit number glued to a letter — "204A, Jln Ampang" — doesn't match.
+    const match = part.match(/^\d{4,6}\s+(.+)$/);
+    if (match && match[1]) return match[1].trim();
+  }
+
+  if (parts.length < 2) return parts[0] ?? "Unknown";
+  const city = parts[parts.length - 2];
+  return city.replace(/\d{3,}/g, "").trim() || parts[parts.length - 1];
+}
+
 function guessArea(address: string | undefined, destination: string): string {
   if (!address) return destination;
   const parts = address.split(",").map((s) => s.trim());
@@ -57,10 +83,15 @@ type PlaceResultWithSummary = google.maps.places.PlaceResult & {
   editorial_summary?: { overview?: string };
 };
 
-function toPlace(result: PlaceResultWithSummary, destination: string): Place {
+function toPlace(result: PlaceResultWithSummary, destinationHint?: string): Place {
   const id = `g-${result.place_id}`;
+  const destination = destinationHint || guessDestination(result.formatted_address);
   const priceLevel = Math.min(4, Math.max(1, (result.price_level ?? 2) + (result.price_level === 0 ? 1 : 0)));
-  const photo = result.photos?.[0]?.getUrl({ maxWidth: 800, maxHeight: 600 }) ?? gradientFor(id);
+  const gallery = (result.photos ?? [])
+    .slice(0, 6)
+    .map((p) => p.getUrl({ maxWidth: 1000, maxHeight: 700 }))
+    .filter(Boolean);
+  const photo = gallery[0] ?? gradientFor(id);
 
   return {
     id,
@@ -74,6 +105,7 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
     },
     address: result.formatted_address ?? "",
     photo,
+    photos: gallery.length > 0 ? gallery : undefined,
     rating: result.rating ?? 0,
     reviewCount: result.user_ratings_total ?? 0,
     priceLevel: priceLevel as Place["priceLevel"],
@@ -104,13 +136,17 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
   };
 }
 
-/** Live text search against Google Places, scoped loosely to a destination. */
-export function searchGooglePlaces(query: string, destination: string): Promise<Place[]> {
+/**
+ * Live text search against Google Places. Scoped loosely to a destination when
+ * the trip has one; otherwise it's a plain open search, so a group that hasn't
+ * decided where to go can still look anywhere.
+ */
+export function searchGooglePlaces(query: string, destination?: string): Promise<Place[]> {
   return new Promise((resolve) => {
     if (!query.trim()) return resolve([]);
     const service = getService();
     service.textSearch(
-      { query: `${query} in ${destination}` },
+      { query: destination ? `${query} in ${destination}` : query },
       (results, status) => {
         if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
           resolve([]);
@@ -138,7 +174,7 @@ const DETAIL_FIELDS = [
 ];
 
 /** Fetches richer fields (hours, description, reviews) for one place right before it's saved. */
-export function enrichGooglePlace(placeId: string, destination: string): Promise<Place | null> {
+export function enrichGooglePlace(placeId: string, destination?: string): Promise<Place | null> {
   return new Promise((resolve) => {
     const service = getService();
     service.getDetails({ placeId, fields: DETAIL_FIELDS }, (result, status) => {

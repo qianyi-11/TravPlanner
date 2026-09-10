@@ -21,8 +21,8 @@ const NAV = [
   { href: "/groups", label: "Groups", shortLabel: "Groups", icon: Users, match: (p: string) => p.startsWith("/groups") },
   {
     href: "/split-bill",
-    label: "Split Bill",
-    shortLabel: "Split",
+    label: "Bill",
+    shortLabel: "Bill",
     icon: Receipt,
     match: (p: string) => p === "/split-bill",
   },

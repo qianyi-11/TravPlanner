@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     transport: TransportMode;
   };
 
-  if (!groupId || !destinations?.length || !startDate || !endDate) {
+  if (!groupId || !startDate || !endDate) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -44,8 +44,8 @@ export async function POST(req: Request) {
     data: {
       id,
       groupId,
-      name: name?.trim() || destinations.join(" & "),
-      destinationsJson: JSON.stringify(destinations),
+      name: name?.trim() || "Untitled trip",
+      destinationsJson: JSON.stringify(destinations ?? []),
       coverColor: "linear-gradient(135deg,#4C7BD9,#0E7C74)",
       startDate,
       endDate,
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       dailyStart,
       dailyEnd,
       transport,
-      stage: "ideas",
+      stage: "preferences",
       recommendedPlaceCount: count,
       votesPerMember: 10,
       pricePressureJson: JSON.stringify({

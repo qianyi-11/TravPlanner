@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Receipt, Users, Wallet } from "lucide-react";
+import { ArrowLeft, CalendarDays, Receipt, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
@@ -14,11 +14,25 @@ export function TripHeader({ trip }: { trip: Trip }) {
   const members = usePlannerStore(
     useShallow((s) => trip.memberIds.map((id) => s.members[id]).filter(Boolean))
   );
+  const group = usePlannerStore((s) => s.groups[trip.groupId]);
   const pathname = usePathname();
   const onSplitBill = pathname?.endsWith("/split-bill");
 
+  // On the workspace hub, "back" leaves the trip; anywhere deeper it returns to the hub.
+  const atHub = pathname === `/trips/${trip.id}`;
+  const back = atHub
+    ? { href: `/groups/${trip.groupId}`, label: group ? `Back to ${group.name}` : "Back to group" }
+    : { href: `/trips/${trip.id}`, label: `Back to ${trip.name}` };
+
   return (
     <div className="space-y-5">
+      <Link
+        href={back.href}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
+      >
+        <ArrowLeft size={15} /> <span className="truncate">{back.label}</span>
+      </Link>
+
       <div
         className="relative overflow-hidden rounded-3xl p-6 sm:p-8"
         style={{ background: trip.coverColor }}

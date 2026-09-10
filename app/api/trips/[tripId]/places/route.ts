@@ -18,6 +18,7 @@ async function ensurePlaceExists(placeId: string, importedPlace?: Place) {
       lng: importedPlace.coordinates.lng,
       address: importedPlace.address,
       photo: importedPlace.photo,
+      photosJson: importedPlace.photos?.length ? JSON.stringify(importedPlace.photos) : null,
       rating: importedPlace.rating,
       reviewCount: importedPlace.reviewCount,
       priceLevel: importedPlace.priceLevel,

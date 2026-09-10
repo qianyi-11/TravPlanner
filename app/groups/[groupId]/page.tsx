@@ -2,7 +2,8 @@
 
 import { use, useState } from "react";
 import { notFound } from "next/navigation";
-import { Compass, Plus, UserPlus } from "lucide-react";
+import { ArrowLeft, Compass, Plus, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { Button, LinkButton } from "@/components/ui/Button";
@@ -37,6 +38,13 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
 
   return (
     <div>
+      <Link
+        href="/groups"
+        className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--color-ink-soft)] transition-colors hover:text-[var(--color-ink)]"
+      >
+        <ArrowLeft size={15} /> Back to groups
+      </Link>
+
       <div
         className="relative overflow-hidden rounded-3xl p-6 sm:p-8"
         style={{ background: group.coverColor }}
