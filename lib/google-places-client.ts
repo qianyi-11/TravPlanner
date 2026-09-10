@@ -40,15 +40,15 @@ function guessArea(address: string | undefined, destination: string): string {
 }
 
 function isOpenNow(hours?: google.maps.places.PlaceOpeningHours): boolean {
-  if (!hours) return true;
+  if (!hours) return false;
   if (typeof hours.isOpen === "function") {
     try {
-      return hours.isOpen() ?? true;
+      return hours.isOpen() === true;
     } catch {
-      return true;
+      return false;
     }
   }
-  return (hours as unknown as { open_now?: boolean }).open_now ?? true;
+  return (hours as unknown as { open_now?: boolean }).open_now === true;
 }
 
 // `editorial_summary` is returned by the Places API when requested but isn't
@@ -64,6 +64,7 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
 
   return {
     id,
+    source: "google",
     name: result.name ?? "Unnamed place",
     category: prettyCategory(result.types),
     area: guessArea(result.formatted_address, destination),
@@ -85,6 +86,7 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
         ? { day: line, hours: "" }
         : { day: line.slice(0, idx).trim(), hours: line.slice(idx + 1).trim() };
     }),
+    // Legacy import snapshot only; UI uses the saved weekly schedule.
     isOpenNow: isOpenNow(result.opening_hours),
     closesAt: undefined,
     estimatedDurationMinutes: 60,
@@ -97,7 +99,7 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
         date: r.relative_time_description ?? "",
       })
     ),
-    availability: "available",
+    availability: "unknown",
     suggestedBy: [],
     voteCount: 0,
     votedBy: [],

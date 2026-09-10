@@ -55,6 +55,7 @@ export function mapMember(
 function basePlaceFields(row: PPlace) {
   return {
     id: row.id,
+    source: row.source as Place["source"],
     name: row.name,
     category: row.category,
     area: row.area,

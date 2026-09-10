@@ -109,7 +109,7 @@ function TravelConnector({
   return (
     <div className="my-2 flex items-center gap-2">
       <span className="flex items-center gap-1.5 rounded-full bg-[var(--color-sand)] px-3 py-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">
-        <Icon size={12} /> {mode.label} · ~{minutes} min
+        <Icon size={12} /> {mode.label} · Est. {minutes} min
       </span>
       {directionsUrl && (
         <a

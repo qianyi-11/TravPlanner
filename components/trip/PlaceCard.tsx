@@ -6,6 +6,7 @@ import type { Member, Place } from "@/lib/types";
 import { PlaceCover } from "./CategoryIcon";
 import { MemberStack } from "@/components/ui/Avatar";
 import { cx } from "@/lib/utils";
+import { getOpeningHoursLabel } from "@/lib/place-facts";
 
 export function PlaceCard({
   place,
@@ -78,9 +79,7 @@ export function PlaceCard({
         </div>
 
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-          <span className={place.isOpenNow ? "font-medium text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-            {place.isOpenNow ? `Open${place.closesAt ? ` until ${place.closesAt}` : ""}` : "Closed now"}
-          </span>
+          <span className="font-medium text-[var(--color-ink-soft)]">{getOpeningHoursLabel(place.openingHours)}</span>
           <span className="flex items-center gap-1 text-[var(--color-ink-soft)]">
             <Clock size={11} /> ~{Math.round(place.estimatedDurationMinutes / 30) * 30 >= 60 ? `${Math.round(place.estimatedDurationMinutes / 60 * 10) / 10}h` : `${place.estimatedDurationMinutes}m`}
           </span>

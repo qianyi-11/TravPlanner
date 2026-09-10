@@ -102,6 +102,7 @@ export interface PlaceReview {
 
 export interface Place {
   id: string;
+  source?: "catalog" | "google";
   name: string;
   category: string;
   area: string; // neighborhood, used for geo-grouping
@@ -115,11 +116,12 @@ export interface Place {
   priceLabel: string;
   description: string;
   openingHours: PlaceOpeningHours[];
+  /** Legacy import-time snapshot; not authoritative for current opening status. */
   isOpenNow: boolean;
   closesAt?: string;
   estimatedDurationMinutes: number;
   reviews: PlaceReview[];
-  availability: "available" | "limited" | "sold_out";
+  availability: "available" | "limited" | "sold_out" | "unknown";
   suggestedBy: string[]; // member ids
   voteCount: number;
   votedBy: string[]; // member ids

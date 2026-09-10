@@ -68,8 +68,8 @@ export default function HomePage() {
           {[
             { title: "Suggest", desc: "Every member adds the places they want to visit." },
             { title: "Vote", desc: "The group votes on the ideas that matter most." },
-            { title: "Validate", desc: "We check real hours, ratings, and availability." },
-            { title: "Build", desc: "We arrange it all into one efficient itinerary." },
+            { title: "Review", desc: "Review saved ratings, hours, costs, and availability notes." },
+            { title: "Build", desc: "We arrange the selected places into one planned itinerary." },
           ].map((s, i) => (
             <div key={s.title}>
               <span className="font-display text-3xl font-extrabold text-white/25">{String(i + 1).padStart(2, "0")}</span>

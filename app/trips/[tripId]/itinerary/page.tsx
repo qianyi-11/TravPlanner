@@ -29,7 +29,7 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
           <EmptyState
             icon={CalendarX}
             title="Itinerary not built yet"
-            description="Finish route optimization first, then we'll build your day-by-day plan."
+            description="Review the trip sequence first, then continue to the day-by-day plan."
             action={<LinkButton href={`/trips/${tripId}/route`}>Go to Route</LinkButton>}
           />
         </div>
@@ -43,6 +43,7 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
     .map((a) => placesMap[a.placeId as string])
     .filter(Boolean);
   const dayCost = day.activities.reduce((s, a) => s + a.estimatedCost, 0);
+  const activityCount = trip.itinerary.reduce((sum, item) => sum + item.activities.filter((activity) => activity.type === "place").length, 0);
 
   return (
     <div>
@@ -52,7 +53,7 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
         <div>
           <h1 className="font-display text-2xl font-bold">Day-by-day itinerary</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            {trip.itinerary.length} days · {trip.shortlistPlaceIds.length} activities
+            {trip.itinerary.length} days · {activityCount} activities
           </p>
         </div>
         <LinkButton href={`/trips/${tripId}/plan`} iconRight={<ArrowRight size={15} />}>

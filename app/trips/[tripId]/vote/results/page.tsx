@@ -32,6 +32,14 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const [count, setCount] = useState(trip?.recommendedPlaceCount || rec.count);
   const tripMembers = trip ? trip.memberIds.map((id) => members[id]).filter(Boolean) : [];
   const consensus = buildConsensus({ members: tripMembers, candidates: places, capacity: count });
+  const primaryTradeoff = [...consensus.tradeoffs].sort((a, b) =>
+    (b.representedAfterCount - b.representedBeforeCount) - (a.representedAfterCount - a.representedBeforeCount) ||
+    b.newlyRepresentedMemberIds.length - a.newlyRepresentedMemberIds.length ||
+    a.selectionIndex - b.selectionIndex ||
+    a.selectedCandidateId.localeCompare(b.selectedCandidateId)
+  )[0];
+  const fairPlace = primaryTradeoff && places.find((place) => place.id === primaryTradeoff.selectedCandidateId);
+  const baselinePlace = primaryTradeoff && places.find((place) => place.id === primaryTradeoff.baselineCandidateId);
   const selectedById = new Map(consensus.shortlist.map((item) => [item.candidateId, item]));
   const selectedIds = new Set(selectedById.keys());
   const orderedPlaces = [
@@ -67,6 +75,37 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
             Ranked by votes, preferences and balanced group representation.
           </p>
+
+          {primaryTradeoff && fairPlace && baselinePlace && (
+            <Card className="mt-5 p-5">
+              <div className="flex items-center gap-2">
+                <Info size={16} className="text-[var(--color-primary)]" />
+                <h2 className="font-display text-base font-bold">
+                  Consensus {consensus.tradeoffs.length === 1 ? "changed" : "adjusted"} {consensus.tradeoffs.length} shortlist decision{consensus.tradeoffs.length === 1 ? "" : "s"}
+                </h2>
+              </div>
+              {consensus.tradeoffs.length > 1 && <p className="mt-2 text-xs font-semibold text-[var(--color-ink-soft)]">Most important trade-off</p>}
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--color-teal-dark)]">With group fairness</p>
+                  <p className="font-display font-bold">{fairPlace.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Without representation adjustment</p>
+                  <p className="font-display font-bold">{baselinePlace.name}</p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--color-ink-soft)]">
+                <span>
+                  Traveller coverage {primaryTradeoff.representedBeforeCount === primaryTradeoff.representedAfterCount
+                    ? `${primaryTradeoff.representedAfterCount} / ${tripMembers.length}`
+                    : `${primaryTradeoff.representedBeforeCount} / ${tripMembers.length} → ${primaryTradeoff.representedAfterCount} / ${tripMembers.length}`}
+                </span>
+                <span>Support {consensus.candidates[fairPlace.id].voteCount} votes vs {consensus.candidates[baselinePlace.id].voteCount} votes</span>
+              </div>
+              <p className="mt-3 text-sm text-[var(--color-ink)]">{primaryTradeoff.explanation}</p>
+            </Card>
+          )}
 
           <div className="mt-5 space-y-2.5">
             {orderedPlaces.map((place, i) => {

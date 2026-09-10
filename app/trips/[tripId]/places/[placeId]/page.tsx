@@ -20,6 +20,12 @@ import { MapView } from "@/components/trip/MapView";
 import { Badge, Card } from "@/components/ui/Card";
 import { MemberStack } from "@/components/ui/Avatar";
 import { formatMinutes } from "@/lib/utils";
+import {
+  getAvailabilityPresentation,
+  getOpeningHoursLabel,
+  getOpeningHoursState,
+  getPricePresentation,
+} from "@/lib/place-facts";
 
 export default function PlaceDetailsPage({
   params,
@@ -36,11 +42,9 @@ export default function PlaceDetailsPage({
   const isShortlisted = trip.shortlistPlaceIds.includes(place.id);
   const suggesters = place.suggestedBy.map((id) => members[id]).filter(Boolean);
 
-  const availabilityBadge = {
-    available: { tone: "success" as const, label: "Available" },
-    limited: { tone: "warning" as const, label: "Limited Availability" },
-    sold_out: { tone: "danger" as const, label: "Sold Out" },
-  }[place.availability];
+  const availability = getAvailabilityPresentation(place.availability);
+  const price = getPricePresentation(place);
+  const hasHours = getOpeningHoursState(place.openingHours) === "AVAILABLE";
 
   return (
     <div>
@@ -66,7 +70,7 @@ export default function PlaceDetailsPage({
               <Badge tone="neutral">{place.category}</Badge>
               {isShortlisted && (
                 <Badge tone="teal">
-                  <BadgeCheck size={12} /> Validated
+                  <BadgeCheck size={12} /> Shortlisted
                 </Badge>
               )}
             </div>
@@ -77,9 +81,7 @@ export default function PlaceDetailsPage({
                 {place.rating}
               </span>
               <span>{place.reviewCount.toLocaleString()} reviews</span>
-              <span className={place.isOpenNow ? "font-medium text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                {place.isOpenNow ? `Open${place.closesAt ? ` until ${place.closesAt}` : ""}` : "Closed"}
-              </span>
+              <span className="font-medium">{getOpeningHoursLabel(place.openingHours)}</span>
             </div>
             {suggesters.length > 0 && (
               <div className="mt-3 flex items-center gap-2">
@@ -96,14 +98,14 @@ export default function PlaceDetailsPage({
           </Section>
 
           <Section title="Hours">
-            <ul className="space-y-1.5 text-sm">
-              {place.openingHours.map((h) => (
+            {hasHours ? <ul className="space-y-1.5 text-sm">
+              {place.openingHours.filter((h) => h.day.trim() && h.hours.trim()).map((h) => (
                 <li key={h.day} className="flex items-center justify-between">
                   <span className="text-[var(--color-ink-soft)]">{h.day}</span>
                   <span className="font-medium">{h.hours}</span>
                 </li>
               ))}
-            </ul>
+            </ul> : <p className="text-sm text-[var(--color-ink-soft)]">Hours unavailable</p>}
           </Section>
 
           <Section title="Reviews">
@@ -138,8 +140,8 @@ export default function PlaceDetailsPage({
           <Section title="Travel Time">
             <p className="text-sm text-[var(--color-ink-soft)]">
               {isShortlisted
-                ? "Travel time to and from nearby stops is calculated in the Route step, based on your final itinerary order."
-                : "Travel time will be calculated once this place is shortlisted and the route is optimized."}
+                ? "Saved travel estimates appear in the itinerary when this place is part of the active plan."
+                : "Travel estimates are not available until this place is part of an itinerary."}
             </p>
           </Section>
         </div>
@@ -147,7 +149,7 @@ export default function PlaceDetailsPage({
         <div className="space-y-5">
           <Card className="space-y-4 p-5">
             <InfoRow icon={Clock} label="Estimated visit" value={formatMinutes(place.estimatedDurationMinutes)} />
-            <InfoRow icon={Wallet} label="Price" value={place.priceLabel} />
+            <InfoRow icon={Wallet} label={price.title} value={price.value} />
             <InfoRow icon={MapPin} label="Area" value={`${place.area}, ${place.destination}`} />
             <InfoRow icon={Phone} label="Address" value={place.address} />
           </Card>
@@ -156,20 +158,20 @@ export default function PlaceDetailsPage({
             <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold">
               <ShieldCheck size={15} className="text-[var(--color-teal)]" /> Availability
             </h3>
-            <Badge tone={availabilityBadge.tone}>{availabilityBadge.label}</Badge>
+            <Badge tone={availability.tone}>{availability.label}</Badge>
             {place.availability === "limited" && (
               <p className="mt-2 text-xs text-[var(--color-ink-soft)]">
-                Slots are filling up — booking ahead is recommended.
+                Saved information marks availability as limited; review booking details before the trip.
               </p>
             )}
           </Card>
 
           <Card className="p-5">
             <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold">
-              <Ticket size={15} className="text-[var(--color-primary)]" /> Price
+              <Ticket size={15} className="text-[var(--color-primary)]" /> {price.title}
             </h3>
-            <p className="font-display text-lg font-bold">{place.priceLabel}</p>
-            <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Estimated, per person</p>
+            <p className="font-display text-lg font-bold">{price.value}</p>
+            <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{price.description}</p>
           </Card>
         </div>
       </div>

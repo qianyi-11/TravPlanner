@@ -52,15 +52,15 @@ const STAGE_INFO: Record<
   },
   validation: {
     icon: ListChecks,
-    title: "Validate the shortlist",
-    description: "We check real hours, ratings, pricing and availability for every chosen place.",
+    title: "Review the shortlist",
+    description: "Review saved ratings, opening hours, cost information and availability notes.",
     cta: "Review Places",
     href: "validate",
   },
   route: {
     icon: RouteIcon,
-    title: "Optimize the route",
-    description: "We group nearby places and sequence them to minimize backtracking.",
+    title: "Preview the trip sequence",
+    description: "Review the saved place order and area grouping on the map.",
     cta: "View Route",
     href: "route",
   },
@@ -134,7 +134,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
               <div>
                 <Badge tone="teal">Trip is live</Badge>
                 <p className="mt-2 text-sm font-medium text-[var(--color-ink)]">
-                  Your trip has started — switch to Trip Mode for real-time updates.
+                  Your trip has started — switch to Trip Mode to follow the saved plan and handle Rescue events.
                 </p>
               </div>
               <LinkButton href={`/trips/${trip.id}/live`} variant="secondary" size="sm">

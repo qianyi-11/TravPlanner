@@ -10,6 +10,7 @@ import { PlaceCover } from "@/components/trip/CategoryIcon";
 import { Badge, Card } from "@/components/ui/Card";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { formatMinutes } from "@/lib/utils";
+import { getOpeningHoursLabel, getPricePresentation } from "@/lib/place-facts";
 
 export default function ValidatePage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -24,6 +25,8 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
 
   const soldOut = places.filter((p) => p.availability === "sold_out").length;
   const limited = places.filter((p) => p.availability === "limited").length;
+  const available = places.filter((p) => p.availability === "available").length;
+  const unknown = places.filter((p) => p.availability === "unknown").length;
 
   function handleContinue() {
     setStage(tripId, "route");
@@ -36,9 +39,9 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
 
       <div className="mt-6 flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold">Detailed place validation</h1>
+          <h1 className="font-display text-2xl font-bold">Review shortlisted place details</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            We&apos;ve checked real hours, pricing and availability for every shortlisted place.
+            Review saved ratings, opening hours, cost information and availability notes before continuing.
           </p>
         </div>
         <Button onClick={handleContinue} iconRight={<ArrowRight size={15} />}>
@@ -48,10 +51,11 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
 
       <div className="mt-4 flex flex-wrap gap-3">
         <Badge tone="success">
-          <ShieldCheck size={12} /> {places.length - soldOut - limited} fully available
+          <ShieldCheck size={12} /> {available} saved available
         </Badge>
         {limited > 0 && <Badge tone="warning">{limited} limited availability</Badge>}
         {soldOut > 0 && <Badge tone="danger">{soldOut} sold out</Badge>}
+        {unknown > 0 && <Badge tone="neutral">{unknown} not checked</Badge>}
       </div>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -63,7 +67,7 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="truncate font-display text-sm font-bold">{place.name}</h3>
                   <Badge tone="teal">
-                    <BadgeCheck size={11} /> Verified
+                    <BadgeCheck size={11} /> Shortlisted
                   </Badge>
                 </div>
                 <p className="text-xs text-[var(--color-ink-soft)]">
@@ -78,11 +82,8 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
             </div>
             <div className="grid grid-cols-3 divide-x divide-[var(--color-border-soft)] border-t border-[var(--color-border-soft)] text-center">
               <MiniFact icon={Clock} value={formatMinutes(place.estimatedDurationMinutes)} />
-              <MiniFact icon={Wallet} value={place.priceLabel.split(" ")[0]} />
-              <MiniFact
-                icon={MapPin}
-                value={place.availability === "available" ? "Open" : place.availability === "limited" ? "Limited" : "Sold out"}
-              />
+              <MiniFact icon={Wallet} value={getPricePresentation(place).value} />
+              <MiniFact icon={MapPin} value={getOpeningHoursLabel(place.openingHours)} />
             </div>
             <div className="border-t border-[var(--color-border-soft)] p-3">
               <LinkButton href={`/trips/${tripId}/places/${place.id}`} variant="ghost" size="sm" fullWidth>

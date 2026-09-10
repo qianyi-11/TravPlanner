@@ -11,6 +11,7 @@ import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { Card, Badge } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import type { Place } from "@/lib/types";
+import { getActivePlanPlaceIds } from "@/lib/plan-places";
 
 export default function RoutePage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -20,31 +21,9 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
   const setStage = usePlannerStore((s) => s.setStage);
   const [selected, setSelected] = useState<string | null>(null);
 
-  const shortlist: Place[] = useMemo(
-    () => (trip ? trip.shortlistPlaceIds.map((id) => placesMap[id]).filter(Boolean) : []),
-    [trip, placesMap]
-  );
-
   const orderedFromItinerary: Place[] = useMemo(() => {
-    if (!trip || trip.itinerary.length === 0) return shortlist;
-    const ids = trip.itinerary
-      .flatMap((d) => d.activities)
-      .filter((a) => a.type === "place" && a.placeId)
-      .map((a) => a.placeId as string);
-    const seen = new Set<string>();
-    const ordered: Place[] = [];
-    for (const id of ids) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const p = placesMap[id];
-      if (p) ordered.push(p);
-    }
-    // include any shortlisted places not in itinerary yet
-    for (const p of shortlist) {
-      if (!seen.has(p.id)) ordered.push(p);
-    }
-    return ordered;
-  }, [trip, shortlist, placesMap]);
+    return trip ? getActivePlanPlaceIds(trip).map((id) => placesMap[id]).filter(Boolean) : [];
+  }, [trip, placesMap]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Place[]>();
@@ -71,9 +50,9 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold">Optimizing your route</h1>
+          <h1 className="font-display text-2xl font-bold">Trip sequence preview</h1>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            We grouped nearby places together to minimize backtracking between stops.
+            Review the saved stop order and area grouping for your trip.
           </p>
         </div>
         <Button onClick={handleContinue} iconRight={<ArrowRight size={15} />}>
@@ -84,8 +63,7 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
       <div className="mt-5 flex items-start gap-3 rounded-2xl border border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-4">
         <Layers size={18} className="mt-0.5 shrink-0 text-[var(--color-teal-dark)]" />
         <p className="text-sm text-[var(--color-teal-dark)]">
-          These places are close together, so we&apos;ve grouped them into the same route — reducing unnecessary
-          travel across your trip.
+          Stops are shown by their saved area and itinerary sequence. The map previews that order.
         </p>
       </div>
 
@@ -137,7 +115,7 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
         <div className="mt-8">
           <div className="mb-3 flex items-center gap-2">
             <RouteIcon size={16} className="text-[var(--color-ink-soft)]" />
-            <h2 className="font-display text-lg font-bold">Suggested route sequence</h2>
+            <h2 className="font-display text-lg font-bold">Planned stop sequence</h2>
           </div>
           <Card className="p-5">
             <ItineraryTimeline

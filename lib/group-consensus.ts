@@ -37,6 +37,17 @@ export interface SelectedConsensusCandidate {
   reason: string;
 }
 
+export interface ConsensusTradeoff {
+  selectedCandidateId: string;
+  baselineCandidateId: string;
+  selectionIndex: number;
+  representedBeforeCount: number;
+  representedAfterCount: number;
+  benefitedMemberIds: string[];
+  newlyRepresentedMemberIds: string[];
+  explanation: string;
+}
+
 export interface ConsensusResult {
   candidates: Record<string, CandidateConsensus>;
   candidateOrder: string[];
@@ -44,7 +55,12 @@ export interface ConsensusResult {
   memberRepresentation: { memberId: string; selectedMatchCount: number }[];
   representedMemberCount: number;
   representationPercent: number;
+  tradeoffs: ConsensusTradeoff[];
 }
+
+type ProvisionalFairnessEvent = Omit<ConsensusTradeoff, "baselineCandidateId" | "explanation"> & {
+  roundBaseWinnerId: string;
+};
 
 const INTEREST_ALIASES: Record<string, string[]> = {
   food: ["food", "restaurant", "market", "cafe", "ramen", "dining", "dessert", "seafood", "soba"],
@@ -143,6 +159,35 @@ function describeCandidate(candidate: CandidateConsensus, memberCount: number): 
   return `${parts.join(" and ")}.`;
 }
 
+function describeTradeoff(
+  selected: ConsensusCandidate,
+  baseline: ConsensusCandidate,
+  event: ProvisionalFairnessEvent,
+  candidates: Record<string, CandidateConsensus>,
+  members: ConsensusMember[]
+): string {
+  const selectedVotes = candidates[selected.id].voteCount;
+  const baselineVotes = candidates[baseline.id].voteCount;
+  const voteDelta = selectedVotes - baselineVotes;
+  const voteComparison = voteDelta === -1
+    ? "while receiving one fewer vote"
+    : voteDelta < -1
+      ? `while receiving ${Math.abs(voteDelta)} fewer votes`
+      : voteDelta === 0
+        ? "with the same vote support"
+        : "while also receiving stronger vote support";
+  const memberNames = new Map(members.map((member) => [member.id, member.name]));
+
+  if (event.newlyRepresentedMemberIds.length) {
+    const names = event.newlyRepresentedMemberIds.map((id) => memberNames.get(id) ?? id);
+    const subject = names.join(" and ");
+    return `With the representation adjustment, ${selected.name} is included instead of ${baseline.name}. ${selected.name} gives ${subject} ${names.length === 1 ? "their first represented activity" : "their first represented activities"} and improves traveller representation from ${event.representedBeforeCount}/${members.length} to ${event.representedAfterCount}/${members.length}, ${voteComparison}.`;
+  }
+
+  const names = event.benefitedMemberIds.map((id) => memberNames.get(id) ?? id).join(" and ");
+  return `With the representation adjustment, ${selected.name} is included instead of ${baseline.name}. It strengthens coverage for ${names}, who had fewer represented activities at this point in the shortlist selection, ${voteComparison}.`;
+}
+
 function evaluateCandidate(
   memberList: ConsensusMember[],
   candidate: ConsensusCandidate
@@ -209,6 +254,7 @@ export function buildConsensus({
   const candidateOrder = [...evaluated].sort(compareCandidates).map((candidate) => candidate.candidateId);
   const representation = new Map(memberList.map((member) => [member.id, 0]));
   const selected: SelectedConsensusCandidate[] = [];
+  const provisionalFairnessEvents: ProvisionalFairnessEvent[] = [];
   const remaining = new Map(evaluated.map((candidate) => [candidate.candidateId, candidate]));
   const mustDos = evaluated
     .filter((candidate) => candidate.mustDoMemberIds.length)
@@ -240,7 +286,17 @@ export function buildConsensus({
   }
 
   const effectiveCapacity = Math.min(candidateList.length, Math.max(0, capacity, mustDos.length));
+  const mustDoIds = new Set(mustDos.map((candidate) => candidate.candidateId));
+  const baselineShortlistIds = [
+    ...mustDos.map((candidate) => candidate.candidateId),
+    ...evaluated
+      .filter((candidate) => !mustDoIds.has(candidate.candidateId))
+      .sort(compareCandidates)
+      .slice(0, effectiveCapacity - mustDos.length)
+      .map((candidate) => candidate.candidateId),
+  ];
   while (selected.length < effectiveCapacity && remaining.size) {
+    const representedBeforeCount = [...representation.values()].filter((count) => count > 0).length;
     const minimum = memberList.length ? Math.min(...representation.values()) : 0;
     const underRepresented = new Set(
       memberList.filter((member) => representation.get(member.id) === minimum).map((member) => member.id)
@@ -259,6 +315,7 @@ export function buildConsensus({
     const winner = choices[0];
     const baseWinner = [...remaining.values()].sort(compareCandidates)[0];
     const changedOrder = winner.candidate.candidateId !== baseWinner.candidateId;
+    const newlyRepresentedMemberIds = winner.representedIds.filter((id) => representation.get(id) === 0);
     const representedNames = winner.representedIds.map((id) => memberList.find((member) => member.id === id)?.name ?? id);
     selected.push({
       candidateId: winner.candidate.candidateId,
@@ -272,6 +329,17 @@ export function buildConsensus({
     });
     remaining.delete(winner.candidate.candidateId);
     addRepresentation(winner.candidate);
+    if (changedOrder) {
+      provisionalFairnessEvents.push({
+        selectedCandidateId: winner.candidate.candidateId,
+        roundBaseWinnerId: baseWinner.candidateId,
+        selectionIndex: selected.length - 1,
+        representedBeforeCount,
+        representedAfterCount: [...representation.values()].filter((count) => count > 0).length,
+        benefitedMemberIds: winner.representedIds,
+        newlyRepresentedMemberIds,
+      });
+    }
   }
 
   const memberRepresentation = memberList.map((member) => ({
@@ -279,6 +347,37 @@ export function buildConsensus({
     selectedMatchCount: representation.get(member.id) ?? 0,
   }));
   const representedMemberCount = memberRepresentation.filter((member) => member.selectedMatchCount > 0).length;
+  const fairShortlistIds = selected.map((candidate) => candidate.candidateId);
+  const fairShortlistIdSet = new Set(fairShortlistIds);
+  const baselineShortlistIdSet = new Set(baselineShortlistIds);
+  const fairOnly = new Set(fairShortlistIds.filter((id) => !baselineShortlistIdSet.has(id)));
+  const baselineOnly = baselineShortlistIds.filter((id) => !fairShortlistIdSet.has(id));
+  const unusedBaselineIds = new Set(baselineOnly);
+  const candidatesByInputId = new Map(candidateList.map((candidate) => [candidate.id, candidate]));
+  const tradeoffs: ConsensusTradeoff[] = [];
+
+  if (fairOnly.size === baselineOnly.length) {
+    for (const event of provisionalFairnessEvents) {
+      if (!fairOnly.has(event.selectedCandidateId)) continue;
+      const baselineCandidateId = unusedBaselineIds.has(event.roundBaseWinnerId)
+        ? event.roundBaseWinnerId
+        : baselineOnly.find((id) => unusedBaselineIds.has(id));
+      const selectedCandidate = candidatesByInputId.get(event.selectedCandidateId);
+      const baselineCandidate = baselineCandidateId && candidatesByInputId.get(baselineCandidateId);
+      if (!baselineCandidateId || !selectedCandidate || !baselineCandidate) continue;
+      unusedBaselineIds.delete(baselineCandidateId);
+      tradeoffs.push({
+        selectedCandidateId: event.selectedCandidateId,
+        baselineCandidateId,
+        selectionIndex: event.selectionIndex,
+        representedBeforeCount: event.representedBeforeCount,
+        representedAfterCount: event.representedAfterCount,
+        benefitedMemberIds: event.benefitedMemberIds,
+        newlyRepresentedMemberIds: event.newlyRepresentedMemberIds,
+        explanation: describeTradeoff(selectedCandidate, baselineCandidate, event, candidatesById, memberList),
+      });
+    }
+  }
   return {
     candidates: candidatesById,
     candidateOrder,
@@ -286,6 +385,7 @@ export function buildConsensus({
     memberRepresentation,
     representedMemberCount,
     representationPercent: memberList.length ? roundedFive((representedMemberCount / memberList.length) * 100) : 0,
+    tradeoffs: tradeoffs.length === fairOnly.size ? tradeoffs : [],
   };
 }
 

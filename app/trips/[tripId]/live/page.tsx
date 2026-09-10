@@ -120,12 +120,12 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
             {phase === "searching" && (
               <div className="space-y-2 text-sm text-[var(--color-ink-soft)]">
                 <p className="flex items-center gap-2 font-medium text-[var(--color-ink)]">
-                  <Loader2 size={14} className="animate-spin text-[var(--color-primary)]" /> Finding alternatives…
+                  <Loader2 size={14} className="animate-spin text-[var(--color-primary)]" /> Reviewing prepared alternative…
                 </p>
                 <ul className="ml-6 list-disc space-y-1 text-xs">
-                  <li>Revalidating route</li>
-                  <li>Checking price &amp; availability</li>
-                  <li>Rechecking opening hours</li>
+                  <li>Comparing Group Match</li>
+                  <li>Reviewing saved travel estimate</li>
+                  <li>Reviewing saved cost and availability</li>
                 </ul>
               </div>
             )}
@@ -144,11 +144,11 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold">{openEvent.alternative.label}</p>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-ink-soft)]">
-                      <span>+{openEvent.alternative.extraTravelMinutes} min travel</span>
+                      <span>Travel estimate: +{openEvent.alternative.extraTravelMinutes} min</span>
                       <span className="text-[var(--color-success)]">
-                        {openEvent.alternative.available ? "Available" : "Unavailable"}
+                        Saved availability: {openEvent.alternative.available ? "Available" : "Unavailable"}
                       </span>
-                      <span>+RM {openEvent.alternative.cost}</span>
+                      <span>Est. replacement cost: RM {openEvent.alternative.cost}</span>
                     </div>
                   </div>
                 </div>
@@ -209,7 +209,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
           </p>
           {nextActivity && (
             <p className="mt-0.5 text-xs text-[var(--color-ink-soft)]">
-              {nextActivity.time} · {nextActivity.travelFromPrevMinutes} min travel
+              {nextActivity.time} · Est. {nextActivity.travelFromPrevMinutes} min travel
             </p>
           )}
         </Card>

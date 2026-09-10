@@ -12,7 +12,6 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
 import { MapView } from "@/components/trip/MapView";
@@ -24,6 +23,7 @@ import { LinkButton } from "@/components/ui/Button";
 import { formatDateRange, daysBetween, cx, formatWeekday } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/States";
 import { buildConsensus } from "@/lib/group-consensus";
+import { getActivePlanPlaceIds } from "@/lib/plan-places";
 
 const TABS = [
   { key: "itinerary", label: "Itinerary", icon: ListTree },
@@ -40,41 +40,24 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
   const membersMap = usePlannerStore((s) => s.members);
-  const shortlist = usePlannerStore(
-    useShallow((s) => (trip ? trip.shortlistPlaceIds.map((id) => s.places[id]).filter(Boolean) : []))
-  );
   const [tab, setTab] = useState<TabKey>("itinerary");
   const [openDay, setOpenDay] = useState(0);
 
-  const orderedPlaces = useMemo(() => {
-    if (!trip) return [];
-    const ids = trip.itinerary
-      .flatMap((d) => d.activities)
-      .filter((a) => a.type === "place" && a.placeId)
-      .map((a) => a.placeId as string);
-    const seen = new Set<string>();
-    const out = [];
-    for (const id of ids) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const p = placesMap[id];
-      if (p) out.push(p);
-    }
-    return out;
+  const activePlanPlaces = useMemo(() => {
+    return trip ? getActivePlanPlaceIds(trip).map((id) => placesMap[id]).filter(Boolean) : [];
   }, [trip, placesMap]);
 
   if (!trip) notFound();
 
   const tripMembers = trip.memberIds.map((id) => membersMap[id]).filter(Boolean);
-  const planPlaces = orderedPlaces.length ? orderedPlaces : shortlist;
-  const planConsensus = buildConsensus({ members: tripMembers, candidates: planPlaces, capacity: planPlaces.length });
+  const planConsensus = buildConsensus({ members: tripMembers, candidates: activePlanPlaces, capacity: activePlanPlaces.length });
   const unrepresentedNames = planConsensus.memberRepresentation
     .filter((member) => member.selectedMatchCount === 0)
     .map((member) => membersMap[member.memberId]?.name ?? member.memberId);
   const days = daysBetween(trip.startDate, trip.endDate);
   const activityCount = trip.itinerary.reduce((s, d) => s + d.activities.filter((a) => a.type === "place").length, 0);
 
-  const bookingItems = shortlist.filter((p) => p.availability !== "available" || p.priceLevel >= 3);
+  const bookingItems = activePlanPlaces.filter((p) => p.availability === "limited" || p.availability === "sold_out");
 
   return (
     <div>
@@ -166,9 +149,9 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
           ))}
 
         {tab === "map" &&
-          (orderedPlaces.length > 0 ? (
+          (activePlanPlaces.length > 0 ? (
             <div style={{ height: 480 }}>
-              <MapView places={orderedPlaces} />
+              <MapView places={activePlanPlaces} />
             </div>
           ) : (
             <EmptyState icon={MapPinned} title="No route yet" />
@@ -189,7 +172,7 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
         {tab === "bookings" && (
           <div className="space-y-3">
             {bookingItems.length === 0 ? (
-              <EmptyState icon={Ticket} title="Nothing to book" description="All your places are free or walk-in." />
+              <EmptyState icon={Ticket} title="No saved booking alerts" description="No current-plan place is marked limited or sold out." />
             ) : (
               bookingItems.map((p) => (
                 <Card key={p.id} className="flex items-center justify-between gap-3 p-4">
@@ -200,7 +183,7 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
                   <Badge
                     tone={p.availability === "sold_out" ? "danger" : p.availability === "limited" ? "warning" : "neutral"}
                   >
-                    {p.availability === "sold_out" ? "Unavailable" : p.availability === "limited" ? "Book Early" : "Pay on arrival"}
+                    {p.availability === "sold_out" ? "Saved sold out" : "Saved limited"}
                   </Badge>
                 </Card>
               ))
@@ -210,7 +193,7 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
 
         {tab === "places" && (
           <div className="space-y-3">
-            {shortlist.map((p) => (
+            {activePlanPlaces.map((p) => (
               <PlaceCard key={p.id} place={p} detailsHref={`/trips/${tripId}/places/${p.id}`} />
             ))}
           </div>
