@@ -172,7 +172,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                   </div>
                 )}
                 <div className="mt-4 flex gap-2">
-                  <Button size="sm" onClick={handleAccept} disabled={saving} icon={<CheckCircle2 size={14} />}>
+                  <Button data-testid="accept-rescue" size="sm" onClick={handleAccept} disabled={saving} icon={<CheckCircle2 size={14} />}>
                     {saving ? "Saving…" : "Accept Change"}
                   </Button>
                 </div>

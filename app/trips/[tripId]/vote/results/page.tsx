@@ -77,7 +77,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
           </p>
 
           {primaryTradeoff && fairPlace && baselinePlace && (
-            <Card className="mt-5 p-5">
+            <Card data-testid="consensus-tradeoff" className="mt-5 p-5">
               <div className="flex items-center gap-2">
                 <Info size={16} className="text-[var(--color-primary)]" />
                 <h2 className="font-display text-base font-bold">
@@ -170,6 +170,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
               <span className="text-[var(--color-primary)]">{count}</span>
             </div>
             <input
+              data-testid="shortlist-capacity"
               type="range"
               min={4}
               max={Math.min(20, places.length || 20)}
@@ -183,7 +184,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
             {consensus.shortlist.length} of {places.length} suggested places will move forward.
           </p>
 
-          <Button fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0 || submitting}>
+          <Button data-testid="confirm-shortlist" fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0 || submitting}>
             {submitting ? "Saving…" : "Confirm & Continue"}
           </Button>
         </Card>

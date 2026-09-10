@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:consensus": "tsx --test lib/group-consensus.test.ts lib/rescue.test.ts",
+    "demo": "tsx scripts/run-demo.ts",
+    "demo:browser-install": "playwright install chromium",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -28,6 +30,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/google.maps": "^3.66.2",
     "@types/node": "^20",
