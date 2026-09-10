@@ -50,6 +50,7 @@ The prototype also introduces **Trip Rescue**, which demonstrates how an existin
 - Collaborative place suggestions
 - Place discovery and map integration
 - Group voting
+- **Deterministic Group Consensus** with explainable fair shortlists
 - Shared shortlist
 - Validation-oriented planning stage
 - Route and map visualisation
@@ -73,6 +74,8 @@ Set Preferences
 Suggest Places
      ↓
 Group Voting
+     ↓
+Group Consensus
      ↓
 Build Shortlist
      ↓
@@ -301,7 +304,13 @@ Members do not only edit a shared document.
 
 They contribute preferences and places, then vote before the trip is finalised.
 
-This makes group agreement part of the product workflow.
+TravPlanner combines those signals into an explainable fair shortlist using:
+
+```text
+base score = 2 × votes + preference matches - 2 × conflicts
+```
+
+Explicit must-dos are protected first. A fixed +3 representation bonus can change close decisions without displacing clear group favourites. The same Group Match evaluation is reused when Trip Rescue compares a prepared replacement.
 
 ## 3. Trip Rescue
 

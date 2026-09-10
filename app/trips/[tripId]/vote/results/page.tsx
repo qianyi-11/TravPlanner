@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { MemberStack } from "@/components/ui/Avatar";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
 import { recommendPlaceCount } from "@/lib/utils";
+import { buildConsensus } from "@/lib/group-consensus";
 
 export default function VoteResultsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -29,12 +30,25 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
 
   const rec = trip ? recommendPlaceCount(trip) : { count: 8, reasoning: "" };
   const [count, setCount] = useState(trip?.recommendedPlaceCount || rec.count);
+  const tripMembers = trip ? trip.memberIds.map((id) => members[id]).filter(Boolean) : [];
+  const consensus = buildConsensus({ members: tripMembers, candidates: places, capacity: count });
+  const selectedById = new Map(consensus.shortlist.map((item) => [item.candidateId, item]));
+  const selectedIds = new Set(selectedById.keys());
+  const orderedPlaces = [
+    ...consensus.shortlist
+      .map((item) => places.find((place) => place.id === item.candidateId))
+      .filter((place): place is (typeof places)[number] => Boolean(place)),
+    ...consensus.candidateOrder
+      .filter((id) => !selectedIds.has(id))
+      .map((id) => places.find((place) => place.id === id))
+      .filter((place): place is (typeof places)[number] => Boolean(place)),
+  ];
 
   if (!trip) notFound();
 
   async function handleConfirm() {
     if (submitting) return;
-    const topIds = places.slice(0, count).map((p) => p.id);
+    const topIds = consensus.shortlist.map((item) => item.candidateId);
     setSubmitting(true);
     try {
       if (await confirmShortlist(tripId, topIds)) router.push(`/trips/${tripId}/shortlist`);
@@ -50,16 +64,22 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div>
           <h1 className="font-display text-2xl font-bold">Voting results</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Ranked by votes from your group.</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+            Ranked by votes, preferences and balanced group representation.
+          </p>
 
           <div className="mt-5 space-y-2.5">
-            {places.map((place, i) => (
+            {orderedPlaces.map((place, i) => {
+              const result = consensus.candidates[place.id];
+              const selected = selectedById.get(place.id);
+              const mustDoNames = result.mustDoMemberIds.map((id) => members[id]?.name ?? id);
+              return (
               <div key={place.id} className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)]">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
                     i === 0
                       ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
-                      : i < count
+                      : selected
                       ? "bg-[var(--color-teal-soft)] text-[var(--color-teal-dark)]"
                       : "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
                   }`}
@@ -72,11 +92,29 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                   <p className="text-xs text-[var(--color-ink-soft)]">
                     {place.category} · {place.area}
                   </p>
+                  <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-[var(--color-ink-soft)]">
+                    <span className="font-semibold text-[var(--color-primary-dark)]">Group Match {result.groupMatchPercent}%</span>
+                    <span>{result.preferenceMatchCount}/{tripMembers.length} preference coverage</span>
+                    <span>{result.dislikeConflictCount ? `${result.dislikeConflictCount} preference conflict${result.dislikeConflictCount === 1 ? "" : "s"}` : "No conflicts"}</span>
+                  </div>
+                  {selected && <p className="mt-1 text-xs text-[var(--color-ink)]">{selected.reason}</p>}
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {mustDoNames.length > 0 && (
+                      <span className="rounded-full bg-[var(--color-teal-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-teal-dark)]">
+                        Must-do · {mustDoNames.join(", ")}
+                      </span>
+                    )}
+                    {selected?.selectionReason === "REPRESENTATION" && (
+                      <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-primary-dark)]">
+                        Improves group representation
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
-                <span className="w-16 shrink-0 text-right text-sm font-bold">{place.voteCount} votes</span>
+                <span className="w-16 shrink-0 text-right text-sm font-bold">{result.voteCount} votes</span>
               </div>
-            ))}
+            )})}
           </div>
         </div>
 
@@ -103,7 +141,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
           </div>
 
           <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
-            Top {count} of {places.length} suggested places will move forward.
+            {consensus.shortlist.length} of {places.length} suggested places will move forward.
           </p>
 
           <Button fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0 || submitting}>

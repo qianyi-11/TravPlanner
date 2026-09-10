@@ -9,6 +9,7 @@ import {
   MapPinned,
   Receipt,
   Ticket,
+  Users,
   Wallet,
 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -22,6 +23,7 @@ import { Badge, Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { formatDateRange, daysBetween, cx, formatWeekday } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/States";
+import { buildConsensus } from "@/lib/group-consensus";
 
 const TABS = [
   { key: "itinerary", label: "Itinerary", icon: ListTree },
@@ -37,6 +39,7 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
+  const membersMap = usePlannerStore((s) => s.members);
   const shortlist = usePlannerStore(
     useShallow((s) => (trip ? trip.shortlistPlaceIds.map((id) => s.places[id]).filter(Boolean) : []))
   );
@@ -62,6 +65,12 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
 
   if (!trip) notFound();
 
+  const tripMembers = trip.memberIds.map((id) => membersMap[id]).filter(Boolean);
+  const planPlaces = orderedPlaces.length ? orderedPlaces : shortlist;
+  const planConsensus = buildConsensus({ members: tripMembers, candidates: planPlaces, capacity: planPlaces.length });
+  const unrepresentedNames = planConsensus.memberRepresentation
+    .filter((member) => member.selectedMatchCount === 0)
+    .map((member) => membersMap[member.memberId]?.name ?? member.memberId);
   const days = daysBetween(trip.startDate, trip.endDate);
   const activityCount = trip.itinerary.reduce((s, d) => s + d.activities.filter((a) => a.type === "place").length, 0);
 
@@ -79,6 +88,23 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
           <span>{activityCount} activities</span>
         </div>
       </div>
+
+      <Card className="mt-4 flex items-center gap-3 p-4">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-teal-soft)] text-[var(--color-teal-dark)]">
+          <Users size={18} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Group Representation</p>
+          <p className="font-display text-base font-bold">
+            {planConsensus.representedMemberCount} / {tripMembers.length} travellers represented · {planConsensus.representationPercent}%
+          </p>
+          <p className="text-xs text-[var(--color-ink-soft)]">
+            {unrepresentedNames.length
+              ? `${unrepresentedNames.join(", ")} currently ${unrepresentedNames.length === 1 ? "has" : "have"} no strongly matched activity.`
+              : "The plan includes at least one supported or preference-matched activity for every traveller."}
+          </p>
+        </div>
+      </Card>
 
       {trip.rescueEvents.length > 0 && (
         <div className="mt-4">

@@ -19,6 +19,7 @@ import { PlaceCover } from "@/components/trip/CategoryIcon";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { formatWeekday } from "@/lib/utils";
+import { evaluateRescueConsensusImpact } from "@/lib/group-consensus";
 
 type RescuePhase = "alert" | "searching" | "proposed" | "resolved";
 
@@ -26,6 +27,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
+  const membersMap = usePlannerStore((s) => s.members);
   const resolveRescue = usePlannerStore((s) => s.resolveRescue);
   const showToast = usePlannerStore((s) => s.showToast);
 
@@ -59,6 +61,15 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
   const currentActivity = day?.activities[Math.max(0, currentActivityIdx ?? 1)];
   const nextActivity = day?.activities[Math.max(0, currentActivityIdx ?? 1) + 1];
   const remaining = day ? day.activities.length - Math.max(0, currentActivityIdx ?? 1) - 1 : 0;
+  const originalPlace = currentActivity?.placeId ? placesMap[currentActivity.placeId] : undefined;
+  const replacementPlace = openEvent?.alternative ? placesMap[openEvent.alternative.placeId] : undefined;
+  const rescueImpact = originalPlace && replacementPlace
+    ? evaluateRescueConsensusImpact({
+        members: trip.memberIds.map((id) => membersMap[id]).filter(Boolean),
+        original: originalPlace,
+        replacement: replacementPlace,
+      })
+    : undefined;
 
   async function handleAccept() {
     if (!openEvent || saving) return;
@@ -137,13 +148,29 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                       <span className="text-[var(--color-success)]">
                         {openEvent.alternative.available ? "Available" : "Unavailable"}
                       </span>
-                      <span>RM {openEvent.alternative.cost}</span>
+                      <span>+RM {openEvent.alternative.cost}</span>
                     </div>
                   </div>
                 </div>
                 <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-teal-dark)]">
                   <Sparkles size={12} /> {openEvent.alternative.note}
                 </p>
+                {rescueImpact && (
+                  <div className="mt-3 rounded-xl bg-[var(--color-sand)] p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">Group Match</p>
+                    <div className="mt-1 grid grid-cols-3 gap-2 text-sm">
+                      <div><span className="block text-xs text-[var(--color-ink-soft)]">Original</span><strong>{rescueImpact.original.groupMatchPercent}%</strong></div>
+                      <div><span className="block text-xs text-[var(--color-ink-soft)]">Replacement</span><strong>{rescueImpact.replacement.groupMatchPercent}%</strong></div>
+                      <div>
+                        <span className="block text-xs text-[var(--color-ink-soft)]">Change</span>
+                        <strong>{rescueImpact.change > 0 ? "+" : ""}{rescueImpact.change} pts</strong>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-[var(--color-ink-soft)]">
+                      Conflicts: {rescueImpact.replacement.dislikeConflictCount || "None"} · {rescueImpact.reason}
+                    </p>
+                  </div>
+                )}
                 <div className="mt-4 flex gap-2">
                   <Button size="sm" onClick={handleAccept} disabled={saving} icon={<CheckCircle2 size={14} />}>
                     {saving ? "Saving…" : "Accept Change"}
