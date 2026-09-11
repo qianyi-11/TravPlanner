@@ -34,8 +34,24 @@ model Member {
   createdAt               DateTime @default(now())
 
   memberships GroupMember[]
+  authIdentities AuthIdentity[]
   suggestions Suggestion[]
   votes       Vote[]
+}
+
+model AuthIdentity {
+  id                String   @id @default(cuid())
+  memberId          String
+  provider          String
+  providerAccountId String
+  email             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([memberId])
 }
 
 /// Join table: which Members belong to which Group, and their role there.
