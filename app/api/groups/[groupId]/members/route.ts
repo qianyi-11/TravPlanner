@@ -16,17 +16,17 @@ export async function POST(req: Request, { params }: { params: Promise<{ groupId
   if (!group) return NextResponse.json({ error: "Group not found" }, { status: 404 });
 
   const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-  const member = await prisma.member.create({
-    data: {
-      id: newId("mem"),
-      name: name.trim(),
-      initials: name.trim().slice(0, 1).toUpperCase() || "?",
-      avatarColor: color,
-    },
-  });
-
-  await prisma.groupMember.create({
-    data: { groupId, memberId: member.id, role: "member" },
+  const member = await prisma.$transaction(async (tx) => {
+    const created = await tx.member.create({
+      data: {
+        id: newId("mem"),
+        name: name.trim(),
+        initials: name.trim().slice(0, 1).toUpperCase() || "?",
+        avatarColor: color,
+      },
+    });
+    await tx.groupMember.create({ data: { groupId, memberId: created.id, role: "member" } });
+    return created;
   });
 
   return NextResponse.json({ id: member.id });

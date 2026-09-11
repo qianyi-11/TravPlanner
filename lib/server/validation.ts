@@ -1,4 +1,16 @@
 import { ApiError } from "./api-error";
+import { isValidDateRange, isValidDateString, isValidDayWindow, isValidTimeString } from "../date-time";
+import {
+  FOOD_PREFERENCES,
+  INTERESTS,
+  PACES,
+  TRANSPORT_MODES,
+  type FoodPreference,
+  type Interest,
+  type MemberPreferences,
+  type Pace,
+  type TransportMode,
+} from "../types";
 
 const MAX_ID_LENGTH = 200;
 
@@ -39,4 +51,116 @@ export function requireUniqueIdArray(
     throw new ApiError(400, "INVALID_ID_ARRAY", `${field} must contain at most ${options.max} item(s)`);
   }
   return ids;
+}
+
+export function parseCreateTripInput(body: Record<string, unknown>): {
+  groupId: string;
+  name: string;
+  destinations: string[];
+  startDate: string;
+  endDate: string;
+  budgetTotal: number;
+  groupSize: number;
+  dailyStart: string;
+  dailyEnd: string;
+  transport: TransportMode;
+} {
+  const groupId = requireId(body.groupId, "groupId");
+  if (body.name !== undefined && typeof body.name !== "string") {
+    throw new ApiError(400, "INVALID_REQUEST", "name must be a string");
+  }
+  if (!Array.isArray(body.destinations) || !body.destinations.length) {
+    throw new ApiError(400, "INVALID_REQUEST", "destinations must be a non-empty array");
+  }
+  const destinations = body.destinations.map((value) => {
+    if (typeof value !== "string" || !value.trim()) {
+      throw new ApiError(400, "INVALID_REQUEST", "destinations must contain non-empty strings");
+    }
+    return value.trim();
+  });
+  if (new Set(destinations.map((value) => value.toLowerCase())).size !== destinations.length) {
+    throw new ApiError(400, "INVALID_REQUEST", "destinations must not contain duplicates");
+  }
+  if (!isValidDateString(body.startDate) || !isValidDateString(body.endDate)) {
+    throw new ApiError(400, "INVALID_DATE", "startDate and endDate must be real dates in YYYY-MM-DD format");
+  }
+  if (!isValidDateRange(body.startDate, body.endDate)) {
+    throw new ApiError(400, "INVALID_DATE_RANGE", "startDate must be on or before endDate");
+  }
+  if (typeof body.budgetTotal !== "number" || !Number.isFinite(body.budgetTotal) || !Number.isInteger(body.budgetTotal) || body.budgetTotal < 200 || body.budgetTotal > 20000) {
+    throw new ApiError(400, "INVALID_BUDGET", "budgetTotal must be an integer from 200 to 20000");
+  }
+  if (typeof body.groupSize !== "number" || !Number.isInteger(body.groupSize) || body.groupSize < 1 || body.groupSize > 100) {
+    throw new ApiError(400, "INVALID_GROUP_SIZE", "groupSize must be an integer from 1 to 100");
+  }
+  if (!isValidTimeString(body.dailyStart) || !isValidTimeString(body.dailyEnd)) {
+    throw new ApiError(400, "INVALID_TIME", "dailyStart and dailyEnd must use HH:MM");
+  }
+  if (!isValidDayWindow(body.dailyStart, body.dailyEnd)) {
+    throw new ApiError(400, "INVALID_DAY_WINDOW", "dailyStart must be before dailyEnd");
+  }
+  if (typeof body.transport !== "string" || !TRANSPORT_MODES.includes(body.transport as TransportMode)) {
+    throw new ApiError(400, "INVALID_TRANSPORT", "transport is invalid");
+  }
+  return {
+    groupId,
+    name: (body.name ?? "").trim(),
+    destinations,
+    startDate: body.startDate,
+    endDate: body.endDate,
+    budgetTotal: body.budgetTotal,
+    groupSize: body.groupSize,
+    dailyStart: body.dailyStart,
+    dailyEnd: body.dailyEnd,
+    transport: body.transport as TransportMode,
+  };
+}
+
+function preferenceValues<T extends string>(value: unknown, field: string, allowed: readonly T[]): T[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && allowed.includes(item as T))) {
+    throw new ApiError(400, "INVALID_PREFERENCES", `${field} contains an invalid value`);
+  }
+  if (new Set(value).size !== value.length) {
+    throw new ApiError(400, "INVALID_PREFERENCES", `${field} must not contain duplicates`);
+  }
+  return value as T[];
+}
+
+function preferenceTags(value: unknown, field: string): string[] {
+  if (!Array.isArray(value) || value.length > 20) {
+    throw new ApiError(400, "INVALID_PREFERENCES", `${field} must be an array with at most 20 items`);
+  }
+  const tags = value.map((item) => {
+    if (typeof item !== "string" || !item.trim() || item.trim().length > 120) {
+      throw new ApiError(400, "INVALID_PREFERENCES", `${field} must contain non-empty strings up to 120 characters`);
+    }
+    return item.trim();
+  });
+  if (new Set(tags).size !== tags.length) {
+    throw new ApiError(400, "INVALID_PREFERENCES", `${field} must not contain duplicates`);
+  }
+  return tags;
+}
+
+export function parseMemberPreferences(value: unknown): MemberPreferences {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new ApiError(400, "INVALID_PREFERENCES", "preferences must be an object");
+  }
+  const input = value as Record<string, unknown>;
+  const interests = preferenceValues<Interest>(input.interests, "interests", INTERESTS);
+  const foodPreferences = preferenceValues<FoodPreference>(input.foodPreferences, "foodPreferences", FOOD_PREFERENCES);
+  if (typeof input.pace !== "string" || !PACES.includes(input.pace as Pace)) {
+    throw new ApiError(400, "INVALID_PREFERENCES", "pace is invalid");
+  }
+  if (typeof input.personalBudget !== "number" || !Number.isFinite(input.personalBudget) || input.personalBudget < 100 || input.personalBudget > 8000) {
+    throw new ApiError(400, "INVALID_PREFERENCES", "personalBudget must be from 100 to 8000");
+  }
+  return {
+    interests,
+    foodPreferences,
+    pace: input.pace as Pace,
+    mustDo: preferenceTags(input.mustDo, "mustDo"),
+    dislikes: preferenceTags(input.dislikes, "dislikes"),
+    personalBudget: input.personalBudget,
+  };
 }

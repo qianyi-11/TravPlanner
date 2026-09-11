@@ -87,6 +87,12 @@ test("generic meals fill available anchors and never cross the daily boundary", 
   assert.equal(tight.itinerary[0].activities.some(({ label }) => label === "Dinner"), false);
 });
 
+test("invalid persisted daily windows fail deterministically", () => {
+  for (const overrides of [{ dailyStart: "8:00" }, { dailyEnd: "25:00" }, { dailyStart: "12:00", dailyEnd: "12:00" }]) {
+    assert.throws(() => buildItinerary({ trip: trip(overrides), selectedPlaceIds: [], places: [] }), /Invalid trip daily window/);
+  }
+});
+
 test("sightseeing respects duration, area grouping, selected order, and database order", () => {
   const places = [
     place("b", "Park", { area: "West", estimatedDurationMinutes: 45 }),

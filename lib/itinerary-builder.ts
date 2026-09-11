@@ -1,5 +1,6 @@
 import type { ItineraryActivity, ItineraryDay, Place, TransportMode } from "./types";
 import { daysBetween } from "./utils";
+import { timeToMinutes } from "./date-time";
 
 interface ItineraryBuildInput {
   trip: {
@@ -32,11 +33,6 @@ const NON_FOOD_PATTERN = /\b(supply|appliance|equipment)\b/i;
 
 export function isFoodPlace(place: Pick<Place, "category">): boolean {
   return !NON_FOOD_PATTERN.test(place.category) && FOOD_PATTERN.test(place.category);
-}
-
-function parseTime(value: string): number {
-  const [hours, minutes = 0] = value.split(":").map(Number);
-  return hours * 60 + minutes;
 }
 
 function formatTime(minutes: number): string {
@@ -123,8 +119,9 @@ export function buildItinerary({ trip, selectedPlaceIds, places }: ItineraryBuil
   const sightQueue = ordered.filter((place) => !isFoodPlace(place));
   const scheduledIds = new Set<string>();
   const itinerary: ItineraryDay[] = [];
-  const dailyStart = parseTime(trip.dailyStart);
-  const dailyEnd = parseTime(trip.dailyEnd);
+  const dailyStart = timeToMinutes(trip.dailyStart);
+  const dailyEnd = timeToMinutes(trip.dailyEnd);
+  if (dailyStart === null || dailyEnd === null || dailyStart >= dailyEnd) throw new Error("Invalid trip daily window");
   const planningEnd = dailyEnd - FALLBACK_TRAVEL_MINUTES;
   const totalDays = Math.max(1, daysBetween(trip.startDate, trip.endDate));
 

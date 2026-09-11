@@ -7,10 +7,15 @@ import { DELETE as removeSuggestion, POST as addSuggestion } from "@/app/api/tri
 import { POST as submitSuggestions } from "@/app/api/trips/[tripId]/submit-suggestions/route";
 import { POST as submitVotes } from "@/app/api/trips/[tripId]/submit-votes/route";
 import { POST as toggleVote } from "@/app/api/trips/[tripId]/votes/route";
+import { POST as createTrip } from "@/app/api/trips/route";
+import { POST as updatePreferences } from "@/app/api/members/[memberId]/preferences/route";
+import { POST as addGroupMember } from "@/app/api/groups/[groupId]/members/route";
 import { prisma } from "@/lib/server/prisma";
 
 const tripContext = (tripId: string) => ({ params: Promise.resolve({ tripId }) });
 const rescueContext = (tripId: string, eventId: string) => ({ params: Promise.resolve({ tripId, eventId }) });
+const memberContext = (memberId: string) => ({ params: Promise.resolve({ memberId }) });
+const groupContext = (groupId: string) => ({ params: Promise.resolve({ groupId }) });
 
 function request(body: unknown, raw = false) {
   return new Request("http://localhost", {
@@ -125,6 +130,102 @@ async function resetFixture() {
 beforeEach(resetFixture);
 after(() => prisma.$disconnect());
 
+const validTripInput = {
+  groupId: "group-a",
+  name: "  Tokyo Escape  ",
+  destinations: [" Tokyo "],
+  startDate: "2026-10-01",
+  endDate: "2026-10-02",
+  budgetTotal: 2000,
+  groupSize: 2,
+  dailyStart: "08:00",
+  dailyEnd: "22:00",
+  transport: "Mixed",
+};
+
+test("trip creation validates and persists normalized input", async () => {
+  const response = await createTrip(request(validTripInput));
+  assert.equal(response.status, 200);
+  const id = (await body(response)).id;
+  assert.equal(typeof id, "string");
+  const saved = await prisma.trip.findUniqueOrThrow({ where: { id: id as string } });
+  assert.equal(saved.name, "Tokyo Escape");
+  assert.deepEqual(JSON.parse(saved.destinationsJson), ["Tokyo"]);
+  assert.equal(saved.stage, "ideas");
+});
+
+test("trip creation rejects invalid input without writing", async () => {
+  const cases: Array<[Partial<typeof validTripInput>, string]> = [
+    [{ startDate: "2026-02-30" }, "INVALID_DATE"],
+    [{ startDate: "2026-10-03", endDate: "2026-10-02" }, "INVALID_DATE_RANGE"],
+    [{ dailyStart: "25:00" }, "INVALID_TIME"],
+    [{ dailyStart: "22:00", dailyEnd: "08:00" }, "INVALID_DAY_WINDOW"],
+    [{ dailyStart: "08:00", dailyEnd: "08:00" }, "INVALID_DAY_WINDOW"],
+    [{ budgetTotal: 199 }, "INVALID_BUDGET"],
+    [{ budgetTotal: 20001 }, "INVALID_BUDGET"],
+    [{ budgetTotal: "2000" as unknown as number }, "INVALID_BUDGET"],
+    [{ budgetTotal: null as unknown as number }, "INVALID_BUDGET"],
+    [{ groupSize: 0 }, "INVALID_GROUP_SIZE"],
+    [{ groupSize: 1.5 }, "INVALID_GROUP_SIZE"],
+    [{ transport: "Teleport" }, "INVALID_TRANSPORT"],
+    [{ destinations: ["Tokyo", " tokyo "] }, "INVALID_REQUEST"],
+  ];
+  const initialCount = await prisma.trip.count();
+  for (const [override, code] of cases) {
+    const response = await createTrip(request({ ...validTripInput, ...override }));
+    assert.equal(response.status, 400, JSON.stringify(override));
+    assert.equal((await body(response)).code, code, JSON.stringify(override));
+    assert.equal(await prisma.trip.count(), initialCount, JSON.stringify(override));
+  }
+});
+
+const validPreferences = {
+  interests: ["Food", "Culture"],
+  foodPreferences: ["Local Food"],
+  pace: "Balanced",
+  mustDo: ["  teamLab Borderless  "],
+  dislikes: ["Long queues"],
+  personalBudget: 1500,
+};
+
+test("member preferences validate, normalize, and preserve the last valid value", async () => {
+  const saved = await updatePreferences(request({ preferences: validPreferences }), memberContext("member-a"));
+  assert.equal(saved.status, 200);
+  assert.deepEqual(JSON.parse((await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).preferencesJson!), {
+    ...validPreferences,
+    mustDo: ["teamLab Borderless"],
+  });
+  const baseline = (await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).preferencesJson;
+  const cases = [
+    { interests: ["Unknown"] },
+    { foodPreferences: ["Unknown"] },
+    { pace: "Slow" },
+    { mustDo: [1] },
+    { mustDo: ["Same", "Same"] },
+    { personalBudget: 99 },
+    { personalBudget: 8001 },
+  ];
+  for (const override of cases) {
+    const response = await updatePreferences(request({ preferences: { ...validPreferences, ...override } }), memberContext("member-a"));
+    assert.equal(response.status, 400, JSON.stringify(override));
+    assert.equal((await body(response)).code, "INVALID_PREFERENCES", JSON.stringify(override));
+    assert.equal((await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).preferencesJson, baseline);
+  }
+
+  const malformed = await updatePreferences(request("{", true), memberContext("member-a"));
+  assert.equal(malformed.status, 400);
+  assert.equal((await body(malformed)).code, "INVALID_REQUEST");
+  assert.equal((await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).preferencesJson, baseline);
+});
+
+test("member preference updates preserve the not-found contract", async () => {
+  const response = await updatePreferences(request({ preferences: validPreferences }), memberContext("missing"));
+  assert.equal(response.status, 404);
+  const result = await body(response);
+  assert.equal(result.error, "Member not found");
+  assert.equal(result.code, "MEMBER_NOT_FOUND");
+});
+
 test("selected routes reject malformed and invalid shortlist input with structured errors", async () => {
   const missingMember = await confirmShortlist(request({ placeIds: ["place-a"] }), tripContext("trip-a"));
   assert.equal(missingMember.status, 400);
@@ -152,6 +253,32 @@ test("membership guards block outsiders on planning mutations", async () => {
     assert.equal(response.status, 403);
     assert.equal((await body(response)).code, "MEMBER_NOT_IN_TRIP");
   }
+});
+
+test("suggestion add/delete stays idempotent and preserves shared TripPlaces", async () => {
+  const context = tripContext("trip-a");
+  assert.equal((await addSuggestion(request({ memberId: "member-a", placeId: "place-a" }), context)).status, 200);
+  assert.equal((await addSuggestion(request({ memberId: "member-a", placeId: "place-a" }), context)).status, 200);
+  assert.equal((await addSuggestion(request({ memberId: "member-b", placeId: "place-a" }), context)).status, 200);
+  const tripPlace = await prisma.tripPlace.findUniqueOrThrow({ where: { tripId_placeId: { tripId: "trip-a", placeId: "place-a" } } });
+  assert.equal(await prisma.suggestion.count({ where: { tripPlaceId: tripPlace.id } }), 2);
+
+  assert.equal((await removeSuggestion(deleteRequest({ memberId: "member-a", placeId: "place-a" }), context)).status, 200);
+  assert.ok(await prisma.tripPlace.findUnique({ where: { id: tripPlace.id } }));
+  assert.equal(await prisma.suggestion.count({ where: { tripPlaceId: tripPlace.id } }), 1);
+
+  assert.equal((await removeSuggestion(deleteRequest({ memberId: "member-b", placeId: "place-a" }), context)).status, 200);
+  assert.equal(await prisma.tripPlace.findUnique({ where: { id: tripPlace.id } }), null);
+  assert.equal((await removeSuggestion(deleteRequest({ memberId: "member-b", placeId: "place-a" }), context)).status, 200);
+});
+
+test("group member creation persists the member and membership together", async () => {
+  const response = await addGroupMember(request({ name: "New Member" }), groupContext("group-a"));
+  assert.equal(response.status, 200);
+  const id = (await body(response)).id as string;
+  assert.equal((await prisma.member.findUniqueOrThrow({ where: { id } })).name, "New Member");
+  const membership = await prisma.groupMember.findUniqueOrThrow({ where: { groupId_memberId: { groupId: "group-a", memberId: id } } });
+  assert.equal(membership.role, "member");
 });
 
 test("vote limit returns a structured error without persisting a rejected vote", async () => {
@@ -227,6 +354,17 @@ test("itinerary rejects cross-trip shortlist data and leaves overflow unchanged"
   const overflow = await buildItinerary(request({ memberId: "member-a" }), tripContext("trip-a"));
   assert.equal(overflow.status, 422);
   assert.equal((await body(overflow)).code, "ITINERARY_OVERFLOW");
+  assert.equal((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson, "[]");
+});
+
+test("structurally invalid generated itineraries are not persisted", async () => {
+  await prisma.trip.update({
+    where: { id: "trip-a" },
+    data: { shortlistJson: '["place-a"]', startDate: "2026-10-03", endDate: "2026-10-02" },
+  });
+  const response = await buildItinerary(request({ memberId: "member-a" }), tripContext("trip-a"));
+  assert.equal(response.status, 409);
+  assert.equal((await body(response)).code, "ITINERARY_INVALID");
   assert.equal((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson, "[]");
 });
 

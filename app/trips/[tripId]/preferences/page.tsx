@@ -6,18 +6,11 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Plus, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
-import type { FoodPreference, Interest, Pace } from "@/lib/types";
+import { FOOD_PREFERENCES, INTERESTS, PACES, type FoodPreference, type Interest, type Pace } from "@/lib/types";
 import { Card, Chip } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MemberAvatar } from "@/components/ui/Avatar";
 import { TripHeader } from "@/components/trip/TripHeader";
-
-const INTERESTS: Interest[] = [
-  "Food", "Shopping", "Nature", "Culture", "History", "Adventure",
-  "Photography", "Nightlife", "Relaxation", "Museums", "Architecture",
-];
-const FOOD: FoodPreference[] = ["Local Food", "Fine Dining", "Street Food", "Halal", "Vegetarian", "Cafe", "Dessert"];
-const PACES: Pace[] = ["Relaxed", "Balanced", "Fast-paced"];
 
 export default function PreferencesPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -90,7 +83,7 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
           <Card className="p-5">
             <h3 className="mb-3 font-display text-base font-bold">Food preferences</h3>
             <div className="flex flex-wrap gap-2">
-              {FOOD.map((f) => (
+              {FOOD_PREFERENCES.map((f) => (
                 <Chip key={f} label={f} selected={food.includes(f)} onClick={() => toggle(food, setFood, f)} />
               ))}
             </div>

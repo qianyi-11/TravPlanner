@@ -6,6 +6,7 @@ import { mapCatalogPlace } from "./mappers";
 import { prisma } from "./prisma";
 import { ApiError } from "./api-error";
 import { requireRescueEventForTrip, requireTrip, requireTripPlaceIds } from "./authorization";
+import { validateBuiltItinerary } from "../itinerary-validation";
 
 export async function confirmTripShortlist({ tripId, placeIds }: { tripId: string; placeIds: string[] }) {
   const trip = await requireTrip(tripId);
@@ -74,6 +75,8 @@ export async function buildTripItinerary({ tripId }: { tripId: string }) {
       `Could not fit ${result.unscheduledPlaceIds.length} selected place(s). Remove stops or extend the trip hours.`
     );
   }
+  const validation = validateBuiltItinerary({ trip, shortlistPlaceIds: shortlistIds, itinerary: result.itinerary });
+  if (!validation.valid) throw new ApiError(409, "ITINERARY_INVALID", "Generated itinerary is invalid", validation.reasons);
 
   await prisma.trip.update({
     where: { id: tripId },

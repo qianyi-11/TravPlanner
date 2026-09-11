@@ -2,31 +2,20 @@
 // Designed to be API-ready: these shapes are what a real backend
 // (Google Places, booking APIs, etc.) would eventually populate.
 
-export type Interest =
-  | "Food"
-  | "Shopping"
-  | "Nature"
-  | "Culture"
-  | "History"
-  | "Adventure"
-  | "Photography"
-  | "Nightlife"
-  | "Relaxation"
-  | "Museums"
-  | "Architecture";
+export const INTERESTS = [
+  "Food", "Shopping", "Nature", "Culture", "History", "Adventure",
+  "Photography", "Nightlife", "Relaxation", "Museums", "Architecture",
+] as const;
+export type Interest = (typeof INTERESTS)[number];
 
-export type FoodPreference =
-  | "Local Food"
-  | "Fine Dining"
-  | "Street Food"
-  | "Halal"
-  | "Vegetarian"
-  | "Cafe"
-  | "Dessert";
+export const FOOD_PREFERENCES = ["Local Food", "Fine Dining", "Street Food", "Halal", "Vegetarian", "Cafe", "Dessert"] as const;
+export type FoodPreference = (typeof FOOD_PREFERENCES)[number];
 
-export type Pace = "Relaxed" | "Balanced" | "Fast-paced";
+export const PACES = ["Relaxed", "Balanced", "Fast-paced"] as const;
+export type Pace = (typeof PACES)[number];
 
-export type TransportMode = "Walking" | "Public Transport" | "Car" | "Taxi" | "Mixed";
+export const TRANSPORT_MODES = ["Walking", "Public Transport", "Car", "Taxi", "Mixed"] as const;
+export type TransportMode = (typeof TRANSPORT_MODES)[number];
 
 export interface Member {
   id: string;
