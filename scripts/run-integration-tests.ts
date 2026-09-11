@@ -4,7 +4,13 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const databasePath = join(root, "prisma", "integration.db");
-const environment: NodeJS.ProcessEnv = { ...process.env, DATABASE_URL: "file:./integration.db" };
+const environment: NodeJS.ProcessEnv = {
+  ...process.env,
+  DATABASE_URL: "file:./integration.db",
+  NODE_ENV: "test",
+  AUTH_DEMO_ENABLED: "false",
+  AUTH_SECRET: "travplanner-integration-test-secret",
+};
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 
 function cleanup() {

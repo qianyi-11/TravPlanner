@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import { apiErrorResponse, ApiError } from "@/lib/server/api-error";
-import { requireTripMember, requireTripPlace } from "@/lib/server/authorization";
+import { requireTripActor, requireTripPlace } from "@/lib/server/authorization";
 import { parseJsonObject, requireId } from "@/lib/server/validation";
 
 export async function POST(req: Request, { params }: { params: Promise<{ tripId: string }> }) {
@@ -9,8 +9,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tripId:
     const tripId = requireId((await params).tripId, "tripId");
     const body = await parseJsonObject(req);
     const placeId = requireId(body.placeId, "placeId");
-    const memberId = requireId(body.memberId, "memberId");
-    const trip = await requireTripMember(tripId, memberId);
+    const { memberId, trip } = await requireTripActor(tripId);
     const tripPlace = await requireTripPlace(tripId, placeId);
 
     const existingVote = await prisma.vote.findUnique({

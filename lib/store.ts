@@ -62,13 +62,13 @@ interface PlannerState {
 
   updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<void>;
 
-  addPlaceSuggestion: (tripId: string, placeId: string, memberId?: string) => Promise<void>;
-  importAndSuggestPlace: (tripId: string, place: Place, memberId?: string) => Promise<void>;
-  removePlaceSuggestion: (tripId: string, placeId: string, memberId?: string) => Promise<void>;
-  submitMySuggestions: (tripId: string, memberId?: string) => Promise<void>;
+  addPlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
+  importAndSuggestPlace: (tripId: string, place: Place) => Promise<void>;
+  removePlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
+  submitMySuggestions: (tripId: string) => Promise<void>;
 
-  toggleVote: (tripId: string, placeId: string, memberId?: string) => Promise<boolean>;
-  submitMyVotes: (tripId: string, memberId?: string) => Promise<boolean>;
+  toggleVote: (tripId: string, placeId: string) => Promise<boolean>;
+  submitMyVotes: (tripId: string) => Promise<boolean>;
 
   confirmShortlist: (tripId: string, placeIds: string[]) => Promise<boolean>;
   buildItinerary: (tripId: string) => Promise<boolean>;
@@ -184,11 +184,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  addPlaceSuggestion: async (tripId, placeId, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  addPlaceSuggestion: async (tripId, placeId) => {
     const result = await api(`/api/trips/${tripId}/places`, {
       method: "POST",
-      body: JSON.stringify({ placeId, memberId: mId }),
+      body: JSON.stringify({ placeId }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't add place" });
@@ -197,11 +196,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  importAndSuggestPlace: async (tripId, place, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  importAndSuggestPlace: async (tripId, place) => {
     const result = await api(`/api/trips/${tripId}/places`, {
       method: "POST",
-      body: JSON.stringify({ place, memberId: mId }),
+      body: JSON.stringify({ place }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't add place" });
@@ -210,11 +208,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  removePlaceSuggestion: async (tripId, placeId, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  removePlaceSuggestion: async (tripId, placeId) => {
     const result = await api(`/api/trips/${tripId}/places`, {
       method: "DELETE",
-      body: JSON.stringify({ placeId, memberId: mId }),
+      body: JSON.stringify({ placeId }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't remove place" });
@@ -223,11 +220,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  submitMySuggestions: async (tripId, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  submitMySuggestions: async (tripId) => {
     const result = await api(`/api/trips/${tripId}/submit-suggestions`, {
       method: "POST",
-      body: JSON.stringify({ memberId: mId }),
+      body: JSON.stringify({}),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't submit suggestions" });
@@ -236,11 +232,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  toggleVote: async (tripId, placeId, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  toggleVote: async (tripId, placeId) => {
     const result = await api(`/api/trips/${tripId}/votes`, {
       method: "POST",
-      body: JSON.stringify({ placeId, memberId: mId }),
+      body: JSON.stringify({ placeId }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't update vote" });
@@ -250,11 +245,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     return true;
   },
 
-  submitMyVotes: async (tripId, memberId) => {
-    const mId = memberId ?? get().currentUserId;
+  submitMyVotes: async (tripId) => {
     const result = await api(`/api/trips/${tripId}/submit-votes`, {
       method: "POST",
-      body: JSON.stringify({ memberId: mId }),
+      body: JSON.stringify({}),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't submit votes" });
@@ -265,10 +259,9 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   confirmShortlist: async (tripId, placeIds) => {
-    const memberId = get().currentUserId;
     const result = await api(`/api/trips/${tripId}/shortlist`, {
       method: "POST",
-      body: JSON.stringify({ placeIds, memberId }),
+      body: JSON.stringify({ placeIds }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't confirm shortlist" });
@@ -281,7 +274,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   buildItinerary: async (tripId) => {
     const result = await api(`/api/trips/${tripId}/build-itinerary`, {
       method: "POST",
-      body: JSON.stringify({ memberId: get().currentUserId }),
+      body: JSON.stringify({}),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't build itinerary" });
@@ -315,7 +308,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   resolveRescue: async (tripId, eventId) => {
     const result = await api(`/api/trips/${tripId}/rescue/${eventId}/resolve`, {
       method: "POST",
-      body: JSON.stringify({ memberId: get().currentUserId }),
+      body: JSON.stringify({}),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't resolve this" });

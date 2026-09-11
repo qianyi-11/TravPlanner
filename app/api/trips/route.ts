@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import { newId } from "@/lib/server/ids";
 import { recommendPlaceCount } from "@/lib/utils";
-import { apiErrorResponse, ApiError } from "@/lib/server/api-error";
+import { apiErrorResponse } from "@/lib/server/api-error";
 import { parseCreateTripInput, parseJsonObject } from "@/lib/server/validation";
+import { requireGroupActor } from "@/lib/server/authorization";
 
 export async function POST(req: Request) {
   try {
     const input = parseCreateTripInput(await parseJsonObject(req));
-    const group = await prisma.group.findUnique({ where: { id: input.groupId } });
-    if (!group) throw new ApiError(404, "GROUP_NOT_FOUND", "Group not found");
+    await requireGroupActor(input.groupId);
     const { count } = recommendPlaceCount(input);
     const id = newId("trip");
     await prisma.trip.create({

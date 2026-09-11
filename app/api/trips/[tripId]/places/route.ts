@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import type { Place } from "@/lib/types";
 import { apiErrorResponse, ApiError } from "@/lib/server/api-error";
-import { requireTripMember } from "@/lib/server/authorization";
+import { requireTripActor } from "@/lib/server/authorization";
 import { parseJsonObject, requireId } from "@/lib/server/validation";
 import type { Prisma } from "@/lib/generated/prisma";
 
@@ -43,7 +43,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ tripId:
   try {
     const tripId = requireId((await params).tripId, "tripId");
     const body = await parseJsonObject(req);
-    const memberId = requireId(body.memberId, "memberId");
     const placeId = requireId(body.placeId ?? (typeof body.place === "object" && body.place !== null ? (body.place as { id?: unknown }).id : undefined), "placeId");
     let importedPlace: Place | undefined;
     if (body.place !== undefined) {
@@ -54,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tripId:
       if (importedId !== placeId) throw new ApiError(400, "INVALID_REQUEST", "place.id must match placeId");
       importedPlace = body.place as Place;
     }
-    await requireTripMember(tripId, memberId);
+    const { memberId } = await requireTripActor(tripId);
 
     const place = await prisma.$transaction(async (tx) => {
       const savedPlace = await ensurePlaceExists(tx, placeId, importedPlace);
@@ -83,8 +82,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ tripI
     const tripId = requireId((await params).tripId, "tripId");
     const body = await parseJsonObject(req);
     const placeId = requireId(body.placeId, "placeId");
-    const memberId = requireId(body.memberId, "memberId");
-    await requireTripMember(tripId, memberId);
+    const { memberId } = await requireTripActor(tripId);
 
     await prisma.$transaction(async (tx) => {
       const tripPlace = await tx.tripPlace.findUnique({ where: { tripId_placeId: { tripId, placeId } } });
