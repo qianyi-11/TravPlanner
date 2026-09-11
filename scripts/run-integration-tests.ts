@@ -31,7 +31,8 @@ function run(command: string, args: string[]) {
 try {
   cleanup();
   writeFileSync(databasePath, "");
-  run(npxCommand, ["prisma", "db", "push", "--skip-generate"]);
+  run(npxCommand, ["prisma", "generate", "--schema=prisma/schema.sqlite.prisma"]);
+  run(npxCommand, ["prisma", "db", "push", "--schema=prisma/schema.sqlite.prisma", "--skip-generate"]);
   run(npxCommand, ["tsx", "--test", "tests/integration/trip-planning.test.ts"]);
 } finally {
   cleanup();

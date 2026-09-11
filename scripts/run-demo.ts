@@ -35,7 +35,8 @@ for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${demoDbPath}${su
 copyFileSync(schemaDbPath, demoDbPath);
 
 console.log("\n[1/3] Creating demo database...");
-run(npxCommand, ["prisma", "db", "push", "--skip-generate"]);
+run(npxCommand, ["prisma", "generate", "--schema=prisma/schema.sqlite.prisma"]);
+run(npxCommand, ["prisma", "db", "push", "--schema=prisma/schema.sqlite.prisma", "--skip-generate", "--accept-data-loss"]);
 console.log("\n[2/3] Loading deterministic demo fixture...");
 run(npxCommand, ["prisma", "db", "seed"]);
 console.log("\n[3/3] Starting automated browser demo...");
