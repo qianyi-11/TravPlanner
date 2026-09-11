@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
-import { apiErrorResponse } from "@/lib/server/api-error";
+import { apiErrorResponse, ApiError } from "@/lib/server/api-error";
 import { requireTripMember, requireTripPlace } from "@/lib/server/authorization";
 import { parseJsonObject, requireId } from "@/lib/server/validation";
 
@@ -24,10 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ tripId:
 
     const votesInTrip = await prisma.vote.count({ where: { memberId, tripPlace: { tripId } } });
     if (votesInTrip >= trip.votesPerMember) {
-      return NextResponse.json(
-        { error: `You can only vote for up to ${trip.votesPerMember} places.` },
-        { status: 400 }
-      );
+      throw new ApiError(400, "VOTE_LIMIT_REACHED", `You can only vote for up to ${trip.votesPerMember} places.`);
     }
 
     await prisma.vote.create({ data: { tripPlaceId: tripPlace.id, memberId } });

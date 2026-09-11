@@ -276,7 +276,7 @@ Important prototype limitations:
 
 - Google `price_level` is relative venue pricing, not admission price;
 - imported duration defaults to 60 minutes;
-- availability may default to `"available"`;
+- Google-imported place availability is saved as `"unknown"`; no live availability check is performed.
 - missing geometry may become `0,0`.
 
 Do not present defaults as verified live facts.

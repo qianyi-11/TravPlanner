@@ -154,6 +154,31 @@ test("membership guards block outsiders on planning mutations", async () => {
   }
 });
 
+test("vote limit returns a structured error without persisting a rejected vote", async () => {
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { votesPerMember: 1 } });
+
+  const first = await toggleVote(
+    request({ memberId: "member-a", placeId: "place-a" }),
+    tripContext("trip-a")
+  );
+  assert.equal(first.status, 200);
+  assert.deepEqual(await body(first), { ok: true, voted: true });
+
+  const limited = await toggleVote(
+    request({ memberId: "member-a", placeId: "place-a2" }),
+    tripContext("trip-a")
+  );
+  assert.equal(limited.status, 400);
+  const result = await body(limited);
+  assert.equal(result.error, "You can only vote for up to 1 places.");
+  assert.equal(result.code, "VOTE_LIMIT_REACHED");
+
+  const voteCount = await prisma.vote.count({
+    where: { memberId: "member-a", tripPlace: { tripId: "trip-a" } },
+  });
+  assert.equal(voteCount, 1);
+});
+
 test("shortlist persists exact order, preserves later stages, and rejects cross-trip places", async () => {
   const invalid = await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-b"] }), tripContext("trip-a"));
   assert.equal(invalid.status, 400);
