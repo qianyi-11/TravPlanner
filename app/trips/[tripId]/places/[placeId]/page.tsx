@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Star,
   Ticket,
-  Wallet,
+  UtensilsCrossed,
 } from "lucide-react";
 import Link from "next/link";
 import { usePlannerStore } from "@/lib/store";
@@ -19,7 +19,7 @@ import { PlaceGallery } from "@/components/trip/PlaceGallery";
 import { MapView } from "@/components/trip/MapView";
 import { Badge, Card } from "@/components/ui/Card";
 import { MemberStack } from "@/components/ui/Avatar";
-import { formatMinutes } from "@/lib/utils";
+import { estimatedMealCost, formatMinutes, isFoodPlace } from "@/lib/utils";
 
 export default function PlaceDetailsPage({
   params,
@@ -28,12 +28,16 @@ export default function PlaceDetailsPage({
 }) {
   const { tripId, placeId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
-  const place = usePlannerStore((s) => s.places[placeId]);
+  // Prefer this trip's copy (it carries who suggested it here); fall back to the
+  // shared catalogue entry for places not yet added to this trip.
+  const place = usePlannerStore((s) => s.tripPlaces[tripId]?.[placeId] ?? s.places[placeId]);
   const members = usePlannerStore((s) => s.members);
 
   if (!trip || !place) notFound();
 
   const isShortlisted = trip.shortlistPlaceIds.includes(place.id);
+  const isFood = isFoodPlace(place);
+  const meal = estimatedMealCost(place.priceLevel);
   const suggesters = place.suggestedBy.map((id) => members[id]).filter(Boolean);
 
   const availabilityBadge = {
@@ -58,46 +62,53 @@ export default function PlaceDetailsPage({
         name={place.name}
       />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="space-y-6">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="neutral">{place.category}</Badge>
-              {isShortlisted && (
-                <Badge tone="teal">
-                  <BadgeCheck size={12} /> Validated
-                </Badge>
-              )}
-            </div>
-            <h1 className="mt-2 font-display text-3xl font-bold">{place.name}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-ink-soft)]">
-              <span className="flex items-center gap-1 font-semibold text-[var(--color-ink)]">
-                <Star size={14} className="fill-[var(--color-warning)] text-[var(--color-warning)]" />
-                {place.rating}
-              </span>
-              <span>{place.reviewCount.toLocaleString()} reviews</span>
-              <span className={place.isOpenNow ? "font-medium text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
-                {place.isOpenNow ? `Open${place.closesAt ? ` until ${place.closesAt}` : ""}` : "Closed"}
-              </span>
-            </div>
-            {suggesters.length > 0 && (
-              <div className="mt-3 flex items-center gap-2">
-                <MemberStack members={suggesters} max={4} size="xs" />
-                <span className="text-xs text-[var(--color-ink-soft)]">
-                  Suggested by {suggesters.map((m) => m.name).join(", ")}
-                </span>
-              </div>
-            )}
+      {/* Title block spans full width — it shouldn't be squeezed into a column. */}
+      <div className="mt-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral">{place.category}</Badge>
+          {isFood && <Badge tone="primary">Good for a meal</Badge>}
+          {isShortlisted && (
+            <Badge tone="teal">
+              <BadgeCheck size={12} /> Validated
+            </Badge>
+          )}
+        </div>
+        <h1 className="mt-2 font-display text-2xl font-bold sm:text-3xl">{place.name}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[var(--color-ink-soft)]">
+          <span className="flex items-center gap-1 font-semibold text-[var(--color-ink)]">
+            <Star size={14} className="fill-[var(--color-warning)] text-[var(--color-warning)]" />
+            {place.rating}
+          </span>
+          <span>{place.reviewCount.toLocaleString()} reviews</span>
+          <span className={place.isOpenNow ? "font-medium text-[var(--color-success)]" : "text-[var(--color-danger)]"}>
+            {place.isOpenNow ? `Open${place.closesAt ? ` until ${place.closesAt}` : ""}` : "Closed"}
+          </span>
+          <span>{place.area}, {place.destination}</span>
+        </div>
+        {suggesters.length > 0 && (
+          <div className="mt-3 flex items-center gap-2">
+            <MemberStack members={suggesters} max={4} size="xs" />
+            <span className="text-xs text-[var(--color-ink-soft)]">
+              Suggested by {suggesters.map((m) => m.name).join(", ")}
+            </span>
           </div>
+        )}
+      </div>
 
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-6">
           <Section title="Overview">
-            <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">{place.description}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+              {place.description?.trim() ||
+                `${place.name} is a ${place.category.toLowerCase()} in ${place.area}, ${place.destination}. ` +
+                  `It holds a ${place.rating} rating across ${place.reviewCount.toLocaleString()} reviews.`}
+            </p>
           </Section>
 
           <Section title="Hours">
             <ul className="space-y-1.5 text-sm">
               {place.openingHours.map((h) => (
-                <li key={h.day} className="flex items-center justify-between">
+                <li key={h.day} className="grid grid-cols-[7rem_1fr] gap-3">
                   <span className="text-[var(--color-ink-soft)]">{h.day}</span>
                   <span className="font-medium">{h.hours}</span>
                 </li>
@@ -143,12 +154,41 @@ export default function PlaceDetailsPage({
           </Section>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
+          <Card className="p-5">
+            <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold">
+              {isFood ? (
+                <>
+                  <UtensilsCrossed size={15} className="text-[var(--color-primary)]" /> Estimated cost
+                </>
+              ) : (
+                <>
+                  <Ticket size={15} className="text-[var(--color-primary)]" /> Price
+                </>
+              )}
+            </h3>
+            {isFood ? (
+              <>
+                <p className="font-display text-2xl font-bold">{meal.label}</p>
+                <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                  Per person for a meal here · based on its {place.priceLabel} price level
+                </p>
+                <p className="mt-3 rounded-lg bg-[var(--color-sand)] px-3 py-2 text-xs text-[var(--color-ink-soft)]">
+                  A rough guide for budgeting, not a quoted price — actual spend depends on what you order.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-display text-2xl font-bold">{place.priceLabel}</p>
+                <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Estimated, per person</p>
+              </>
+            )}
+          </Card>
+
           <Card className="space-y-4 p-5">
             <InfoRow icon={Clock} label="Estimated visit" value={formatMinutes(place.estimatedDurationMinutes)} />
-            <InfoRow icon={Wallet} label="Price" value={place.priceLabel} />
             <InfoRow icon={MapPin} label="Area" value={`${place.area}, ${place.destination}`} />
-            <InfoRow icon={Phone} label="Address" value={place.address} />
+            <InfoRow icon={Phone} label="Address" value={place.address} wrap />
           </Card>
 
           <Card className="p-5">
@@ -161,14 +201,6 @@ export default function PlaceDetailsPage({
                 Slots are filling up — booking ahead is recommended.
               </p>
             )}
-          </Card>
-
-          <Card className="p-5">
-            <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-bold">
-              <Ticket size={15} className="text-[var(--color-primary)]" /> Price
-            </h3>
-            <p className="font-display text-lg font-bold">{place.priceLabel}</p>
-            <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Estimated, per person</p>
           </Card>
         </div>
       </div>
@@ -185,15 +217,26 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function InfoRow({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+  wrap = false,
+}: {
+  icon: typeof Clock;
+  label: string;
+  value: string;
+  /** Long values like a full address should wrap rather than get cut off. */
+  wrap?: boolean;
+}) {
   return (
     <div className="flex items-start gap-3">
       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sand)]">
         <Icon size={15} className="text-[var(--color-ink-soft)]" />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs text-[var(--color-ink-soft)]">{label}</p>
-        <p className="truncate text-sm font-semibold">{value}</p>
+        <p className={`text-sm font-semibold ${wrap ? "break-words" : "truncate"}`}>{value}</p>
       </div>
     </div>
   );

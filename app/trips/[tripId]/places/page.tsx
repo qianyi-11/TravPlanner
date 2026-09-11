@@ -2,7 +2,7 @@
 
 import { use, useEffect, useMemo, useState } from "react";
 import { notFound } from "next/navigation";
-import { Check, Globe, Loader2, Plus, Search } from "lucide-react";
+import { ArrowRight, Check, Globe, Loader2, Plus, Search } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
@@ -14,12 +14,17 @@ import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { enrichGooglePlace, searchGooglePlaces } from "@/lib/google-places-client";
 import type { Place } from "@/lib/types";
 
+/** Stable reference so the selector doesn't return a fresh object each render. */
+const EMPTY_TRIP_PLACES: Record<string, Place> = {};
+
 export default function AddPlacesPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const allPlaces = usePlannerStore(useShallow((s) => Object.values(s.places)));
-  const allPlacesById = usePlannerStore((s) => s.places);
+  // Suggestions are per-trip: a place added in another group must not read as
+  // "Added" here.
+  const tripPlacesById = usePlannerStore((s) => s.tripPlaces[tripId] ?? EMPTY_TRIP_PLACES);
   const addSuggestion = usePlannerStore((s) => s.addPlaceSuggestion);
   const importAndSuggest = usePlannerStore((s) => s.importAndSuggestPlace);
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
@@ -87,13 +92,15 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   const catalogIds = new Set(candidates.map((p) => p.id));
   const freshLiveResults = liveResults.filter((p) => !catalogIds.has(p.id));
 
-  const myCount = allPlaces.filter(
-    (p) => trip.placeIds.includes(p.id) && p.suggestedBy.includes(currentUserId)
+  const myCount = Object.values(tripPlacesById).filter((p) =>
+    p.suggestedBy.includes(currentUserId)
   ).length;
 
   async function handleAdd(place: Place) {
-    const alreadyImported = Boolean(allPlacesById[place.id]);
-    if (alreadyImported) {
+    // Whether it's in the shared catalogue at all — separate from whether this
+    // trip has it. A place another group added still needs suggesting here.
+    const alreadyInCatalog = allPlaces.some((p) => p.id === place.id);
+    if (alreadyInCatalog) {
       await addSuggestion(tripId, place.id);
       showToast(`${place.name} added to your suggestions`);
       return;
@@ -107,14 +114,13 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   }
 
   function renderCard(place: Place) {
-    const added = allPlacesById[place.id]
-      ? place.suggestedBy.includes(currentUserId) || allPlacesById[place.id].suggestedBy.includes(currentUserId)
-      : false;
+    const inThisTrip = tripPlacesById[place.id];
+    const added = inThisTrip ? inThisTrip.suggestedBy.includes(currentUserId) : false;
     const isAdding = addingId === place.id;
     return (
       <PlaceCard
         key={place.id}
-        place={allPlacesById[place.id] ?? place}
+        place={inThisTrip ?? place}
         footer={
           <Button
             size="sm"
@@ -190,6 +196,26 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
             </div>
           )}
         </div>
+
+        {myCount > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-5">
+            <div>
+              <p className="font-display text-base font-bold">
+                You&apos;ve added {myCount} place{myCount > 1 ? "s" : ""}
+              </p>
+              <p className="mt-0.5 text-sm text-[var(--color-teal-dark)]">
+                Done adding? Review them and submit so the group can start voting.
+              </p>
+            </div>
+            <LinkButton
+              href={`/trips/${tripId}/places/mine`}
+              variant="secondary"
+              iconRight={<ArrowRight size={15} />}
+            >
+              Review &amp; Submit
+            </LinkButton>
+          </div>
+        )}
       </div>
 
       {myCount > 0 && (

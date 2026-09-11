@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
-import { mapCatalogPlace, mapGroup, mapMember, mapTrip } from "@/lib/server/mappers";
+import { mapCatalogPlace, mapGroup, mapMember, mapPlaceForTrip, mapTrip } from "@/lib/server/mappers";
 import type { Group, Member, Place, Trip } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -34,11 +34,19 @@ export async function GET() {
     return entry;
   }
 
+  // `places` is the shared catalogue (static details only). `tripPlaces` carries
+  // who suggested/voted for a place *within one trip*, so the same place can be
+  // planned independently by different groups.
   const places: Record<string, Place> = {};
+  const tripPlaces: Record<string, Record<string, Place>> = {};
+
   for (const row of placeRows) {
     for (const tp of row.tripPlaces) {
       for (const s of tp.suggestions) activityFor(s.memberId).suggested.push(row.id);
       for (const v of tp.votes) activityFor(v.memberId).voted.push(row.id);
+
+      if (!tripPlaces[tp.tripId]) tripPlaces[tp.tripId] = {};
+      tripPlaces[tp.tripId][row.id] = mapPlaceForTrip(row, tp);
     }
     places[row.id] = mapCatalogPlace(row);
   }
@@ -73,5 +81,5 @@ export async function GET() {
 
   const currentUserId = memberRows.find((m) => m.isYou)?.id ?? memberRows[0]?.id ?? "";
 
-  return NextResponse.json({ groups, members, trips, places, currentUserId });
+  return NextResponse.json({ groups, members, trips, places, tripPlaces, currentUserId });
 }

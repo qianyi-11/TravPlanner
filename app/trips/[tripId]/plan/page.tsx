@@ -74,7 +74,7 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
         <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
           <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
-          <span>{trip.groupSize} travelers</span>
+          <span>{trip.memberIds.length} travelers</span>
           <span>{days} days</span>
           <span>{activityCount} activities</span>
         </div>

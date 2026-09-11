@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
-import { notFound } from "next/navigation";
-import { ArrowLeft, Compass, Plus, UserPlus } from "lucide-react";
+import { notFound, useRouter } from "next/navigation";
+import { ArrowLeft, Compass, Plus, Trash2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState } from "@/components/ui/States";
 import { MemberAvatar } from "@/components/ui/Avatar";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EditableTitle } from "@/components/ui/EditableTitle";
 import { TripCard } from "@/components/trip/TripCard";
 
 export default function GroupRoomPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -23,7 +25,12 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
     useShallow((s) => (group ? group.tripIds.map((id) => s.trips[id]).filter(Boolean) : []))
   );
   const addMember = usePlannerStore((s) => s.addMember);
+  const deleteGroup = usePlannerStore((s) => s.deleteGroup);
+  const renameGroup = usePlannerStore((s) => s.renameGroup);
+  const showToast = usePlannerStore((s) => s.showToast);
+  const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [name, setName] = useState("");
 
   if (!group) notFound();
@@ -55,9 +62,13 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
               {group.emoji}
             </div>
             <div>
-              <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
-                {group.name} {group.emoji}
-              </h1>
+              <EditableTitle
+                value={group.name}
+                onSave={(next) => renameGroup(groupId, next)}
+                label="Rename group"
+                className="font-display text-2xl font-bold text-white sm:text-3xl"
+                inputClassName="font-display text-2xl font-bold text-white sm:text-3xl"
+              />
               {group.description && (
                 <p className="mt-1 max-w-md text-sm text-white/75">{group.description}</p>
               )}
@@ -95,6 +106,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
           )}
         </div>
 
+        <div className="space-y-6">
         <Card className="h-fit p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-base font-bold">
@@ -124,7 +136,47 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
             Add Member
           </Button>
         </Card>
+
+        <Card className="p-5">
+          <h3 className="mb-1 font-display text-sm font-bold text-[var(--color-danger)]">Danger zone</h3>
+          <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
+            Permanently delete this group
+            {trips.length > 0
+              ? `, along with ${trips.length} trip${trips.length > 1 ? "s" : ""} inside it`
+              : ""}
+            . This can&apos;t be undone.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            fullWidth
+            icon={<Trash2 size={14} />}
+            className="border-[var(--color-danger)] text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
+            onClick={() => setConfirmOpen(true)}
+          >
+            Delete Group
+          </Button>
+        </Card>
+        </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Delete this group?"
+        description={`"${group.name}" will be permanently deleted${
+          trips.length > 0
+            ? `, along with ${trips.length} trip${trips.length > 1 ? "s" : ""} inside it and all their suggestions, votes and itineraries`
+            : ""
+        }. This can't be undone.`}
+        confirmLabel="Delete Group"
+        danger
+        onConfirm={async () => {
+          await deleteGroup(groupId);
+          showToast(`${group.name} was deleted`);
+          router.push("/groups");
+        }}
+      />
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a member">
         <form onSubmit={handleAdd} className="space-y-4">

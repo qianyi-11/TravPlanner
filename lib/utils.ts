@@ -98,6 +98,40 @@ export function initialsAvatarStyle(color: string) {
   return { backgroundColor: color };
 }
 
+// Category strings (ours, and Google's snake_case types title-cased on import)
+// that mean "you eat here" rather than "you go look at it".
+const FOOD_KEYWORDS = [
+  "food", "restaurant", "cafe", "café", "bakery", "ramen", "noodle", "dessert",
+  "coffee", "tea", "bistro", "diner", "eatery", "kitchen", "grill", "sushi",
+  "pizza", "burger", "buffet", "hot pot", "hotpot", "ice cream", "bagel",
+  "brunch", "deli", "steakhouse", "seafood", "bar & grill", "meal",
+];
+
+export function isFoodPlace(place: { category: string }): boolean {
+  const c = place.category.toLowerCase();
+  return FOOD_KEYWORDS.some((kw) => c.includes(kw));
+}
+
+/**
+ * A per-person spend estimate for eating somewhere, derived from Google's
+ * price level. Deliberately a range, not a single figure — it's an estimate
+ * for budgeting, not a quoted price.
+ */
+export function estimatedMealCost(priceLevel: 1 | 2 | 3 | 4): {
+  low: number;
+  high: number;
+  label: string;
+} {
+  const ranges: Record<1 | 2 | 3 | 4, [number, number]> = {
+    1: [5, 15],
+    2: [15, 35],
+    3: [35, 70],
+    4: [70, 150],
+  };
+  const [low, high] = ranges[priceLevel] ?? ranges[2];
+  return { low, high, label: `RM ${low} – ${high}` };
+}
+
 export function totalItineraryCost(trip: Trip): number {
   return trip.itinerary.reduce(
     (sum, day) => sum + day.activities.reduce((s, a) => s + a.estimatedCost, 0),
@@ -127,6 +161,6 @@ export function computeBudgetBreakdown(trip: Trip): BudgetBreakdown {
   }
   const accommodation = Math.round(trip.budgetTotal * 0.35);
   const total = transport + food + activities + accommodation;
-  const perPerson = Math.round(total / Math.max(1, trip.groupSize));
+  const perPerson = Math.round(total / Math.max(1, trip.memberIds.length));
   return { transport, food, activities, accommodation, total, perPerson };
 }

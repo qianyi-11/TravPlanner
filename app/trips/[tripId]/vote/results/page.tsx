@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo } from "react";
 import { notFound, useRouter } from "next/navigation";
-import { Check, Clock, Info, Trophy } from "lucide-react";
+import { Check, Clock, Info, Trophy, UtensilsCrossed } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { MemberStack } from "@/components/ui/Avatar";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
 import { DemoVotingShortcut } from "@/components/trip/DemoVotingShortcut";
-import { recommendPlaceCount } from "@/lib/utils";
+import { planShortlist } from "@/lib/shortlist-planner";
 
 export default function VoteResultsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -26,16 +26,23 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const places = usePlannerStore(
     useShallow((s) =>
       trip
-        ? [...trip.placeIds.map((id) => s.places[id]).filter(Boolean)].sort((a, b) => b.voteCount - a.voteCount)
+        ? [...trip.placeIds.map((id) => s.tripPlaces[tripId]?.[id]).filter(Boolean)].sort((a, b) => b.voteCount - a.voteCount)
         : []
     )
   );
   const confirmShortlist = usePlannerStore((s) => s.confirmShortlist);
 
-  const rec = trip ? recommendPlaceCount(trip) : { count: 8, reasoning: "" };
-  const [count, setCount] = useState(trip?.recommendedPlaceCount || rec.count);
+  // The system works out how many places the trip can actually hold, and which
+  // of them are the meals — the group doesn't guess a number on a slider.
+  const plan = useMemo(
+    () => (trip ? planShortlist(trip, places) : null),
+    [trip, places]
+  );
 
-  if (!trip) notFound();
+  if (!trip || !plan) notFound();
+
+  const chosen = new Set(plan.placeIds);
+  const foodChosen = new Set(plan.foodIds);
 
   // The group can't lock a shortlist until every traveler has had their say.
   const pending = tripMembers.filter((m) => !m.hasSubmittedVotes);
@@ -43,9 +50,8 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const everyoneVoted = pending.length === 0;
 
   function handleConfirm() {
-    if (!everyoneVoted) return;
-    const topIds = places.slice(0, count).map((p) => p.id);
-    confirmShortlist(tripId, topIds);
+    if (!everyoneVoted || !plan) return;
+    confirmShortlist(tripId, plan.placeIds);
     router.push(`/trips/${tripId}/shortlist`);
   }
 
@@ -59,13 +65,21 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Ranked by votes from your group.</p>
 
           <div className="mt-5 space-y-2.5">
-            {places.map((place, i) => (
-              <div key={place.id} className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)]">
+            {places.map((place, i) => {
+              const madeCut = chosen.has(place.id);
+              const isMeal = foodChosen.has(place.id);
+              return (
+              <div
+                key={place.id}
+                className={`flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-[var(--shadow-soft)] ${
+                  madeCut ? "border-[var(--color-border)]" : "border-dashed border-[var(--color-border)] opacity-60"
+                }`}
+              >
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
                     i === 0
                       ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
-                      : i < count
+                      : madeCut
                       ? "bg-[var(--color-teal-soft)] text-[var(--color-teal-dark)]"
                       : "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
                   }`}
@@ -74,7 +88,19 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                 </div>
                 <PlaceCover photo={place.photo} category={place.category} className="h-12 w-12 shrink-0 rounded-xl" iconSize={16} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{place.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-bold">{place.name}</p>
+                    {isMeal && (
+                      <span className="flex shrink-0 items-center gap-1 rounded-md bg-[var(--color-primary-soft)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-primary-dark)]">
+                        <UtensilsCrossed size={9} /> MEAL
+                      </span>
+                    )}
+                    {!madeCut && (
+                      <span className="shrink-0 rounded-md bg-[var(--color-sand)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--color-ink-soft)]">
+                        DIDN&apos;T FIT
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-[var(--color-ink-soft)]">
                     {place.category} · {place.area}
                   </p>
@@ -82,7 +108,8 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                 <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
                 <span className="w-16 shrink-0 text-right text-sm font-bold">{place.voteCount} votes</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -130,36 +157,44 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
         <Card className="h-fit p-5">
           <div className="mb-3 flex items-center gap-2">
             <Info size={16} className="text-[var(--color-primary)]" />
-            <h3 className="font-display text-base font-bold">How many places?</h3>
+            <h3 className="font-display text-base font-bold">What fits in this trip</h3>
           </div>
-          <p className="text-sm text-[var(--color-ink-soft)]">{rec.reasoning}</p>
 
-          <div className="mt-5">
-            <div className="mb-1.5 flex items-center justify-between text-sm font-semibold">
-              <span>Places to shortlist</span>
-              <span className="text-[var(--color-primary)]">{count}</span>
+          <div className="flex gap-2">
+            <div className="flex-1 rounded-xl bg-[var(--color-primary-soft)] p-3">
+              <p className="font-display text-xl font-bold text-[var(--color-primary-dark)]">
+                {plan.foodIds.length}
+              </p>
+              <p className="text-xs font-medium text-[var(--color-primary-dark)]">places to eat</p>
             </div>
-            <input
-              type="range"
-              min={4}
-              max={Math.min(20, places.length || 20)}
-              value={count}
-              onChange={(e) => setCount(Number(e.target.value))}
-              className="w-full accent-[var(--color-primary)]"
-            />
+            <div className="flex-1 rounded-xl bg-[var(--color-teal-soft)] p-3">
+              <p className="font-display text-xl font-bold text-[var(--color-teal-dark)]">
+                {plan.sightIds.length}
+              </p>
+              <p className="text-xs font-medium text-[var(--color-teal-dark)]">places to visit</p>
+            </div>
           </div>
 
-          <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
-            Top {count} of {places.length} suggested places will move forward.
+          <ul className="mt-4 space-y-2">
+            {plan.reasoning.map((line, i) => (
+              <li key={i} className="flex gap-2 text-xs leading-relaxed text-[var(--color-ink-soft)]">
+                <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--color-ink-faint,var(--color-ink-soft))]" />
+                {line}
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-3 border-t border-[var(--color-border-soft)] pt-3 text-xs text-[var(--color-ink-soft)]">
+            Your meals get assigned to the highest-voted places to eat when the itinerary is built.
           </p>
 
           <Button
             fullWidth
-            className="mt-5"
+            className="mt-4"
             onClick={handleConfirm}
             disabled={places.length === 0 || !everyoneVoted}
           >
-            {everyoneVoted ? "Confirm & Continue" : `Waiting for ${pending.length} to vote`}
+            {everyoneVoted ? `Confirm ${plan.placeIds.length} places` : `Waiting for ${pending.length} to vote`}
           </Button>
         </Card>
         </div>

@@ -79,14 +79,28 @@ function basePlaceFields(row: PPlace) {
 
 type TripPlaceWithJoins = PTripPlace & { suggestions: PSuggestion[]; votes: PVote[] };
 
-/** Aggregates a place's suggestions/votes across every trip it currently appears in. */
-export function mapCatalogPlace(row: PPlace & { tripPlaces: TripPlaceWithJoins[] }): Place {
-  const allSuggestions = row.tripPlaces.flatMap((tp) => tp.suggestions);
-  const allVotes = row.tripPlaces.flatMap((tp) => tp.votes);
-  const votedBy = Array.from(new Set(allVotes.map((v) => v.memberId)));
+/**
+ * The shared catalogue entry for a place — static details only.
+ *
+ * Suggestions and votes are deliberately empty here: they only mean anything
+ * inside one trip. Two groups can both plan Petronas Towers without either
+ * seeing the other's picks, so per-trip state comes from mapPlaceForTrip.
+ */
+export function mapCatalogPlace(row: PPlace & { tripPlaces?: TripPlaceWithJoins[] }): Place {
   return {
     ...basePlaceFields(row),
-    suggestedBy: Array.from(new Set(allSuggestions.map((s) => s.memberId))),
+    suggestedBy: [],
+    voteCount: 0,
+    votedBy: [],
+  };
+}
+
+/** The same place, scoped to one trip: who suggested it and who voted for it there. */
+export function mapPlaceForTrip(row: PPlace, tripPlace: TripPlaceWithJoins): Place {
+  const votedBy = Array.from(new Set(tripPlace.votes.map((v) => v.memberId)));
+  return {
+    ...basePlaceFields(row),
+    suggestedBy: Array.from(new Set(tripPlace.suggestions.map((s) => s.memberId))),
     voteCount: votedBy.length,
     votedBy,
   };

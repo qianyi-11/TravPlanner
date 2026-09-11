@@ -17,7 +17,7 @@ export default function GroupSuggestionsPage({ params }: { params: Promise<{ tri
   const places = usePlannerStore(
     useShallow((s) =>
       trip
-        ? [...trip.placeIds.map((id) => s.places[id]).filter(Boolean)].sort(
+        ? [...trip.placeIds.map((id) => s.tripPlaces[tripId]?.[id]).filter(Boolean)].sort(
             (a, b) => b.suggestedBy.length - a.suggestedBy.length
           )
         : []

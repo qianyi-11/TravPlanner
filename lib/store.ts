@@ -8,6 +8,8 @@ interface BootstrapPayload {
   trips: Record<string, Trip>;
   members: Record<string, Member>;
   places: Record<string, Place>;
+  /** tripId -> placeId -> place with that trip's own suggestions and votes. */
+  tripPlaces: Record<string, Record<string, Place>>;
   currentUserId: string;
 }
 
@@ -30,6 +32,8 @@ interface PlannerState {
   trips: Record<string, Trip>;
   members: Record<string, Member>;
   places: Record<string, Place>;
+  /** tripId -> placeId -> place with that trip's own suggestions and votes. */
+  tripPlaces: Record<string, Record<string, Place>>;
   currentUserId: string;
   toast: string | null;
   initialized: boolean;
@@ -40,6 +44,8 @@ interface PlannerState {
   clearToast: () => void;
 
   createGroup: (input: { name: string; emoji: string; description?: string; coverColor: string }) => Promise<string>;
+  renameGroup: (groupId: string, name: string) => Promise<void>;
+  deleteGroup: (groupId: string) => Promise<void>;
   addMember: (groupId: string, name: string) => Promise<void>;
 
   createTrip: (
@@ -56,6 +62,18 @@ interface PlannerState {
       transport: Trip["transport"];
     }
   ) => Promise<string>;
+  renameTrip: (tripId: string, name: string) => Promise<void>;
+  updateTripDetails: (
+    tripId: string,
+    updates: Partial<{
+      startDate: string;
+      endDate: string;
+      budgetTotal: number;
+      dailyStart: string;
+      dailyEnd: string;
+      transport: Trip["transport"];
+    }>
+  ) => Promise<boolean>;
   deleteTrip: (tripId: string) => Promise<void>;
 
   updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<void>;
@@ -83,6 +101,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   trips: {},
   members: {},
   places: {},
+  tripPlaces: {},
   currentUserId: "",
   toast: null,
   initialized: false,
@@ -115,6 +134,27 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     return result.id as string;
   },
 
+  renameGroup: async (groupId, name) => {
+    const result = await api(`/api/groups/${groupId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't rename group" });
+      return;
+    }
+    await get().hydrate();
+  },
+
+  deleteGroup: async (groupId) => {
+    const result = await api(`/api/groups/${groupId}`, { method: "DELETE" });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't delete group" });
+      return;
+    }
+    await get().hydrate();
+  },
+
   addMember: async (groupId, name) => {
     const result = await api(`/api/groups/${groupId}/members`, {
       method: "POST",
@@ -138,6 +178,31 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     }
     await get().hydrate();
     return result.id as string;
+  },
+
+  renameTrip: async (tripId, name) => {
+    const result = await api(`/api/trips/${tripId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't rename trip" });
+      return;
+    }
+    await get().hydrate();
+  },
+
+  updateTripDetails: async (tripId, updates) => {
+    const result = await api(`/api/trips/${tripId}`, {
+      method: "PATCH",
+      body: JSON.stringify(updates),
+    });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't update trip details" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
   },
 
   deleteTrip: async (tripId) => {

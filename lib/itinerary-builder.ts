@@ -1,5 +1,5 @@
 import type { ItineraryActivity, ItineraryDay, Place, TransportMode } from "./types";
-import { daysBetween } from "./utils";
+import { daysBetween, isFoodPlace } from "./utils";
 
 /**
  * Turns a route-ordered shortlist into a real day-by-day plan.
@@ -35,20 +35,6 @@ const SPEED_KMH: Record<TransportMode, number> = {
 };
 
 const PRICE_ESTIMATE: Record<1 | 2 | 3 | 4, number> = { 1: 10, 2: 25, 3: 50, 4: 90 };
-
-// Category strings (ours, and Google's snake_case types title-cased by
-// prettyCategory) that mean "you eat here" rather than "you go look at it".
-const FOOD_KEYWORDS = [
-  "food", "restaurant", "cafe", "café", "bakery", "ramen", "noodle", "dessert",
-  "coffee", "tea", "bistro", "diner", "eatery", "kitchen", "grill", "sushi",
-  "pizza", "burger", "buffet", "hot pot", "hotpot", "ice cream", "bagel",
-  "brunch", "deli", "steakhouse", "seafood", "bar & grill", "meal",
-];
-
-export function isFoodPlace(place: Pick<Place, "category">): boolean {
-  const c = place.category.toLowerCase();
-  return FOOD_KEYWORDS.some((kw) => c.includes(kw));
-}
 
 function parseTime(t: string): number {
   const [h, m] = t.split(":").map(Number);

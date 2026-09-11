@@ -22,7 +22,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
   const myPlaces = usePlannerStore(
     useShallow((s) =>
       trip
-        ? trip.placeIds.map((id) => s.places[id]).filter((p) => p && p.suggestedBy.includes(currentUserId))
+        ? trip.placeIds.map((id) => s.tripPlaces[tripId]?.[id]).filter((p) => p && p.suggestedBy.includes(currentUserId))
         : []
     )
   );

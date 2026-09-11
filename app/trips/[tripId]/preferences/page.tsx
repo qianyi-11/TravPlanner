@@ -35,8 +35,6 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
   const [interests, setInterests] = useState<Interest[]>(me?.preferences?.interests ?? []);
   const [food, setFood] = useState<FoodPreference[]>(me?.preferences?.foodPreferences ?? []);
   const [pace, setPace] = useState<Pace>(me?.preferences?.pace ?? "Balanced");
-  const [mustDo, setMustDo] = useState<string[]>(me?.preferences?.mustDo ?? []);
-  const [mustDoInput, setMustDoInput] = useState("");
   const [dislikes, setDislikes] = useState<string[]>(me?.preferences?.dislikes ?? []);
   const [dislikeInput, setDislikeInput] = useState("");
   const [budget, setBudget] = useState(me?.preferences?.personalBudget ?? 1500);
@@ -60,7 +58,7 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
       interests,
       foodPreferences: food,
       pace,
-      mustDo,
+      mustDo: [],
       dislikes,
       personalBudget: budget,
     });
@@ -116,18 +114,6 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
                 </button>
               ))}
             </div>
-          </Card>
-
-          <Card className="p-5">
-            <h3 className="mb-1 font-display text-base font-bold">Must-do places</h3>
-            <p className="mb-3 text-xs text-[var(--color-ink-soft)]">Anything you already know you want to visit.</p>
-            <TagInput
-              value={mustDoInput}
-              onChange={setMustDoInput}
-              onAdd={() => addTag(mustDo, setMustDo, mustDoInput, () => setMustDoInput(""))}
-              placeholder="e.g. teamLab Borderless"
-            />
-            <TagList tags={mustDo} onRemove={(t) => setMustDo(mustDo.filter((x) => x !== t))} tone="teal" />
           </Card>
 
           <Card className="p-5">
