@@ -1,6 +1,7 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
 import { PartyPopper, Trash2, Users2 } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/ui/States";
 
 export default function MySuggestionsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
+  const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
@@ -28,10 +30,22 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
   );
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
   const submit = usePlannerStore((s) => s.submitMySuggestions);
+  const [submitting, setSubmitting] = useState(false);
 
   if (!trip || !me) notFound();
 
   const submittedCount = members.filter((m) => m.hasSubmittedSuggestions).length;
+  const solo = members.length === 1;
+
+  async function handleSubmit() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      if (await submit(tripId) && solo) router.push(`/trips/${tripId}/vote/results`);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <div>
@@ -89,43 +103,53 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
           {me.hasSubmittedSuggestions ? (
             <div className="text-center">
               <PartyPopper className="mx-auto text-[var(--color-primary)]" size={32} />
-              <h3 className="mt-3 font-display text-lg font-bold">You&apos;re all set 🎉</h3>
-              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Waiting for the rest of your group.</p>
-              <div className="mt-4">
-                <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">
-                  {submittedCount} / {members.length} members submitted
-                </p>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-sand)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--color-teal)]"
-                    style={{ width: `${(submittedCount / members.length) * 100}%` }}
-                  />
-                </div>
-              </div>
-              {submittedCount === members.length ? (
+              <h3 className="mt-3 font-display text-lg font-bold">{solo ? "Ready to build your plan" : "You're all set 🎉"}</h3>
+              {solo ? (
+                <>
+                  <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Your preferences and places will create a deterministic shortlist.</p>
+                  <LinkButton href={`/trips/${tripId}/vote/results`} size="sm" fullWidth className="mt-5">
+                    Build My Shortlist
+                  </LinkButton>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Waiting for the rest of your group.</p>
+                  <div className="mt-4">
+                    <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">
+                      {submittedCount} / {members.length} members submitted
+                    </p>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-sand)]">
+                      <div
+                        className="h-full rounded-full bg-[var(--color-teal)]"
+                        style={{ width: `${(submittedCount / members.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              {!solo && submittedCount === members.length ? (
                 <LinkButton href={`/trips/${tripId}/generating`} size="sm" fullWidth className="mt-5">
                   Start Voting
                 </LinkButton>
-              ) : (
+               ) : !solo ? (
                 <LinkButton href={`/trips/${tripId}/places/all`} variant="outline" size="sm" fullWidth className="mt-5">
                   See Everyone&apos;s Ideas
                 </LinkButton>
-              )}
+               ) : null}
             </div>
           ) : (
             <>
               <h3 className="font-display text-base font-bold">Ready to submit?</h3>
               <p className="mt-1.5 text-sm text-[var(--color-ink-soft)]">
-                You&apos;ve added <strong>{myPlaces.length} places</strong>. Your group can vote once everyone has
-                submitted.
+                You&apos;ve added <strong>{myPlaces.length} places</strong>. {solo ? "Submit them to build your shortlist." : "Your group can vote once everyone has submitted."}
               </p>
               <Button
                 fullWidth
                 className="mt-4"
                 disabled={myPlaces.length === 0}
-                onClick={() => submit(tripId)}
+                onClick={handleSubmit}
               >
-                Submit My Suggestions
+                {submitting ? "Submitting…" : "Submit My Suggestions"}
               </Button>
             </>
           )}

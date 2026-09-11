@@ -1070,6 +1070,7 @@ export const TRIPS: Record<string, Trip> = {
     recommendedPlaceCount: 8,
     votesPerMember: 16,
     itinerary: JAPAN_ITINERARY,
+    itineraryRevision: 1,
     pricePressure: {
       level: "VERY HIGH",
       reasons: [
@@ -1121,6 +1122,7 @@ export const TRIPS: Record<string, Trip> = {
     recommendedPlaceCount: 6,
     votesPerMember: 5,
     itinerary: [],
+    itineraryRevision: 1,
     pricePressure: {
       level: "MEDIUM",
       reasons: ["Weekend travel dates", "Moderate demand for city hotels"],
@@ -1148,6 +1150,7 @@ export const TRIPS: Record<string, Trip> = {
     recommendedPlaceCount: 8,
     votesPerMember: 8,
     itinerary: [],
+    itineraryRevision: 1,
     pricePressure: {
       level: "LOW",
       reasons: ["Visit date is well in advance", "Off-peak shoulder season"],

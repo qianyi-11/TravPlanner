@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import { newId } from "@/lib/server/ids";
 import { apiErrorResponse } from "@/lib/server/api-error";
-import { requireGroupActor } from "@/lib/server/authorization";
+import { requireGroupOrganizer } from "@/lib/server/authorization";
 import { requireId } from "@/lib/server/validation";
 
 const COLORS = ["#D8674A", "#3E7C7B", "#8A5CF6", "#C2578B", "#4C7BD9", "#D8A62B"];
@@ -10,7 +10,7 @@ const COLORS = ["#D8674A", "#3E7C7B", "#8A5CF6", "#C2578B", "#4C7BD9", "#D8A62B"
 export async function POST(req: Request, { params }: { params: Promise<{ groupId: string }> }) {
   try {
     const groupId = requireId((await params).groupId, "groupId");
-    await requireGroupActor(groupId);
+    await requireGroupOrganizer(groupId);
     const { name } = (await req.json()) as { name: string };
 
     if (!name?.trim()) {

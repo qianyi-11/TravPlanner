@@ -56,6 +56,8 @@ function basePlaceFields(row: PPlace) {
   return {
     id: row.id,
     source: row.source as Place["source"],
+    googlePlaceId: row.googlePlaceId ?? undefined,
+    providerFetchedAt: row.providerFetchedAt?.toISOString(),
     name: row.name,
     category: row.category,
     area: row.area,
@@ -131,6 +133,7 @@ export function mapTrip(
     recommendedPlaceCount: row.recommendedPlaceCount,
     votesPerMember: row.votesPerMember,
     itinerary: JSON.parse(row.itineraryJson) as ItineraryDay[],
+    itineraryRevision: row.itineraryRevision,
     pricePressure: JSON.parse(row.pricePressureJson) as PricePressure,
     rescueEvents: row.rescueEvents.map(mapRescueEvent),
     isLive: row.isLive,

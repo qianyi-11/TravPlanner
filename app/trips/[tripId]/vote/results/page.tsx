@@ -29,7 +29,8 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const [submitting, setSubmitting] = useState(false);
 
   const rec = trip ? recommendPlaceCount(trip) : { count: 8, reasoning: "" };
-  const [count, setCount] = useState(trip?.recommendedPlaceCount || rec.count);
+  const maxCount = Math.max(1, Math.min(20, places.length || 20));
+  const [count, setCount] = useState(Math.min(maxCount, trip?.recommendedPlaceCount || rec.count));
   const tripMembers = trip ? trip.memberIds.map((id) => members[id]).filter(Boolean) : [];
   const consensus = buildConsensus({ members: tripMembers, candidates: places, capacity: count });
   const primaryTradeoff = [...consensus.tradeoffs].sort((a, b) =>
@@ -172,8 +173,8 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
             <input
               data-testid="shortlist-capacity"
               type="range"
-              min={4}
-              max={Math.min(20, places.length || 20)}
+              min={Math.min(4, maxCount)}
+              max={maxCount}
               value={count}
               onChange={(e) => setCount(Number(e.target.value))}
               className="w-full accent-[var(--color-primary)]"

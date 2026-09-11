@@ -92,6 +92,8 @@ export interface PlaceReview {
 export interface Place {
   id: string;
   source?: "catalog" | "google";
+  googlePlaceId?: string;
+  providerFetchedAt?: string;
   name: string;
   category: string;
   area: string; // neighborhood, used for geo-grouping
@@ -190,6 +192,7 @@ export interface Trip {
   recommendedPlaceCount: number;
   votesPerMember: number;
   itinerary: ItineraryDay[];
+  itineraryRevision: number;
   pricePressure: PricePressure;
   rescueEvents: TripRescueEvent[];
   isLive?: boolean; // trip mode active

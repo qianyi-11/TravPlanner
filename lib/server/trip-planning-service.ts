@@ -5,7 +5,7 @@ import type { ItineraryDay, TransportMode, TripRescueEvent } from "@/lib/types";
 import { mapCatalogPlace } from "./mappers";
 import { prisma } from "./prisma";
 import { ApiError } from "./api-error";
-import { requireRescueEventForTrip, requireTrip, requireTripPlaceIds } from "./authorization";
+import { requireTrip, requireTripPlaceIds } from "./authorization";
 import { validateBuiltItinerary } from "../itinerary-validation";
 
 export async function confirmTripShortlist({ tripId, placeIds }: { tripId: string; placeIds: string[] }) {
@@ -25,8 +25,11 @@ export async function confirmTripShortlist({ tripId, placeIds }: { tripId: strin
   return { ok: true as const };
 }
 
-export async function buildTripItinerary({ tripId }: { tripId: string }) {
+export async function buildTripItinerary({ tripId, expectedItineraryRevision }: { tripId: string; expectedItineraryRevision: number }) {
   const trip = await requireTrip(tripId);
+  if (trip.itineraryRevision !== expectedItineraryRevision) {
+    throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+  }
   let shortlistIds: string[];
   let existingItinerary: unknown;
 
@@ -78,15 +81,17 @@ export async function buildTripItinerary({ tripId }: { tripId: string }) {
   const validation = validateBuiltItinerary({ trip, shortlistPlaceIds: shortlistIds, itinerary: result.itinerary });
   if (!validation.valid) throw new ApiError(409, "ITINERARY_INVALID", "Generated itinerary is invalid", validation.reasons);
 
-  await prisma.trip.update({
-    where: { id: tripId },
-    data: { itineraryJson: JSON.stringify(result.itinerary), stage: "itinerary" },
+  const updated = await prisma.trip.updateMany({
+    where: { id: tripId, itineraryRevision: expectedItineraryRevision },
+    data: { itineraryJson: JSON.stringify(result.itinerary), stage: "itinerary", itineraryRevision: { increment: 1 } },
   });
+  if (updated.count !== 1) throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
 
   return {
     ok: true as const,
     days: result.itinerary.length,
     activities: result.itinerary.reduce((count, day) => count + day.activities.length, 0),
+    itineraryRevision: expectedItineraryRevision + 1,
   };
 }
 
@@ -101,34 +106,60 @@ function isAlternative(value: unknown): value is NonNullable<TripRescueEvent["al
   );
 }
 
-export async function resolveTripRescue({ tripId, eventId }: { tripId: string; eventId: string }) {
-  const event = await requireRescueEventForTrip(tripId, eventId);
-  if (event.status === "resolved") return { ok: true as const, alreadyResolved: true as const };
+export async function resolveTripRescue({
+  tripId,
+  eventId,
+  expectedItineraryRevision,
+}: {
+  tripId: string;
+  eventId: string;
+  expectedItineraryRevision: number;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const event = await tx.rescueEvent.findUnique({ where: { id: eventId } });
+    if (!event || event.tripId !== tripId) throw new ApiError(404, "RESCUE_EVENT_NOT_FOUND", "Rescue event not found");
+    if (event.status === "resolved") return { ok: true as const, alreadyResolved: true as const };
 
-  const trip = await requireTrip(tripId);
-  let itinerary: ItineraryDay[];
-  let alternative: NonNullable<TripRescueEvent["alternative"]> | undefined;
-  try {
-    const parsedItinerary = JSON.parse(trip.itineraryJson) as unknown;
-    const parsedAlternative = event.alternativeJson ? (JSON.parse(event.alternativeJson) as unknown) : undefined;
-    if (!Array.isArray(parsedItinerary)) throw new Error();
-    itinerary = parsedItinerary as ItineraryDay[];
-    alternative = isAlternative(parsedAlternative) ? parsedAlternative : undefined;
-  } catch {
-    throw new ApiError(409, "RESCUE_DATA_INVALID", "Rescue data is invalid");
-  }
+    const trip = await tx.trip.findUnique({ where: { id: tripId } });
+    if (!trip) throw new ApiError(404, "TRIP_NOT_FOUND", "Trip not found");
+    if (trip.itineraryRevision !== expectedItineraryRevision) {
+      throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+    }
 
-  if (!alternative) throw new ApiError(409, "PREPARED_REPLACEMENT_MISSING", "Prepared replacement is missing");
+    let itinerary: ItineraryDay[];
+    let alternative: NonNullable<TripRescueEvent["alternative"]> | undefined;
+    try {
+      const parsedItinerary = JSON.parse(trip.itineraryJson) as unknown;
+      const parsedAlternative = event.alternativeJson ? (JSON.parse(event.alternativeJson) as unknown) : undefined;
+      if (!Array.isArray(parsedItinerary)) throw new Error();
+      itinerary = parsedItinerary as ItineraryDay[];
+      alternative = isAlternative(parsedAlternative) ? parsedAlternative : undefined;
+    } catch {
+      throw new ApiError(409, "RESCUE_DATA_INVALID", "Rescue data is invalid");
+    }
 
-  try {
-    itinerary = applyRescueReplacement(itinerary, event.affectedActivityId, alternative);
-  } catch {
-    throw new ApiError(409, "AFFECTED_ACTIVITY_NOT_FOUND", "Affected itinerary activity not found");
-  }
+    if (!alternative) throw new ApiError(409, "PREPARED_REPLACEMENT_MISSING", "Prepared replacement is missing");
+    try {
+      itinerary = applyRescueReplacement(itinerary, event.affectedActivityId, alternative);
+    } catch {
+      throw new ApiError(409, "AFFECTED_ACTIVITY_NOT_FOUND", "Affected itinerary activity not found");
+    }
 
-  await prisma.$transaction([
-    prisma.trip.update({ where: { id: tripId }, data: { itineraryJson: JSON.stringify(itinerary) } }),
-    prisma.rescueEvent.update({ where: { id: eventId }, data: { status: "resolved" } }),
-  ]);
-  return { ok: true as const };
+    const updatedTrip = await tx.trip.updateMany({
+      where: { id: tripId, itineraryRevision: expectedItineraryRevision },
+      data: { itineraryJson: JSON.stringify(itinerary), itineraryRevision: { increment: 1 } },
+    });
+    if (updatedTrip.count !== 1) throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+
+    const updatedEvent = await tx.rescueEvent.updateMany({
+      where: { id: eventId, status: "open" },
+      data: { status: "resolved" },
+    });
+    if (updatedEvent.count !== 1) {
+      const current = await tx.rescueEvent.findUnique({ where: { id: eventId }, select: { status: true } });
+      if (current?.status === "resolved") return { ok: true as const, alreadyResolved: true as const };
+      throw new ApiError(409, "RESCUE_NOT_APPLIED", "Rescue could not be applied");
+    }
+    return { ok: true as const, itineraryRevision: expectedItineraryRevision + 1 };
+  });
 }

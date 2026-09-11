@@ -123,32 +123,3 @@ export function searchGooglePlaces(query: string, destination: string): Promise<
     );
   });
 }
-
-const DETAIL_FIELDS = [
-  "place_id",
-  "name",
-  "formatted_address",
-  "geometry",
-  "rating",
-  "user_ratings_total",
-  "price_level",
-  "opening_hours",
-  "photos",
-  "types",
-  "editorial_summary",
-  "reviews",
-];
-
-/** Fetches richer fields (hours, description, reviews) for one place right before it's saved. */
-export function enrichGooglePlace(placeId: string, destination: string): Promise<Place | null> {
-  return new Promise((resolve) => {
-    const service = getService();
-    service.getDetails({ placeId, fields: DETAIL_FIELDS }, (result, status) => {
-      if (status !== google.maps.places.PlacesServiceStatus.OK || !result) {
-        resolve(null);
-        return;
-      }
-      resolve(toPlace(result, destination));
-    });
-  });
-}

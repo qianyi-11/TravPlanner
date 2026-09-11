@@ -25,6 +25,7 @@ import {
   getOpeningHoursLabel,
   getOpeningHoursState,
   getPricePresentation,
+  getPlaceFreshnessPresentation,
 } from "@/lib/place-facts";
 
 export default function PlaceDetailsPage({
@@ -44,6 +45,7 @@ export default function PlaceDetailsPage({
 
   const availability = getAvailabilityPresentation(place.availability);
   const price = getPricePresentation(place);
+  const freshness = getPlaceFreshnessPresentation(place);
   const hasHours = getOpeningHoursState(place.openingHours) === "AVAILABLE";
 
   return (
@@ -68,6 +70,7 @@ export default function PlaceDetailsPage({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="neutral">{place.category}</Badge>
+              <Badge tone={freshness.tone}>{freshness.label}</Badge>
               {isShortlisted && (
                 <Badge tone="teal">
                   <BadgeCheck size={12} /> Shortlisted

@@ -15,6 +15,7 @@ import { TripCard } from "@/components/trip/TripCard";
 export default function GroupRoomPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = use(params);
   const group = usePlannerStore((s) => s.groups[groupId]);
+  const currentUserId = usePlannerStore((s) => s.currentUserId);
   const members = usePlannerStore(
     useShallow((s) => (group ? group.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
   );
@@ -22,17 +23,45 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
     useShallow((s) => (group ? group.tripIds.map((id) => s.trips[id]).filter(Boolean) : []))
   );
   const addMember = usePlannerStore((s) => s.addMember);
+  const createGroupInvite = usePlannerStore((s) => s.createGroupInvite);
+  const showToast = usePlannerStore((s) => s.showToast);
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState("");
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const isOrganizer = members.find((member) => member.id === currentUserId)?.role === "organizer";
 
   if (!group) notFound();
 
-  function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    addMember(groupId, name.trim());
-    setName("");
-    setAddOpen(false);
+    if (!name.trim() || addingMember) return;
+    setAddingMember(true);
+    try {
+      if (await addMember(groupId, name.trim())) {
+        setName("");
+        setAddOpen(false);
+      }
+    } finally {
+      setAddingMember(false);
+    }
+  }
+
+  async function handleInvite() {
+    if (creatingInvite) return;
+    setCreatingInvite(true);
+    try {
+      const token = await createGroupInvite(groupId);
+      const link = `${window.location.origin}/join/${token}`;
+      setInviteLink(link);
+      await navigator.clipboard?.writeText(link);
+      showToast("Invite link copied");
+    } catch {
+      // The store already surfaces the server error.
+    } finally {
+      setCreatingInvite(false);
+    }
   }
 
   return (
@@ -92,12 +121,14 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
             <h2 className="font-display text-base font-bold">
               Members <span className="text-[var(--color-ink-soft)] font-normal">({members.length})</span>
             </h2>
-            <button
-              onClick={() => setAddOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-sand)] text-[var(--color-ink)] hover:bg-[var(--color-border)] cursor-pointer"
-            >
-              <UserPlus size={15} />
-            </button>
+            {isOrganizer && (
+              <button
+                onClick={() => setAddOpen(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-sand)] text-[var(--color-ink)] hover:bg-[var(--color-border)] cursor-pointer"
+              >
+                <UserPlus size={15} />
+              </button>
+            )}
           </div>
           <div className="space-y-3">
             {members.map((m) => (
@@ -112,9 +143,17 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
               </div>
             ))}
           </div>
-          <Button variant="outline" fullWidth size="sm" className="mt-4" icon={<UserPlus size={14} />} onClick={() => setAddOpen(true)}>
-            Add Member
-          </Button>
+          {isOrganizer && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" size="sm" icon={<UserPlus size={14} />} onClick={() => setAddOpen(true)}>
+                Add Member
+              </Button>
+              <Button variant="secondary" size="sm" disabled={creatingInvite} onClick={handleInvite}>
+                {creatingInvite ? "Creating…" : "Copy invite link"}
+              </Button>
+            </div>
+          )}
+          {inviteLink && <p className="mt-2 break-all text-xs text-[var(--color-ink-soft)]">{inviteLink}</p>}
         </Card>
       </div>
 
@@ -130,8 +169,8 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
               className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm outline-none focus:border-[var(--color-primary)]"
             />
           </div>
-          <Button type="submit" fullWidth disabled={!name.trim()}>
-            Add to Group
+          <Button type="submit" fullWidth disabled={!name.trim() || addingMember}>
+            {addingMember ? "Adding…" : "Add to Group"}
           </Button>
         </form>
       </Modal>

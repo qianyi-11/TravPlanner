@@ -23,7 +23,7 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
         : []
     )
   );
-  const toggleVote = usePlannerStore((s) => s.toggleVote);
+  const setVote = usePlannerStore((s) => s.setVote);
   const submitVotes = usePlannerStore((s) => s.submitMyVotes);
   const [pendingPlaceId, setPendingPlaceId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -33,11 +33,11 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
   const myVotes = (me.votedPlaceIds ?? []).filter((id) => trip.placeIds.includes(id));
   const limit = trip.votesPerMember;
 
-  async function handleToggleVote(placeId: string) {
+  async function handleVote(placeId: string, voted: boolean) {
     if (pendingPlaceId || submitting) return;
     setPendingPlaceId(placeId);
     try {
-      await toggleVote(tripId, placeId);
+      await setVote(tripId, placeId, voted);
     } finally {
       setPendingPlaceId(null);
     }
@@ -89,7 +89,7 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
                     size="sm"
                     variant={voted ? "secondary" : "outline"}
                     icon={voted ? <Check size={14} /> : <VoteIcon size={14} />}
-                    onClick={() => handleToggleVote(place.id)}
+                    onClick={() => handleVote(place.id, !voted)}
                     disabled={pendingPlaceId !== null || submitting}
                   >
                     {pendingPlaceId === place.id ? "Saving…" : voted ? "Voted" : "Vote"}

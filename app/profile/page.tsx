@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/Button";
 import { GroupCard } from "@/components/trip/GroupCard";
 import { TripCard } from "@/components/trip/TripCard";
 import { EmptyState } from "@/components/ui/States";
+import { signOut } from "next-auth/react";
 
 export default function ProfilePage() {
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
   const members = usePlannerStore(useShallow((s) => Object.values(s.members)));
   const switchDemoUser = usePlannerStore((s) => s.switchDemoUser);
   const resetDemoUser = usePlannerStore((s) => s.resetDemoUser);
+  const demoAuthEnabled = usePlannerStore((s) => s.demoAuthEnabled);
   const [switchingUser, setSwitchingUser] = useState(false);
   const groups = usePlannerStore(
     useShallow((s) => Object.values(s.groups).filter((g) => g.memberIds.includes(s.currentUserId)))
@@ -57,7 +59,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <Card className="mt-8 p-5">
+      {demoAuthEnabled ? <Card className="mt-8 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-display text-lg font-bold">Demo session</h2>
@@ -88,7 +90,13 @@ export default function ProfilePage() {
             {switchingUser && <span className="text-xs text-[var(--color-ink-soft)]">Switching…</span>}
           </div>
         </div>
-      </Card>
+      </Card> : <Card className="mt-8 flex items-center justify-between gap-4 p-5">
+        <div>
+          <h2 className="font-display text-lg font-bold">Signed in</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Your Google account is linked to this TravPlanner profile.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>Sign out</Button>
+      </Card>}
 
       <div className="mt-8">
         <h2 className="mb-4 font-display text-lg font-bold">Your travel profile</h2>

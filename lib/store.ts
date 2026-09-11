@@ -9,6 +9,7 @@ interface BootstrapPayload {
   members: Record<string, Member>;
   places: Record<string, Place>;
   currentUserId: string;
+  demoAuthEnabled: boolean;
 }
 
 async function api(url: string, init?: RequestInit): Promise<{ ok: boolean; error?: string; [k: string]: unknown }> {
@@ -34,6 +35,8 @@ interface PlannerState {
   toast: string | null;
   initialized: boolean;
   hydrating: boolean;
+  authRequired: boolean;
+  demoAuthEnabled: boolean;
 
   hydrate: () => Promise<void>;
   switchDemoUser: (memberId: string) => Promise<boolean>;
@@ -42,7 +45,8 @@ interface PlannerState {
   clearToast: () => void;
 
   createGroup: (input: { name: string; emoji: string; description?: string; coverColor: string }) => Promise<string>;
-  addMember: (groupId: string, name: string) => Promise<void>;
+  createGroupInvite: (groupId: string) => Promise<string>;
+  addMember: (groupId: string, name: string) => Promise<boolean>;
 
   createTrip: (
     groupId: string,
@@ -60,14 +64,14 @@ interface PlannerState {
   ) => Promise<string>;
   deleteTrip: (tripId: string) => Promise<void>;
 
-  updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<void>;
+  updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<boolean>;
 
   addPlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
   importAndSuggestPlace: (tripId: string, place: Place) => Promise<void>;
   removePlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
-  submitMySuggestions: (tripId: string) => Promise<void>;
+  submitMySuggestions: (tripId: string) => Promise<boolean>;
 
-  toggleVote: (tripId: string, placeId: string) => Promise<boolean>;
+  setVote: (tripId: string, placeId: string, voted: boolean) => Promise<boolean>;
   submitMyVotes: (tripId: string) => Promise<boolean>;
 
   confirmShortlist: (tripId: string, placeIds: string[]) => Promise<boolean>;
@@ -87,15 +91,22 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   toast: null,
   initialized: false,
   hydrating: false,
+  authRequired: false,
+  demoAuthEnabled: false,
 
   hydrate: async () => {
     set({ hydrating: true });
     try {
       const res = await fetch("/api/bootstrap", { cache: "no-store" });
-      const data = (await res.json()) as BootstrapPayload;
-      set({ ...data, initialized: true, hydrating: false });
+      const data = (await res.json().catch(() => ({}))) as Partial<BootstrapPayload> & { error?: string };
+      if (!res.ok) {
+        if (res.status === 401) set({ initialized: true, hydrating: false, authRequired: true });
+        else set({ initialized: true, hydrating: false, toast: data.error ?? "Couldn't load your trips" });
+        return;
+      }
+      set({ ...data as BootstrapPayload, initialized: true, hydrating: false, authRequired: false });
     } catch {
-      set({ hydrating: false, toast: "Couldn't reach the server. Is it running?" });
+      set({ initialized: true, hydrating: false, toast: "Couldn't reach the server. Is it running?" });
     }
   },
 
@@ -145,9 +156,19 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't add member" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
+  },
+
+  createGroupInvite: async (groupId) => {
+    const result = await api(`/api/groups/${groupId}/invite`, { method: "POST", body: JSON.stringify({}) });
+    if (!result.ok || typeof result.token !== "string") {
+      set({ toast: result.error ?? "Couldn't create invite" });
+      throw new Error(result.error ?? "Couldn't create invite");
+    }
+    return result.token;
   },
 
   createTrip: async (groupId, input) => {
@@ -179,9 +200,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't save preferences" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
   addPlaceSuggestion: async (tripId, placeId) => {
@@ -199,7 +221,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   importAndSuggestPlace: async (tripId, place) => {
     const result = await api(`/api/trips/${tripId}/places`, {
       method: "POST",
-      body: JSON.stringify({ place }),
+      body: JSON.stringify({ placeId: place.id }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't add place" });
@@ -227,15 +249,16 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't submit suggestions" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
-  toggleVote: async (tripId, placeId) => {
+  setVote: async (tripId, placeId, voted) => {
     const result = await api(`/api/trips/${tripId}/votes`, {
       method: "POST",
-      body: JSON.stringify({ placeId }),
+      body: JSON.stringify({ placeId, voted }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't update vote" });
@@ -272,9 +295,14 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   buildItinerary: async (tripId) => {
+    const expectedItineraryRevision = get().trips[tripId]?.itineraryRevision;
+    if (!expectedItineraryRevision) {
+      set({ toast: "Couldn't read the current itinerary version" });
+      return false;
+    }
     const result = await api(`/api/trips/${tripId}/build-itinerary`, {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ expectedItineraryRevision }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't build itinerary" });
@@ -306,9 +334,14 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   resolveRescue: async (tripId, eventId) => {
+    const expectedItineraryRevision = get().trips[tripId]?.itineraryRevision;
+    if (!expectedItineraryRevision) {
+      set({ toast: "Couldn't read the current itinerary version" });
+      return false;
+    }
     const result = await api(`/api/trips/${tripId}/rescue/${eventId}/resolve`, {
       method: "POST",
-      body: JSON.stringify({}),
+      body: JSON.stringify({ expectedItineraryRevision }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't resolve this" });

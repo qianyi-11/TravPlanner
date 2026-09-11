@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { ApiError } from "./api-error";
 import { DEMO_AUTH_COOKIE, isDemoAuthEnabled } from "./demo-auth";
 import { prisma } from "./prisma";
+import { assertProductionEnv } from "./env";
 
 export interface AuthenticatedActor {
   memberId: string;
@@ -16,6 +17,7 @@ export function setAuthenticatedMemberIdForTests(memberId: string | null) {
 }
 
 export async function resolveCurrentMemberId(): Promise<string | undefined> {
+  assertProductionEnv();
   if (process.env.NODE_ENV === "test" && testMemberId !== undefined) return testMemberId ?? undefined;
 
   const sessionMemberId = (await auth())?.user?.memberId;

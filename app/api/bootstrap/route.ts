@@ -4,29 +4,56 @@ import { mapCatalogPlace, mapGroup, mapMember, mapTrip } from "@/lib/server/mapp
 import type { Group, Member, Place, Trip } from "@/lib/types";
 import { apiErrorResponse } from "@/lib/server/api-error";
 import { requireAuthenticatedActor } from "@/lib/server/auth";
+import { isDemoAuthEnabled } from "@/lib/server/demo-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const { memberId: currentUserId } = await requireAuthenticatedActor();
-    const [groupRows, memberRows, groupMemberRows, tripRows, placeRows] = await Promise.all([
-      prisma.group.findMany({
-        include: { members: { select: { memberId: true } }, trips: { select: { id: true } } },
-      }),
-      prisma.member.findMany(),
-      prisma.groupMember.findMany(),
-      prisma.trip.findMany({
-        include: {
-          tripPlaces: { select: { placeId: true } },
-          rescueEvents: true,
-          group: { select: { members: { select: { memberId: true } } } },
-        },
-      }),
-      prisma.place.findMany({
-        include: { tripPlaces: { include: { suggestions: true, votes: true } } },
-      }),
+    const memberships = await prisma.groupMember.findMany({
+      where: { memberId: currentUserId },
+      select: { groupId: true },
+    });
+    const groupIds = Array.from(new Set(memberships.map(({ groupId }) => groupId)));
+
+    const [groupRows, memberRows, groupMemberRows, tripRows] = await Promise.all([
+      groupIds.length
+        ? prisma.group.findMany({
+            where: { id: { in: groupIds } },
+            include: { members: { select: { memberId: true } }, trips: { select: { id: true } } },
+          })
+        : [],
+      groupIds.length
+        ? prisma.member.findMany({ where: { memberships: { some: { groupId: { in: groupIds } } } } })
+        : [],
+      groupIds.length
+        ? prisma.groupMember.findMany({ where: { groupId: { in: groupIds } } })
+        : [],
+      groupIds.length
+        ? prisma.trip.findMany({
+            where: { groupId: { in: groupIds } },
+            include: {
+              tripPlaces: { select: { placeId: true } },
+              rescueEvents: true,
+              group: { select: { members: { select: { memberId: true } } } },
+            },
+          })
+        : [],
     ]);
+
+    const tripIds = tripRows.map(({ id }) => id);
+    const placeRows = tripIds.length
+      ? await prisma.place.findMany({
+          where: { tripPlaces: { some: { tripId: { in: tripIds } } } },
+          include: {
+            tripPlaces: {
+              where: { tripId: { in: tripIds } },
+              include: { suggestions: true, votes: true },
+            },
+          },
+        })
+      : [];
 
     const memberActivity = new Map<string, { suggested: string[]; voted: string[] }>();
     function activityFor(memberId: string) {
@@ -40,18 +67,17 @@ export async function GET() {
 
     const places: Record<string, Place> = {};
     for (const row of placeRows) {
-      for (const tp of row.tripPlaces) {
-        for (const s of tp.suggestions) activityFor(s.memberId).suggested.push(row.id);
-        for (const v of tp.votes) activityFor(v.memberId).voted.push(row.id);
+      for (const tripPlace of row.tripPlaces) {
+        for (const suggestion of tripPlace.suggestions) activityFor(suggestion.memberId).suggested.push(row.id);
+        for (const vote of tripPlace.votes) activityFor(vote.memberId).voted.push(row.id);
       }
       places[row.id] = mapCatalogPlace(row);
     }
 
-    // A member's role can technically differ per group; prefer "organizer" if they hold it anywhere.
     const roleByMember = new Map<string, string>();
-    for (const gm of groupMemberRows) {
-      const existing = roleByMember.get(gm.memberId);
-      if (!existing || gm.role === "organizer") roleByMember.set(gm.memberId, gm.role);
+    for (const membership of groupMemberRows) {
+      const existing = roleByMember.get(membership.memberId);
+      if (!existing || membership.role === "organizer") roleByMember.set(membership.memberId, membership.role);
     }
 
     const members: Record<string, Member> = {};
@@ -69,13 +95,10 @@ export async function GET() {
 
     const trips: Record<string, Trip> = {};
     for (const row of tripRows) {
-      trips[row.id] = mapTrip(
-        row,
-        row.group.members.map((m) => m.memberId)
-      );
+      trips[row.id] = mapTrip(row, row.group.members.map((member) => member.memberId));
     }
 
-    return NextResponse.json({ groups, members, trips, places, currentUserId });
+    return NextResponse.json({ groups, members, trips, places, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
   } catch (error) {
     return apiErrorResponse(error);
   }

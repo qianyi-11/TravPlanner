@@ -11,7 +11,7 @@ import { Button, LinkButton } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/States";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
-import { enrichGooglePlace, searchGooglePlaces } from "@/lib/google-places-client";
+import { searchGooglePlaces } from "@/lib/google-places-client";
 import type { Place } from "@/lib/types";
 
 export default function AddPlacesPage({ params }: { params: Promise<{ tripId: string }> }) {
@@ -42,12 +42,12 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
 
   useEffect(() => {
     if (!mapsReady || !query.trim() || !searchDestination) {
-      setLiveResults([]);
       return;
     }
     let cancelled = false;
-    setSearching(true);
     const timer = setTimeout(() => {
+      setSearching(true);
+      setLiveResults([]);
       searchGooglePlaces(query, searchDestination).then((results) => {
         if (!cancelled) {
           setLiveResults(results);
@@ -80,11 +80,14 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   }, [allPlaces, trip.destinations, destFilter, query]);
 
   const catalogIds = new Set(candidates.map((p) => p.id));
-  const freshLiveResults = liveResults.filter((p) => !catalogIds.has(p.id));
+  const freshLiveResults = mapsReady && query.trim() && searchDestination
+    ? liveResults.filter((p) => !catalogIds.has(p.id))
+    : [];
 
   const myCount = allPlaces.filter(
     (p) => trip.placeIds.includes(p.id) && p.suggestedBy.includes(currentUserId)
   ).length;
+  const solo = trip.memberIds.length === 1;
 
   async function handleAdd(place: Place) {
     const alreadyImported = Boolean(allPlacesById[place.id]);
@@ -94,8 +97,7 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
       return;
     }
     setAddingId(place.id);
-    const enriched = (await enrichGooglePlace(place.id.replace(/^g-/, ""), place.destination)) ?? place;
-    await importAndSuggest(tripId, enriched);
+    await importAndSuggest(tripId, place);
     setAddingId(null);
     showToast(`${place.name} added to your suggestions`);
   }
@@ -138,7 +140,7 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
       <div className="mt-6">
         <h1 className="font-display text-2xl font-bold">Where do you want to go?</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-          Add the places you&apos;d love to visit. Your group will vote on them later.
+          {solo ? "Add the places you'd love to visit. Your preferences will shape the shortlist." : "Add the places you'd love to visit. Your group will vote on them later."}
         </p>
 
         <div className="sticky top-[70px] z-20 mt-5 rounded-2xl border border-[var(--color-border)] bg-white/95 p-3 shadow-[var(--shadow-soft)] backdrop-blur">

@@ -89,7 +89,10 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
 
   if (!trip) notFound();
 
-  const info = STAGE_INFO[trip.stage];
+  const solo = members.length === 1;
+  const info = solo && trip.stage === "voting"
+    ? { ...STAGE_INFO.voting, title: "Build your shortlist", description: "Use your saved preferences and places to choose a deterministic shortlist.", cta: "Build Shortlist", href: "vote/results" }
+    : STAGE_INFO[trip.stage];
   const days = daysBetween(trip.startDate, trip.endDate);
   const suggestedCount = places.length;
   const shortlistCount = trip.shortlistPlaceIds.length;
@@ -164,26 +167,32 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
 
         <div className="space-y-6">
           <Card className="h-fit p-5">
-            <h3 className="mb-4 font-display text-base font-bold">Group status</h3>
-            <div className="space-y-4 text-sm">
-              <StatusRow label="Suggestions submitted" done={suggestedDone} total={members.length} />
-              <StatusRow label="Votes submitted" done={votedDone} total={members.length} />
-            </div>
-            <div className="mt-5 space-y-3 border-t border-[var(--color-border-soft)] pt-4">
-              {members.map((m) => (
-                <div key={m.id} className="flex items-center gap-3">
-                  <MemberAvatar member={m} size="sm" />
-                  <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
-                  {m.hasSubmittedVotes ? (
-                    <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
-                  ) : m.hasSubmittedSuggestions ? (
-                    <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
-                  ) : (
-                    <Circle size={16} className="text-[var(--color-border)]" />
-                  )}
+            <h3 className="mb-4 font-display text-base font-bold">{solo ? "Solo planning" : "Group status"}</h3>
+            {solo ? (
+              <p className="text-sm text-[var(--color-ink-soft)]">Your preferences and saved places will determine the shortlist and itinerary.</p>
+            ) : (
+              <>
+                <div className="space-y-4 text-sm">
+                  <StatusRow label="Suggestions submitted" done={suggestedDone} total={members.length} />
+                  <StatusRow label="Votes submitted" done={votedDone} total={members.length} />
                 </div>
-              ))}
-            </div>
+                <div className="mt-5 space-y-3 border-t border-[var(--color-border-soft)] pt-4">
+                  {members.map((m) => (
+                    <div key={m.id} className="flex items-center gap-3">
+                      <MemberAvatar member={m} size="sm" />
+                      <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
+                      {m.hasSubmittedVotes ? (
+                        <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
+                      ) : m.hasSubmittedSuggestions ? (
+                        <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
+                      ) : (
+                        <Circle size={16} className="text-[var(--color-border)]" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <LinkButton href={`/groups/${trip.groupId}`} variant="ghost" size="sm" fullWidth className="mt-4" icon={<Compass size={14} />}>
               Back to group room
             </LinkButton>

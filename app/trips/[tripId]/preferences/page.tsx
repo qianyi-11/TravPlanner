@@ -45,15 +45,15 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
     clear();
   }
 
-  function handleSave() {
-    updatePrefs(currentUserId, {
+  async function handleSave() {
+    if (!(await updatePrefs(currentUserId, {
       interests,
       foodPreferences: food,
       pace,
       mustDo,
       dislikes,
       personalBudget: budget,
-    });
+    }))) return;
     showToast("Preferences saved");
     router.push(`/trips/${tripId}/places`);
   }

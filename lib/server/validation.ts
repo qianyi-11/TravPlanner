@@ -35,6 +35,13 @@ export function requireId(value: unknown, field: string): string {
   return value.trim();
 }
 
+export function requireItineraryRevision(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
+    throw new ApiError(400, "INVALID_ITINERARY_REVISION", "expectedItineraryRevision must be a positive integer");
+  }
+  return value;
+}
+
 export function requireUniqueIdArray(
   value: unknown,
   field: string,

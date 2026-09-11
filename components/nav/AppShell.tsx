@@ -8,6 +8,7 @@ import { usePlannerStore } from "@/lib/store";
 import { MemberAvatar } from "@/components/ui/Avatar";
 import { LoadingState } from "@/components/ui/States";
 import { cx } from "@/lib/utils";
+import { AuthGate } from "@/components/auth/AuthGate";
 
 const NAV = [
   { href: "/", label: "Home", shortLabel: "Home", icon: Home, match: (p: string) => p === "/" },
@@ -33,6 +34,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
   const initialized = usePlannerStore((s) => s.initialized);
+  const authRequired = usePlannerStore((s) => s.authRequired);
   const hydrate = usePlannerStore((s) => s.hydrate);
   const startedRef = useRef(false);
 
@@ -41,6 +43,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     startedRef.current = true;
     hydrate();
   }, [hydrate]);
+
+  if (authRequired) return <AuthGate />;
 
   return (
     <div className="min-h-screen">
