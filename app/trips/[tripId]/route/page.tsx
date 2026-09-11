@@ -18,8 +18,9 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
   const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
-  const setStage = usePlannerStore((s) => s.setStage);
+  const buildItinerary = usePlannerStore((s) => s.buildItinerary);
   const [selected, setSelected] = useState<string | null>(null);
+  const [building, setBuilding] = useState(false);
 
   const orderedFromItinerary: Place[] = useMemo(() => {
     return trip ? getActivePlanPlaceIds(trip).map((id) => placesMap[id]).filter(Boolean) : [];
@@ -37,9 +38,15 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
 
   if (!trip) notFound();
 
-  function handleContinue() {
-    setStage(tripId, "itinerary");
-    router.push(`/trips/${tripId}/itinerary`);
+  async function handleContinue() {
+    if (trip.itinerary.length) {
+      router.push(`/trips/${tripId}/itinerary`);
+      return;
+    }
+    setBuilding(true);
+    const built = await buildItinerary(tripId);
+    setBuilding(false);
+    if (built) router.push(`/trips/${tripId}/itinerary`);
   }
 
   let runningIndex = 0;
@@ -55,8 +62,8 @@ export default function RoutePage({ params }: { params: Promise<{ tripId: string
             Review the saved stop order and area grouping for your trip.
           </p>
         </div>
-        <Button onClick={handleContinue} iconRight={<ArrowRight size={15} />}>
-          Build Itinerary
+        <Button onClick={handleContinue} disabled={building} aria-busy={building} iconRight={<ArrowRight size={15} />}>
+          {trip.itinerary.length ? "View Itinerary" : building ? "Building..." : "Build Itinerary"}
         </Button>
       </div>
 

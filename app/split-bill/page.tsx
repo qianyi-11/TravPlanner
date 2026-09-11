@@ -2,30 +2,54 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Receipt, Sparkles } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Receipt, Sparkles } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { SplitBillCalculator } from "@/components/trip/SplitBillCalculator";
+import { CurrencyConverter } from "@/components/trip/CurrencyConverter";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { formatDateRange } from "@/lib/utils";
+import { cx, formatDateRange } from "@/lib/utils";
+
+type View = "split" | "converter";
 
 export default function GlobalSplitBillPage() {
   const trips = usePlannerStore(useShallow((s) => Object.values(s.trips)));
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const me = usePlannerStore((s) => s.members[currentUserId]);
   const [quickMode, setQuickMode] = useState(false);
+  const [view, setView] = useState<View>("split");
 
   return (
     <div>
       <div>
         <h1 className="font-display text-2xl font-bold sm:text-3xl">Split a Bill</h1>
         <p className="mt-1.5 text-sm text-[var(--color-ink-soft)]">
-          Break down a shared expense and see who owes what.
+          Break down a shared expense or estimate a reference currency conversion.
         </p>
       </div>
 
-      {!quickMode && (
+      <div className="mt-5 inline-flex rounded-2xl border border-[var(--color-border)] bg-white p-1 shadow-[var(--shadow-soft)]">
+        {(["split", "converter"] as View[]).map((item) => {
+          const Icon = item === "split" ? Receipt : ArrowLeftRight;
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setView(item)}
+              className={cx(
+                "flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold",
+                view === item ? "bg-[var(--color-ink)] text-white" : "text-[var(--color-ink-soft)] hover:bg-[var(--color-sand)]"
+              )}
+            >
+              <Icon size={15} />
+              {item === "split" ? "Split Bill" : "Reference Converter"}
+            </button>
+          );
+        })}
+      </div>
+
+      {view === "split" && !quickMode && (
         <div className="mt-8 space-y-6">
           {trips.length > 0 && (
             <div>
@@ -80,9 +104,15 @@ export default function GlobalSplitBillPage() {
         </div>
       )}
 
-      {quickMode && (
+      {view === "split" && quickMode && (
         <div className="mt-6 max-w-2xl">
           <SplitBillCalculator storageKey="trippy-split-quick" defaultNames={me ? [me.name] : []} />
+        </div>
+      )}
+
+      {view === "converter" && (
+        <div className="mt-6 max-w-3xl">
+          <CurrencyConverter />
         </div>
       )}
     </div>
