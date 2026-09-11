@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { ApiError } from "./api-error";
+import { requireAuthenticatedActor } from "./auth";
 
 export async function requireTrip(tripId: string) {
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
@@ -17,6 +18,40 @@ export async function requireTripMember(tripId: string, memberId: string) {
   });
   if (!membership) throw new ApiError(403, "MEMBER_NOT_IN_TRIP", "Member is not part of this trip");
   return trip;
+}
+
+export async function requireGroupActor(groupId: string) {
+  const { memberId } = await requireAuthenticatedActor();
+  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  if (!group) throw new ApiError(404, "GROUP_NOT_FOUND", "Group not found");
+
+  const membership = await prisma.groupMember.findUnique({
+    where: { groupId_memberId: { groupId, memberId } },
+  });
+  if (!membership) throw new ApiError(403, "MEMBER_NOT_IN_GROUP", "Member is not part of this group");
+  return { memberId, role: membership.role, group };
+}
+
+export async function requireTripActor(tripId: string) {
+  const { memberId } = await requireAuthenticatedActor();
+  const trip = await requireTrip(tripId);
+  const membership = await prisma.groupMember.findUnique({
+    where: { groupId_memberId: { groupId: trip.groupId, memberId } },
+  });
+  if (!membership) throw new ApiError(403, "MEMBER_NOT_IN_TRIP", "Member is not part of this trip");
+  return { memberId, role: membership.role, trip };
+}
+
+export async function requireGroupOrganizer(groupId: string) {
+  const actor = await requireGroupActor(groupId);
+  if (actor.role !== "organizer") throw new ApiError(403, "ORGANIZER_REQUIRED", "Organizer access required");
+  return actor;
+}
+
+export async function requireTripOrganizer(tripId: string) {
+  const actor = await requireTripActor(tripId);
+  if (actor.role !== "organizer") throw new ApiError(403, "ORGANIZER_REQUIRED", "Organizer access required");
+  return actor;
 }
 
 export async function requireTripPlace(tripId: string, placeId: string) {
