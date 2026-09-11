@@ -1,10 +1,8 @@
-# TravPlanner by [Team Name]
+# TravPlanner
 
-**Team:** [Member 1], [Member 2], [Member 3], [Member 4]  
+**Competition branch:** `version1.1`
 **Problem Statement:** Planning an Escape — Travel Planner  
-**Video Presentation:** [Unlisted YouTube Link]  
-**Presentation Slides:** [Public Slides Link]  
-**Live Prototype:** [Deployed Prototype Link]
+**Repository:** https://github.com/qianyi-11/TravPlanner
 
 ---
 
@@ -36,7 +34,7 @@ Instead of treating the itinerary as the starting point, TravPlanner makes the *
 
 ## Our Solution
 
-**TravPlanner** is a collaborative travel-planning prototype for solo travellers and small groups.
+**TravPlanner converts different traveller preferences into one shared, explainable and persistent trip plan.** It supports solo travellers and small groups.
 
 Users progress through a guided planning flow: define the trip, express preferences, suggest places, vote together, create a shortlist, review practical constraints, organise the route and view the final itinerary.
 
@@ -60,7 +58,7 @@ The prototype also introduces **Trip Rescue**, which demonstrates how an existin
 - Split-bill calculator
 - **Trip Rescue** for demonstrating unexpected-plan adjustment
 - Shared final trip plan
-- Persistent prototype data through Prisma and SQLite
+- Authenticated persistence through Prisma, with SQLite for local/demo use and PostgreSQL for production
 
 ### Core User Flow
 
@@ -81,11 +79,11 @@ Build Shortlist
      ↓
 Validate Choices
      ↓
-Plan Route
+Sequence Preview
      ↓
-Build Itinerary
+Itinerary
      ↓
-Final Trip Plan
+Final Plan
      ↓
 Trip Rescue when plans change
 ```
@@ -146,21 +144,18 @@ The original design remains useful as a long-term architecture reference. Howeve
 
 ### Problem and Solution Map
 
-> **TODO before submission:** Export the problem/solution diagram into the repository.
-
-```markdown
-![Problem and Solution Map](docs/ideation/problem-solution-map.png)
+```mermaid
+flowchart LR
+    A[Scattered places and group-chat decisions] --> B[Different preferences and budgets]
+    B --> C[TravPlanner consensus]
+    C --> D[One explainable shortlist]
+    D --> E[Persistent itinerary]
+    E --> F[Trip Rescue when plans change]
 ```
 
-This diagram should show how fragmented planning, group disagreement, budget concerns and unexpected changes connect to TravPlanner's main features.
+The problem is fragmented coordination. The solution is a visible decision path that turns individual input into one shared plan.
 
 ### User Flow
-
-> **TODO before submission:** Add one visual user-flow diagram.
-
-```markdown
-![TravPlanner User Flow](docs/ideation/user-flow.png)
-```
 
 Recommended flow:
 
@@ -190,18 +185,13 @@ The purpose of this diagram is to show that TravPlanner was designed as a **plan
 
 ## 2.3 Mentor Consultation
 
-> **Do not invent this section. Replace the placeholders with your team's actual mentor conversations.**
-
-| Date | Mentor | Feedback Received | What Was Changed |
-|---|---|---|---|
-| [Date] | [Mentor] | [Specific feedback] | [What the team changed or why it was not adopted] |
-| [Date] | [Mentor] | [Specific feedback] | [Result] |
+Mentor notes are not stored in this repository, so no feedback is attributed here. The documented scope decisions are based on the implemented prototype and should be updated only from actual consultation notes.
 
 ---
 
 # 3. Design & Prototype
 
-**UI Prototype / Live Application:** [Public Link]
+The repository is the source for the current UI prototype. A public deployment URL is intentionally omitted until one is available.
 
 TravPlanner uses a guided stage-based interface so users always know what part of the planning process they are currently completing.
 
@@ -216,69 +206,37 @@ The implemented prototype follows these main stages:
 
 ## Key Screens
 
-> Replace the paths below with actual screenshots before submission.
+The following screens are implemented in the application. Screenshot assets are not included in this repository; the seeded local demo is the reproducible evidence path.
 
 ### 1. Group and Trip Dashboard
-
-```markdown
-![Group Dashboard](docs/screenshots/01-groups.png)
-```
 
 Users organise trips around a travel group and can see the trips associated with that group.
 
 ### 2. Trip Planning Progress
 
-```markdown
-![Trip Overview](docs/screenshots/02-trip-overview.png)
-```
-
 The trip overview shows the current planning stage, dates, budget, group participation and planning progress.
 
 ### 3. Preferences and Place Suggestions
-
-```markdown
-![Preferences and Suggestions](docs/screenshots/03-preferences-places.png)
-```
 
 Members express their travel preferences and contribute places they would like the group to consider.
 
 ### 4. Group Voting
 
-```markdown
-![Voting](docs/screenshots/04-voting.png)
-```
-
 Suggested places become shared decisions through the voting stage.
 
 ### 5. Shortlist and Validation
-
-```markdown
-![Validation](docs/screenshots/05-validation.png)
-```
 
 The group narrows the available choices and reviews practical information before building the trip.
 
 ### 6. Route and Map
 
-```markdown
-![Route Map](docs/screenshots/06-route.png)
-```
-
 Selected activities can be viewed spatially to make the trip easier to understand and reduce unnecessary backtracking.
 
 ### 7. Final Plan and Budget
 
-```markdown
-![Final Plan](docs/screenshots/07-final-plan.png)
-```
-
 The final trip workspace combines the itinerary, map, budget, booking indicators and selected places.
 
 ### 8. Trip Rescue
-
-```markdown
-![Trip Rescue](docs/screenshots/08-trip-rescue.png)
-```
 
 Trip Rescue demonstrates an unexpected event affecting the itinerary, evaluates a prepared alternative and lets the traveller accept the replacement.
 
@@ -307,10 +265,10 @@ They contribute preferences and places, then vote before the trip is finalised.
 TravPlanner combines those signals into an explainable fair shortlist using:
 
 ```text
-base score = 2 × votes + preference matches - 2 × conflicts
+baseScore = 2 × votes + preference matches - 2 × dislike conflicts
 ```
 
-Explicit must-dos are protected first. A fixed +3 representation bonus can change close decisions without displacing clear group favourites. The same Group Match evaluation is reused when Trip Rescue compares a prepared replacement.
+Exact Must-do matches are selected first and can expand capacity. Remaining candidates are ranked deterministically by base score, vote support, preference matches, fewer conflicts, then stable candidate ID. A bounded fixed `+3` representation adjustment rewards an under-represented traveller only when it changes a close selection; it cannot overwhelm clear group support. The Consensus Trade-off card explains each such change. Trip Rescue reuses the same candidate evaluation semantics when it compares a prepared replacement.
 
 ## 3. Trip Rescue
 
@@ -325,6 +283,13 @@ Trip Rescue demonstrates how TravPlanner could respond when an activity no longe
 5. and updating the shared itinerary after acceptance.
 
 The current implementation is a **prototype demonstration of this workflow**, rather than a production real-time disruption-monitoring service.
+
+## Known Limitations
+
+- Saved opening hours and `isOpenNow` values are provider snapshots, not live availability.
+- Google `price_level` describes relative venue affordability, not an admission or ticket price.
+- Route is a saved sequence preview; it is not route optimisation, and travel minutes are estimates.
+- Trip Rescue uses prepared disruption and replacement data. It does not detect weather or discover live alternatives automatically.
 
 ## 4. One Continuous Workspace
 
@@ -355,9 +320,10 @@ The goal is to reduce the number of separate decisions and tools travellers need
 | Styling | Tailwind CSS 4 | Allows fast development of a consistent responsive UI. |
 | Client State | Zustand | Keeps shared prototype state simple and lightweight. |
 | Backend | Next.js Route Handlers | Allows frontend and prototype APIs to remain in one codebase. |
+| Authentication | Auth.js + Google OAuth | Maps an authenticated provider identity to one stable TravPlanner Member. |
 | ORM | Prisma | Provides structured database access and a clear domain schema. |
-| Database | SQLite | Simple persistence suitable for the current prototype and seeded demo environment. |
-| Maps / Places | Google Maps / Places integration | Supports place discovery and geographical presentation. |
+| Database | SQLite locally; PostgreSQL in production | Keeps the seeded demo simple while allowing deployment on Vercel. |
+| Maps / Places | Google Maps browser UI + server Google Places | Browser search is discovery; persisted place facts are resolved server-side. |
 | Icons | Lucide React | Provides a consistent interface icon set. |
 
 ## Current Architecture
@@ -369,8 +335,9 @@ flowchart TD
     UI --> Z[Zustand Client State]
     Z --> API[Next.js API Routes]
 
+    UI --> AUTH[Auth.js / Google OAuth]
     API --> P[Prisma ORM]
-    P --> DB[(SQLite Database)]
+    P --> DB[(SQLite local/demo or PostgreSQL production)]
 
     UI --> MAP[Google Maps UI]
     API --> PLACE[Place Data / Google Places]
@@ -381,7 +348,7 @@ flowchart TD
     DB --> I[Itineraries & Rescue Events]
 ```
 
-The browser does not rely only on hard-coded frontend state. Prototype mutations are sent through server API routes and persisted through Prisma.
+The browser does not rely only on hard-coded frontend state. Mutations are sent through server API routes, authorized from the session and group membership, then persisted through Prisma.
 
 ## Simplification From Original Architecture
 
@@ -403,21 +370,21 @@ Google Places / Routes
 Optional AI explanation layer
 ```
 
-This architecture remains a possible production direction, but implementing its complete security, concurrency, validation and planning rules would have reduced our ability to finish the prototype.
-
-The competition prototype therefore uses a smaller architecture:
+Firebase was considered during ideation but is not part of version1.1. The implemented architecture is:
 
 ```text
-Next.js
+Next.js + React
+   ↓
+Auth.js + Google OAuth
    ↓
 Next.js API routes
    ↓
 Prisma
    ↓
-SQLite
+SQLite locally / PostgreSQL in production
 ```
 
-This trade-off lets us demonstrate the complete product concept while keeping the codebase understandable and achievable within the hackathon period.
+This keeps the backend command boundary in one Next.js application while making production persistence and identity explicit.
 
 ---
 
@@ -438,16 +405,16 @@ We intentionally distinguish between what the current prototype demonstrates and
 | Budget | Implemented at prototype level | Full cost/booking integration |
 | Trip Rescue | Interactive prototype | Live disruption/weather detection and revalidation |
 | Split Bill | Prototype feature | Persistent expense ledger and settlement |
-| Authentication | Not production-ready | OAuth/authentication and access control |
-| Database | SQLite prototype | Managed production database |
-| Multi-user security | Limited | Full server-side authorisation |
+| Authentication | Google OAuth with stable Member provisioning | Additional providers and account-linking UI |
+| Database | SQLite local/demo and PostgreSQL production schema/migrations | Managed PostgreSQL operations |
+| Multi-user security | Session, group membership and organizer checks | Real-time collaboration and richer audit controls |
 | AI | Deferred | Explanation and trade-off assistance only |
 
 ---
 
 ## Build Plan & Scope
 
-### Prototype Completion Scope
+### Version1.1 Delivery Scope
 
 Before submission we are prioritising:
 
@@ -455,18 +422,14 @@ Before submission we are prioritising:
 2. Simple solo-travel demonstration.
 3. Reliable seeded demonstration data.
 4. Working core buttons and navigation.
-5. Public deployment.
-6. Key prototype screenshots.
-7. Ideation documentation.
-8. Final presentation video.
+5. Reproducible PostgreSQL/Vercel deployment path.
+6. Accurate competition documentation and deterministic demo.
 
-### Explicit Non-Goals for This Prototype
+### Explicitly Deferred Features
 
 We are **not** attempting to finish:
 
-- production authentication,
-- production multi-user concurrency,
-- full Firebase migration,
+- Firebase, Firestore and Cloud Functions,
 - a complete constraint optimisation engine,
 - automatic live weather monitoring,
 - automatic disruption detection,
@@ -474,9 +437,11 @@ We are **not** attempting to finish:
 - hotel booking,
 - payment processing,
 - production expense settlement,
-- or a production-scale database.
+- AI itinerary or consensus generation,
+- live route optimisation,
+- or a larger workflow/version-history system.
 
-This narrower scope is intentional. The goal is to demonstrate the central product idea reliably before investing in production infrastructure.
+These boundaries keep version1.1 focused on the shared, explainable planning path.
 
 ---
 
@@ -491,9 +456,9 @@ This narrower scope is intentional. The goal is to demonstrate the central produ
 | Adjustment to unexpected changes | Trip Rescue prototype |
 | Faster planning | Major planning decisions are combined into one guided workflow |
 | Less stressful planning | Visible stages reduce the need to manually coordinate information across separate tools |
-| Solo travel | Shared planning model can operate with a single traveller; dedicated solo UX remains limited |
+| Solo travel | Single-member trips skip group-only gates and reuse consensus, shortlist, itinerary, Final Plan and Rescue |
 | Group travel | Primary prototype flow |
-| Deployable demonstration | [Deployment Link] |
+| Deployable demonstration | `npm run build`, PostgreSQL migration script and `/api/health` endpoint |
 
 ---
 
@@ -591,8 +556,16 @@ The original design documentation explores several of these areas in substantial
 ```bash
 git clone https://github.com/qianyi-11/TravPlanner.git
 cd TravPlanner
-git checkout version1
+git checkout version1.1
 npm install
+```
+
+Copy `.env.example` to `.env.local` and set a local SQLite URL plus a local Auth.js secret. Set `AUTH_DEMO_ENABLED=true` for the deterministic local demo; this flag is ignored in production.
+
+```env
+DATABASE_URL=file:./prisma/dev.db
+AUTH_SECRET=local-only-secret
+AUTH_DEMO_ENABLED=true
 ```
 
 Generate the Prisma client:
@@ -608,6 +581,8 @@ npm run db:push
 npm run db:seed
 ```
 
+`npm run db:seed` resets the configured local database. Use it only with a disposable/local database.
+
 Start the application:
 
 ```bash
@@ -619,6 +594,16 @@ Open:
 ```text
 http://localhost:3000
 ```
+
+For production, set `DATABASE_URL` to PostgreSQL, configure Google OAuth and both restricted browser/private server Google keys, keep `AUTH_DEMO_ENABLED=false`, then run:
+
+```bash
+npm run db:generate:production
+npm run db:migrate:production
+npm run build
+```
+
+The health check is available at `/api/health`. It verifies production configuration and database connectivity without returning secrets.
 
 ---
 
@@ -643,7 +628,9 @@ TravPlanner/
 │   └── google-*.ts          # Google integration utilities
 │
 ├── prisma/
-│   ├── schema.prisma        # Prototype database schema
+│   ├── schema.prisma        # PostgreSQL production schema and migration source
+│   ├── schema.sqlite.prisma # SQLite local/demo schema
+│   ├── migrations/           # PostgreSQL deployment migrations
 │   └── seed.ts              # Deterministic demo data
 │
 └── public/
@@ -665,7 +652,5 @@ The current repository implementation is treated as the source of truth for what
 # 12. Submission Links
 
 - **GitHub:** https://github.com/qianyi-11/TravPlanner
-- **Live Prototype:** [Link]
-- **Video Presentation:** [Unlisted YouTube Link]
-- **Presentation Slides:** [Public Link]
-- **UI / Design:** [Public Link]
+- **Live Prototype:** Not published in this repository
+- **Video / Slides / UI:** Add links here when the final submission assets are available
