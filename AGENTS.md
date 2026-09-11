@@ -33,6 +33,10 @@ Zustand — lib/store.ts
         ↓
 Route Handlers — app/api/
         ↓
+validation + domain authorization
+        ↓
+focused server service — lib/server/
+        ↓
 Prisma — lib/server/prisma.ts
         ↓
 SQLite
@@ -141,7 +145,7 @@ Canonical itinerary state is:
 Trip.itineraryJson
 ```
 
-The complete Japan itinerary comes from seed data. There is no general itinerary-generation engine.
+The complete Japan itinerary comes from seed data. A deterministic server builder also creates an itinerary from a confirmed shortlist; there is no general automatic planning engine.
 
 ### Zustand
 
@@ -230,10 +234,17 @@ Base score:
 
 Do not duplicate consensus logic in React.
 
-Tests:
+Domain tests:
 
 ```bash
 npm run test:consensus
+```
+
+Integration tests call the actual Route Handler functions against a disposable `prisma/integration.db`:
+
+```bash
+npm run test:domain
+npm run test:integration
 ```
 
 ## Places and Google Data
@@ -330,7 +341,7 @@ Do not assume the project currently has:
 - live availability validation;
 - route optimization;
 - Directions API travel-time calculation;
-- automatic itinerary generation;
+- automatic itinerary generation beyond the confirmed-shortlist builder;
 - automatic disruption detection;
 - live Rescue alternative search.
 
@@ -371,7 +382,7 @@ Missing Maps credentials should not break the seeded/offline demo.
 | Prisma validate | `npx prisma validate` |
 | Prisma generate | `npm run db:generate` |
 
-There is no configured E2E test framework.
+The deterministic browser demo uses Playwright via `npm run demo`.
 
 ## Agent Checklist
 

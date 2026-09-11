@@ -265,9 +265,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   confirmShortlist: async (tripId, placeIds) => {
+    const memberId = get().currentUserId;
     const result = await api(`/api/trips/${tripId}/shortlist`, {
       method: "POST",
-      body: JSON.stringify({ placeIds }),
+      body: JSON.stringify({ placeIds, memberId }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't confirm shortlist" });
@@ -278,7 +279,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   buildItinerary: async (tripId) => {
-    const result = await api(`/api/trips/${tripId}/build-itinerary`, { method: "POST" });
+    const result = await api(`/api/trips/${tripId}/build-itinerary`, {
+      method: "POST",
+      body: JSON.stringify({ memberId: get().currentUserId }),
+    });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't build itinerary" });
       return false;
@@ -309,7 +313,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   resolveRescue: async (tripId, eventId) => {
-    const result = await api(`/api/trips/${tripId}/rescue/${eventId}/resolve`, { method: "POST" });
+    const result = await api(`/api/trips/${tripId}/rescue/${eventId}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ memberId: get().currentUserId }),
+    });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't resolve this" });
       return false;

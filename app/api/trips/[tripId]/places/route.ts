@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import type { Place } from "@/lib/types";
+import { apiErrorResponse, ApiError } from "@/lib/server/api-error";
+import { requireTripMember } from "@/lib/server/authorization";
+import { parseJsonObject, requireId } from "@/lib/server/validation";
 
 async function ensurePlaceExists(placeId: string, importedPlace?: Place) {
   const existing = await prisma.place.findUnique({ where: { id: placeId } });
@@ -36,52 +39,66 @@ async function ensurePlaceExists(placeId: string, importedPlace?: Place) {
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = await params;
-  const body = (await req.json()) as { placeId?: string; place?: Place; memberId: string };
-  const { memberId } = body;
-  const placeId = body.placeId ?? body.place?.id;
+  try {
+    const tripId = requireId((await params).tripId, "tripId");
+    const body = await parseJsonObject(req);
+    const memberId = requireId(body.memberId, "memberId");
+    const placeId = requireId(body.placeId ?? (typeof body.place === "object" && body.place !== null ? (body.place as { id?: unknown }).id : undefined), "placeId");
+    let importedPlace: Place | undefined;
+    if (body.place !== undefined) {
+      if (typeof body.place !== "object" || body.place === null || Array.isArray(body.place)) {
+        throw new ApiError(400, "INVALID_REQUEST", "place must be an object");
+      }
+      const importedId = requireId((body.place as { id?: unknown }).id, "place.id");
+      if (importedId !== placeId) throw new ApiError(400, "INVALID_REQUEST", "place.id must match placeId");
+      importedPlace = body.place as Place;
+    }
+    await requireTripMember(tripId, memberId);
 
-  if (!placeId || !memberId) {
-    return NextResponse.json({ error: "Missing place or member" }, { status: 400 });
+    const place = await ensurePlaceExists(placeId, importedPlace);
+    if (!place) throw new ApiError(404, "PLACE_NOT_FOUND", "Place not found");
+
+    const tripPlace = await prisma.tripPlace.upsert({
+      where: { tripId_placeId: { tripId, placeId: place.id } },
+      update: {},
+      create: { tripId, placeId: place.id },
+    });
+
+    await prisma.suggestion.upsert({
+      where: { tripPlaceId_memberId: { tripPlaceId: tripPlace.id, memberId } },
+      update: {},
+      create: { tripPlaceId: tripPlace.id, memberId },
+    });
+
+    return NextResponse.json({ ok: true, placeId: place.id });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-
-  const place = await ensurePlaceExists(placeId, body.place);
-  if (!place) return NextResponse.json({ error: "Place not found" }, { status: 404 });
-
-  const tripPlace = await prisma.tripPlace.upsert({
-    where: { tripId_placeId: { tripId, placeId: place.id } },
-    update: {},
-    create: { tripId, placeId: place.id },
-  });
-
-  await prisma.suggestion.upsert({
-    where: { tripPlaceId_memberId: { tripPlaceId: tripPlace.id, memberId } },
-    update: {},
-    create: { tripPlaceId: tripPlace.id, memberId },
-  });
-
-  return NextResponse.json({ ok: true, placeId: place.id });
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = await params;
-  const { placeId, memberId } = (await req.json()) as { placeId: string; memberId: string };
+  try {
+    const tripId = requireId((await params).tripId, "tripId");
+    const body = await parseJsonObject(req);
+    const placeId = requireId(body.placeId, "placeId");
+    const memberId = requireId(body.memberId, "memberId");
+    await requireTripMember(tripId, memberId);
 
-  const tripPlace = await prisma.tripPlace.findUnique({
-    where: { tripId_placeId: { tripId, placeId } },
-  });
-  if (!tripPlace) return NextResponse.json({ ok: true });
+    const tripPlace = await prisma.tripPlace.findUnique({
+      where: { tripId_placeId: { tripId, placeId } },
+    });
+    if (!tripPlace) return NextResponse.json({ ok: true });
 
-  await prisma.suggestion.deleteMany({ where: { tripPlaceId: tripPlace.id, memberId } });
+    await prisma.suggestion.deleteMany({ where: { tripPlaceId: tripPlace.id, memberId } });
 
-  const remaining = await prisma.suggestion.count({ where: { tripPlaceId: tripPlace.id } });
-  if (remaining === 0) {
-    // Cascades away any votes for it too — no one suggested it, so it's gone from the trip entirely.
-    await prisma.tripPlace.delete({ where: { id: tripPlace.id } });
+    const remaining = await prisma.suggestion.count({ where: { tripPlaceId: tripPlace.id } });
+    if (remaining === 0) {
+      // Cascades away any votes for it too — no one suggested it, so it's gone from the trip entirely.
+      await prisma.tripPlace.delete({ where: { id: tripPlace.id } });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-
-  return NextResponse.json({ ok: true });
 }

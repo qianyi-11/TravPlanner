@@ -1,37 +1,38 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
+import { apiErrorResponse } from "@/lib/server/api-error";
+import { requireTripMember, requireTripPlace } from "@/lib/server/authorization";
+import { parseJsonObject, requireId } from "@/lib/server/validation";
 
 export async function POST(req: Request, { params }: { params: Promise<{ tripId: string }> }) {
-  const { tripId } = await params;
-  const { placeId, memberId } = (await req.json()) as { placeId: string; memberId: string };
+  try {
+    const tripId = requireId((await params).tripId, "tripId");
+    const body = await parseJsonObject(req);
+    const placeId = requireId(body.placeId, "placeId");
+    const memberId = requireId(body.memberId, "memberId");
+    const trip = await requireTripMember(tripId, memberId);
+    const tripPlace = await requireTripPlace(tripId, placeId);
 
-  const trip = await prisma.trip.findUnique({ where: { id: tripId } });
-  if (!trip) return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+    const existingVote = await prisma.vote.findUnique({
+      where: { tripPlaceId_memberId: { tripPlaceId: tripPlace.id, memberId } },
+    });
 
-  const tripPlace = await prisma.tripPlace.findUnique({
-    where: { tripId_placeId: { tripId, placeId } },
-  });
-  if (!tripPlace) {
-    return NextResponse.json({ error: "This place isn't part of the trip yet" }, { status: 400 });
+    if (existingVote) {
+      await prisma.vote.delete({ where: { id: existingVote.id } });
+      return NextResponse.json({ ok: true, voted: false });
+    }
+
+    const votesInTrip = await prisma.vote.count({ where: { memberId, tripPlace: { tripId } } });
+    if (votesInTrip >= trip.votesPerMember) {
+      return NextResponse.json(
+        { error: `You can only vote for up to ${trip.votesPerMember} places.` },
+        { status: 400 }
+      );
+    }
+
+    await prisma.vote.create({ data: { tripPlaceId: tripPlace.id, memberId } });
+    return NextResponse.json({ ok: true, voted: true });
+  } catch (error) {
+    return apiErrorResponse(error);
   }
-
-  const existingVote = await prisma.vote.findUnique({
-    where: { tripPlaceId_memberId: { tripPlaceId: tripPlace.id, memberId } },
-  });
-
-  if (existingVote) {
-    await prisma.vote.delete({ where: { id: existingVote.id } });
-    return NextResponse.json({ ok: true, voted: false });
-  }
-
-  const votesInTrip = await prisma.vote.count({ where: { memberId, tripPlace: { tripId } } });
-  if (votesInTrip >= trip.votesPerMember) {
-    return NextResponse.json(
-      { error: `You can only vote for up to ${trip.votesPerMember} places.` },
-      { status: 400 }
-    );
-  }
-
-  await prisma.vote.create({ data: { tripPlaceId: tripPlace.id, memberId } });
-  return NextResponse.json({ ok: true, voted: true });
 }
