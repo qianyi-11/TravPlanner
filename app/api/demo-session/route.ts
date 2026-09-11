@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
-
-const COOKIE_NAME = "travplanner_demo_user";
+import { DEMO_AUTH_COOKIE, isDemoAuthEnabled } from "@/lib/server/demo-auth";
 
 export async function POST(req: Request) {
+  if (!isDemoAuthEnabled()) return NextResponse.json({ error: "Not found" }, { status: 404 });
   let body: unknown;
   try {
     body = await req.json();
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   }
 
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(COOKIE_NAME, member.id, {
+  response.cookies.set(DEMO_AUTH_COOKIE, member.id, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
@@ -32,8 +32,9 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
+  if (!isDemoAuthEnabled()) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const response = NextResponse.json({ ok: true });
-  response.cookies.set(COOKIE_NAME, "", {
+  response.cookies.set(DEMO_AUTH_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",
     path: "/",

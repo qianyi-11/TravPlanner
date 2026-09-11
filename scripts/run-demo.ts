@@ -8,6 +8,8 @@ const schemaDbPath = join(root, "prisma", "prisma", "dev.db");
 const demoEnvironment: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: "file:./demo.db",
+  AUTH_DEMO_ENABLED: "true",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "travplanner-demo-only-secret-do-not-use-in-production",
   DEMO_TRIP_ID: process.env.DEMO_TRIP_ID ?? "trip-japan",
   NEXT_DIST_DIR: ".next-demo",
 };
