@@ -42,7 +42,8 @@ TravPlanner is a collaborative travel planner for solo travellers and small grou
 - Known estimated itinerary spend with incomplete costs kept in scope as unknown
 - Calendar-based planning urgency computed from days until departure, not price or demand prediction
 - Shared persisted trip Split Bill with revision protection
-- Trip Rescue using prepared prototype events and alternatives
+- Shared trip checklist with member assignment and completion tracking
+- Trip Rescue using prepared prototype events, alternatives and saved Plan B backups
 - Auth.js with Google OAuth, stable Member provisioning and server-side group/trip authorization
 - Prisma persistence with SQLite for local/demo use and PostgreSQL for production
 
@@ -85,8 +86,16 @@ Trip Rescue
 | Idea | Decision | Reason |
 |---|---|---|
 | Collaborative group planner | **Kept** | Directly addresses fragmented planning and group coordination. |
+| Group voting | **Refined** | Voting captures opinions, but alone was not distinctive enough; it now feeds explainable Group Consensus. |
+| Explainable Group Consensus | **Implemented** | Turns preferences and votes into a server-authoritative, deterministic and fairness-aware shared shortlist. |
+| Group Availability Poll | **Deferred** | Useful for finding overlapping free time, but the team prioritised the core planning flow and competition demo. |
+| Meeting Point Recommendation | **Deferred** | Useful when members start in different places, but it requires additional location and travel-time logic outside the current MVP. |
+| Flight-ticket integration | **Deferred** | It could broaden the platform but does not strengthen the core MVP enough to justify implementation before submission. |
+| URL-to-travel-data extraction | **Deferred** | It could simplify data entry but does not strengthen the core MVP enough to justify implementation before submission. |
+| Plan B per Stop | **Implemented** | Travellers can save one backup place for an itinerary stop before disruption occurs. |
+| Shared Checklist | **Implemented** | Gives trip members one persisted preparation list with assignment and completion tracking. |
 | AI-generated itinerary approach | **Deferred** | Deterministic behaviour is easier to explain and demonstrate reliably. |
-| Dynamic Trip Rescue / replanning | **Simplified** | A prepared event and alternative demonstrate adjustment without claiming live detection. |
+| Trip Rescue | **Implemented in simplified form** | A saved Plan B or prepared fallback demonstrates adjustment without claiming live detection. |
 | Budget and Split Bill support | **Simplified** | The prototype shows known estimated spend and a shared Split Bill without claiming a settlement-grade ledger. |
 | Large production-oriented planning platform | **Replaced** | The scope was too broad for a complete prototype journey. |
 
@@ -129,15 +138,24 @@ This flow demonstrates the coordination problem from opinions to an actionable p
 | Refinement | Prioritise one end-to-end group-planning flow | This made the main user problem demonstrable from preferences through itinerary. |
 | Key product decision | Deterministic, explainable consensus instead of opaque AI-generated planning | Reviewers and travellers can see why places are selected. |
 | Technical simplification | Replace the Firebase-oriented architecture with Next.js, Prisma and SQLite | The smaller stack supports reliable local and seeded demonstration. |
-| Final prototype direction | Preferences → voting → consensus → shortlist → itinerary → Trip Rescue | This keeps group agreement primary and post-plan adjustment secondary. |
+| 09/09/2026 mentor feedback | Simple voting needed stronger differentiation; existing planners and wider coordination problems should be examined | The team focused the product on the group decision process, kept Trip Rescue secondary and evaluated other coordination ideas selectively. |
+| Final prototype direction | Preferences → voting → explainable consensus → shared itinerary → coordinated preparation → Trip Rescue | Group agreement remains primary, while Plan B, Shared Checklist, Split Bill and prepared adjustment support the shared plan. |
 
 ## 2.4 Mentor Consultation
 
-No mentor consultation record is present in the repository. Replace this TODO with evidence from the team’s real notes before submission.
-
 | Date | Mentor | Feedback | Team Decision / Change |
 |---|---|---|---|
-| TODO | TODO | TODO — actual mentor feedback required | TODO — actual team response required |
+| 09/09/2026 | Mentor 1 | Groups with different schedules struggle to find a suitable meeting time; consider a calendar or availability input that identifies overlaps. | Considered a Group Availability Poll; deferred it from the current MVP to prioritise the core collaborative planning flow and competition demo. |
+| 09/09/2026 | Mentor 1 | Members starting from different places need a practical meeting point; consider using distance or travel time to suggest a location such as a café. | Considered a Meeting Point Recommendation; deferred it because the extra location and travel-time logic is outside the current MVP. |
+| 09/09/2026 | Mentor 1 | Study existing travel planners, particularly Wanderlog, and clarify why travellers would choose TravPlanner. | Strengthened conservative competitive analysis and positioned TravPlanner around the group decision process between individual preferences and one shared itinerary. |
+| 09/09/2026 | Mentor 1 | Voting was a promising direction, but the team needed to examine the problem more deeply and establish a clearer unique selling point. | The feedback pushed us to strengthen simple voting into a more differentiated **Preferences → Voting → Explainable Group Consensus → Shared Plan** workflow. |
+| 09/09/2026 | Mentor 1 | Survey the market, compare competitors and explain what makes TravPlanner stand out. | Added a comparison focused on TravPlanner’s own product emphasis without claiming unverified gaps in competing products. |
+| 09/09/2026 | Mentor 1 | Explore broader ideas including flight-ticket functionality and automatic travel-data extraction from a URL. | Recorded both as deferred ideas; neither directly strengthens the core MVP enough to justify implementation before submission. |
+| 09/09/2026 | Jarod Tan | Research previous hackathon travel and group-planning projects to understand common patterns. | **Decision:** research previous hackathon projects before finalising differentiation; no completed findings are claimed here. |
+| 09/09/2026 | Jarod Tan | Group voting alone was not sufficiently distinctive because similar voting and preference mechanisms are common. | Repositioned basic voting as an input to the stronger Explainable Group Consensus workflow rather than the innovation itself. |
+| 09/09/2026 | Jarod Tan | Look for a more memorable or ambitious product direction. | Based on this feedback, the team reviewed how to make the product more distinctive, retaining Group Consensus as primary and strengthening the supporting story around Trip Rescue, Plan B, Shared Checklist and Split Bill. |
+
+Before mentorship, TravPlanner was primarily framed as a travel planner with collaborative voting. After the sessions, the team focused more strongly on the difficult group-coordination problem: **different preferences → voting → explainable consensus → shared itinerary → coordinated preparation → adjustment when plans change**. The mentors did not design the implemented features or scoring algorithm; their feedback prompted the team to sharpen the product’s differentiation and document why ideas were implemented or deferred.
 
 ---
 
@@ -205,11 +223,11 @@ A bounded `+3` representation bonus can change close choices, and stable IDs bre
 
 ## Trip Rescue
 
-Trip Rescue is the secondary differentiator. Accepting a replacement modifies the persisted itinerary and resolves the event in one database transaction. The current event and alternative are prepared prototype data: TravPlanner does not automatically detect live disruptions, search for live alternatives or verify live availability.
+Trip Rescue is the secondary differentiator. Travellers can prepare a backup place for important itinerary stops before disruption occurs. When an event affects a stop, the saved Plan B is used when available; otherwise the existing prepared fallback remains. Accepting a replacement modifies the persisted itinerary and resolves the event in one database transaction. TravPlanner does not automatically detect live disruptions, search for live alternatives or verify live availability.
 
 ## Continuous Planning Workspace
 
-Groups can move through preferences, suggestions, votes, shortlist confirmation, itinerary, budget context, shared expense splitting and plan adjustment without rebuilding the trip in separate documents.
+Groups can move through preferences, suggestions, votes, shortlist confirmation, itinerary, budget context, a shared checklist, shared expense splitting, per-stop Plan B preparation and plan adjustment without rebuilding the trip in separate documents. Group Consensus remains the primary differentiator, Trip Rescue is secondary, and these coordination tools support the shared plan.
 
 ## Known Limitations
 
@@ -278,9 +296,11 @@ Persisted mutations normally follow **UI → store action → authenticated API 
 | Validation | Deterministic saved-data checks | Richer opening-hours, cost and routing validation |
 | Sequence preview | Saved stop order, area grouping and estimated travel time | Live route optimisation and travel-time services |
 | Itinerary | Deterministic server builder and persisted itinerary | Richer constraint-aware alternatives |
+| Plan B per Stop | One persisted backup place per itinerary activity with revision protection | Richer alternative comparison and provider revalidation |
 | Budget | Known estimated spend with explicit unknown activity, transport and accommodation costs | External hotel, ticket and transport pricing |
 | Planning urgency | Calendar-based urgency from days until departure | Verified provider and availability signals |
 | Trip Rescue | Prepared event and alternative update the persisted itinerary | Live detection, search and revalidation |
+| Shared Checklist | Persisted trip tasks with member assignment and completion tracking | Notifications, due dates and richer task management |
 | Split Bill | Shared persisted trip snapshot with revision protection | Expense history, payer tracking, settlements and ledger model |
 | Authentication | Auth.js, Google OAuth, stable Member provisioning and server-side authorization | Production account hardening, additional providers, linking and account management |
 | Database | SQLite local/demo and PostgreSQL production schema/migrations | Managed PostgreSQL operations and deployment hardening |
@@ -298,6 +318,8 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 - Group Consensus and shortlist confirmation
 - Validation, sequence preview and itinerary
 - Known estimated spend summary
+- Plan B per itinerary stop
+- Shared trip checklist with member assignment and completion tracking
 - Shared persisted Split Bill with revision protection
 - Trip Rescue
 - Seeded demo and deployment path
@@ -307,6 +329,8 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 - Live route optimisation and live transport times
 - Live booking, ticket and accommodation prices
 - Flight and hotel integrations
+- Group availability polling and meeting-point recommendations
+- URL-to-travel-data extraction
 - Weather monitoring and automatic disruption detection
 - AI itinerary generation or AI consensus
 - Payment processing and settlement-grade Split Bill
@@ -323,8 +347,8 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 | Budgeting | Known estimated spend with incomplete costs identified as unknown; shared persisted Split Bill |
 | Itinerary building | Deterministic day-by-day itinerary from a confirmed shortlist |
 | Group preferences | Member preferences, suggestions, votes and explainable Group Consensus |
-| Traveller coordination | Visible stages and a shared persisted trip plan |
-| Unexpected plan changes | Prepared Trip Rescue flow that updates the itinerary |
+| Traveller coordination | Visible stages, a shared persisted trip plan, member-assigned checklist and Split Bill |
+| Unexpected plan changes | Per-stop Plan B preparation and a prepared Trip Rescue flow that updates the itinerary |
 | Solo travel | The shared planning model can operate with one traveller; dedicated solo UX is limited |
 | Group travel | Primary prototype flow |
 | Deployable demonstration | TODO — public UI Prototype link required |
@@ -388,6 +412,9 @@ TravPlanner starts with small friend and student groups. A realistic path is to 
 10. Settlement-grade Split Bill with expense history and payer tracking
 11. Explanation-only AI for trade-offs
 12. Flight and hotel integrations
+13. Group availability polling
+14. Meeting-point recommendations using location and travel time
+15. URL-to-travel-data extraction
 
 ---
 

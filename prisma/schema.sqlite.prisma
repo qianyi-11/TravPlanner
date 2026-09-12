@@ -35,6 +35,7 @@ model Member {
   memberships GroupMember[]
   authIdentities AuthIdentity[]
   createdInvites GroupInvite[] @relation("MemberCreatedInvites")
+  checklistItems TripChecklistItem[] @relation("ChecklistAssignee")
   suggestions Suggestion[]
   votes       Vote[]
 }
@@ -93,6 +94,7 @@ model Trip {
 
   group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   tripPlaces   TripPlace[]
+  checklistItems TripChecklistItem[]
   rescueEvents RescueEvent[]
 }
 
@@ -189,4 +191,20 @@ model RescueEvent {
   createdAt          DateTime @default(now())
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+}
+
+model TripChecklistItem {
+  id               String   @id
+  tripId           String
+  title            String
+  assignedMemberId String?
+  completed        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  trip           Trip    @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  assignedMember Member? @relation("ChecklistAssignee", fields: [assignedMemberId], references: [id], onDelete: SetNull)
+
+  @@index([tripId])
+  @@index([assignedMemberId])
 }

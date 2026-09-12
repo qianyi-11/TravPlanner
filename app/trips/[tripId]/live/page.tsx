@@ -61,8 +61,19 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
   const currentActivity = day?.activities[Math.max(0, currentActivityIdx ?? 1)];
   const nextActivity = day?.activities[Math.max(0, currentActivityIdx ?? 1) + 1];
   const remaining = day ? day.activities.length - Math.max(0, currentActivityIdx ?? 1) - 1 : 0;
+  const savedBackupPlace = currentActivity?.backupPlaceId ? placesMap[currentActivity.backupPlaceId] : undefined;
+  const preparedAlternative = savedBackupPlace && currentActivity
+    ? {
+        placeId: savedBackupPlace.id,
+        label: savedBackupPlace.name,
+        extraTravelMinutes: 0,
+        available: savedBackupPlace.availability === "available",
+        cost: currentActivity.estimatedCost,
+        note: "Your saved Plan B",
+      }
+    : openEvent?.alternative;
   const originalPlace = currentActivity?.placeId ? placesMap[currentActivity.placeId] : undefined;
-  const replacementPlace = openEvent?.alternative ? placesMap[openEvent.alternative.placeId] : undefined;
+  const replacementPlace = preparedAlternative ? placesMap[preparedAlternative.placeId] : undefined;
   const rescueImpact = originalPlace && replacementPlace
     ? evaluateRescueConsensusImpact({
         members: trip.memberIds.map((id) => membersMap[id]).filter(Boolean),
@@ -129,31 +140,31 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                 </ul>
               </div>
             )}
-            {phase === "proposed" && openEvent.alternative && (
+            {phase === "proposed" && preparedAlternative && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                  Recommended Alternative
+                  {savedBackupPlace ? "Your saved Plan B" : "Suggested alternative"}
                 </p>
                 <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] p-3">
                   <PlaceCover
-                    photo={placesMap[openEvent.alternative.placeId]?.photo ?? "linear-gradient(135deg,#ccc,#999)"}
-                    category={placesMap[openEvent.alternative.placeId]?.category ?? "Place"}
+                    photo={placesMap[preparedAlternative.placeId]?.photo ?? "linear-gradient(135deg,#ccc,#999)"}
+                    category={placesMap[preparedAlternative.placeId]?.category ?? "Place"}
                     className="h-14 w-14 shrink-0 rounded-xl"
                     iconSize={18}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold">{openEvent.alternative.label}</p>
+                    <p className="text-sm font-bold">{preparedAlternative.label}</p>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-ink-soft)]">
-                      <span>Travel estimate: +{openEvent.alternative.extraTravelMinutes} min</span>
+                      <span>Travel estimate: +{preparedAlternative.extraTravelMinutes} min</span>
                       <span className="text-[var(--color-success)]">
-                        Saved availability: {openEvent.alternative.available ? "Available" : "Unavailable"}
+                        Saved availability: {preparedAlternative.available ? "Available" : "Unavailable"}
                       </span>
-                      <span>Est. replacement cost: RM {openEvent.alternative.cost}</span>
+                      <span>Est. replacement cost: RM {preparedAlternative.cost}</span>
                     </div>
                   </div>
                 </div>
                 <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-teal-dark)]">
-                  <Sparkles size={12} /> {openEvent.alternative.note}
+                  <Sparkles size={12} /> {preparedAlternative.note}
                 </p>
                 {rescueImpact && (
                   <div className="mt-3 rounded-xl bg-[var(--color-sand)] p-3">

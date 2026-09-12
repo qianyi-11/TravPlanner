@@ -24,6 +24,7 @@ import { formatDateRange, daysBetween, cx, formatWeekday } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/States";
 import { buildConsensus } from "@/lib/group-consensus";
 import { getActivePlanPlaceIds } from "@/lib/plan-places";
+import { TripChecklist } from "@/components/trip/TripChecklist";
 
 const TABS = [
   { key: "itinerary", label: "Itinerary", icon: ListTree },
@@ -138,7 +139,14 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
                   </button>
                   {openDay === i && (
                     <div className="border-t border-[var(--color-border-soft)] p-4">
-                      <ItineraryTimeline activities={day.activities} places={placesMap} transport={trip.transport} tripId={tripId} />
+                      <ItineraryTimeline
+                        activities={day.activities}
+                        places={placesMap}
+                        transport={trip.transport}
+                        tripId={tripId}
+                        planBPlaces={tripPlacesMap ?? {}}
+                        itineraryRevision={trip.itineraryRevision}
+                      />
                     </div>
                   )}
                 </Card>
@@ -200,6 +208,8 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
           </div>
         )}
       </div>
+
+      <TripChecklist tripId={tripId} />
     </div>
   );
 }

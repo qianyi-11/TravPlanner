@@ -129,6 +129,7 @@ export interface RouteStop {
 export interface ItineraryActivity {
   id: string;
   placeId: string | null; // null for generic activities like "Lunch" / "Return"
+  backupPlaceId?: string | null;
   label: string;
   time: string;
   durationMinutes: number;

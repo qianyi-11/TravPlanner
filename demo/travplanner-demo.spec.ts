@@ -70,7 +70,7 @@ test("TravPlanner CodeNection MVP demo", async ({ page }) => {
 
   await openChapter(page, "/live", "12. Trip Rescue — unsuitable planned activity", 1_200);
   await expect(page.getByText("Trip Rescue", { exact: true })).toBeVisible();
-  await expect(page.getByText("Recommended Alternative", { exact: true })).toBeVisible({ timeout: 8_000 });
+  await expect(page.getByText("Suggested alternative", { exact: true })).toBeVisible({ timeout: 8_000 });
   await pause(page, "Compare original and replacement Group Match", 5_000);
 
   const acceptRescue = page.getByTestId("accept-rescue");
@@ -95,5 +95,26 @@ test("TravPlanner CodeNection MVP demo", async ({ page }) => {
   await pause(page, "14. Rescue survives refresh", 4_500);
 
   await openChapter(page, "/plan", "15. TravPlanner — final active plan", 6_000);
+
+  console.log("[DEMO] Testing shared checklist persistence");
+  await page.getByLabel("Checklist task", { exact: true }).fill("Pack adapters");
+  await page.getByLabel("Assign checklist task").selectOption({ label: "Sarah" });
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText("Pack adapters", { exact: true })).toBeVisible();
+  const checklistBox = page.getByRole("checkbox", { name: "Mark Pack adapters complete" });
+  await checklistBox.click();
+  await expect(checklistBox).toBeChecked();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("checkbox", { name: "Mark Pack adapters complete" })).toBeChecked();
+
+  console.log("[DEMO] Testing saved Plan B persistence");
+  await page.getByRole("button", { name: "Add Plan B", exact: true }).first().click();
+  await page.getByLabel("Plan B place", { exact: true }).selectOption({ index: 1 });
+  const savePlanB = page.getByRole("button", { name: "Save Plan B", exact: true });
+  await expect(savePlanB).toBeEnabled();
+  await savePlanB.click();
+  await expect(page.getByText(/^Plan B: /).first()).toBeVisible();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByText(/^Plan B: /).first()).toBeVisible();
   console.log("[DEMO] MVP demo completed successfully");
 });

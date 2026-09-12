@@ -15,6 +15,9 @@ import { POST as setDemoSession } from "@/app/api/demo-session/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
 import { GET as getPlacePhoto } from "@/app/api/places/[placeId]/photo/route";
 import { GET as getSplitBill, PUT as saveSplitBill } from "@/app/api/trips/[tripId]/split-bill/route";
+import { GET as getChecklist, POST as createChecklistItem } from "@/app/api/trips/[tripId]/checklist/route";
+import { DELETE as deleteChecklistItem, PATCH as updateChecklistItem } from "@/app/api/trips/[tripId]/checklist/[itemId]/route";
+import { DELETE as removeActivityBackup, PUT as assignActivityBackup } from "@/app/api/trips/[tripId]/itinerary/[activityId]/backup/route";
 import { POST as createInvite } from "@/app/api/groups/[groupId]/invite/route";
 import { POST as joinInvite } from "@/app/api/invites/[token]/join/route";
 import { DELETE as deleteGroup, PATCH as renameGroup } from "@/app/api/groups/[groupId]/route";
@@ -33,6 +36,8 @@ const memberContext = (memberId: string) => ({ params: Promise.resolve({ memberI
 const groupContext = (groupId: string) => ({ params: Promise.resolve({ groupId }) });
 const photoContext = (placeId: string) => ({ params: Promise.resolve({ placeId }) });
 const splitBillContext = (tripId: string) => ({ params: Promise.resolve({ tripId }) });
+const checklistItemContext = (tripId: string, itemId: string) => ({ params: Promise.resolve({ tripId, itemId }) });
+const activityBackupContext = (tripId: string, activityId: string) => ({ params: Promise.resolve({ tripId, activityId }) });
 
 function request(body: unknown, raw = false) {
   return new Request("http://localhost", {
@@ -109,6 +114,7 @@ async function resetFixture() {
   await prisma.groupInvite.deleteMany();
   await prisma.authIdentity.deleteMany();
   await prisma.tripPlace.deleteMany();
+  await prisma.tripChecklistItem.deleteMany();
   await prisma.rescueEvent.deleteMany();
   await prisma.trip.deleteMany();
   await prisma.groupMember.deleteMany();
@@ -239,6 +245,38 @@ test("unauthenticated bootstrap is rejected", async () => {
   const response = await bootstrap();
   assert.equal(response.status, 401);
   assert.equal((await body(response)).code, "UNAUTHENTICATED");
+});
+
+test("shared trip checklist is persisted, trip-scoped, and membership-authorized", async () => {
+  let response = await createChecklistItem(request({ title: "  Book tickets  ", assignedMemberId: "member-b" }), tripContext("trip-a"));
+  assert.equal(response.status, 200);
+  const item = (await body(response)).item as { id: string; title: string; assignedMemberId: string | null; completed: boolean };
+  assert.equal(item.title, "Book tickets");
+  assert.equal(item.assignedMemberId, "member-b");
+  assert.equal(item.completed, false);
+  assert.ok(await prisma.tripChecklistItem.findUnique({ where: { id: item.id } }));
+
+  response = await updateChecklistItem(request({ completed: true }), checklistItemContext("trip-a", item.id));
+  assert.equal(response.status, 200);
+  response = await updateChecklistItem(request({ assignedMemberId: "member-a" }), checklistItemContext("trip-a", item.id));
+  assert.equal(response.status, 200);
+  const listed = await body(await getChecklist(new Request("http://localhost"), tripContext("trip-a"))) as { items: { id: string; completed: boolean; assignedMemberId: string | null }[] };
+  assert.deepEqual(listed.items.map(({ id, completed, assignedMemberId }) => ({ id, completed, assignedMemberId })), [
+    { id: item.id, completed: true, assignedMemberId: "member-a" },
+  ]);
+
+  assert.equal((await createChecklistItem(request({ title: "Unknown", assignedMemberId: "missing" }), tripContext("trip-a"))).status, 404);
+  assert.equal((await createChecklistItem(request({ title: "Outsider", assignedMemberId: "outsider" }), tripContext("trip-a"))).status, 403);
+  assert.equal((await createChecklistItem(request({ title: "" }), tripContext("trip-a"))).status, 400);
+
+  await prisma.tripChecklistItem.create({ data: { id: "foreign-checklist", tripId: "trip-b", title: "Foreign" } });
+  assert.equal((await updateChecklistItem(request({ completed: true }), checklistItemContext("trip-a", "foreign-checklist"))).status, 404);
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await getChecklist(new Request("http://localhost"), tripContext("trip-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+  response = await deleteChecklistItem(new Request("http://localhost", { method: "DELETE" }), checklistItemContext("trip-a", item.id));
+  assert.equal(response.status, 200);
+  assert.equal(await prisma.tripChecklistItem.findUnique({ where: { id: item.id } }), null);
 });
 
 test("group rename is organizer-only and strictly validated", async () => {
@@ -917,4 +955,61 @@ test("failed Rescue validation leaves itinerary and event unchanged", async () =
   assert.equal((await body(response)).code, "AFFECTED_ACTIVITY_NOT_FOUND");
   assert.deepEqual(JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson), itinerary);
   assert.equal((await prisma.rescueEvent.findUniqueOrThrow({ where: { id: "event-missing" } })).status, "open");
+});
+
+test("Plan B is trip-scoped, revision-protected, and used by Trip Rescue", async () => {
+  const itinerary = [{
+    day: 1,
+    date: "2026-10-01",
+    title: "Central",
+    activities: [rescueActivity(), { ...rescueActivity(), id: "meal-a", placeId: null, type: "meal" }],
+  }];
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { itineraryJson: JSON.stringify(itinerary) } });
+
+  let response = await assignActivityBackup(
+    request({ backupPlaceId: "place-a2", expectedItineraryRevision: 1 }),
+    activityBackupContext("trip-a", "activity-a")
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await body(response), { ok: true, itineraryRevision: 2 });
+  assert.equal(JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson)[0].activities[0].backupPlaceId, "place-a2");
+  const refreshed = await body(await bootstrap()) as unknown as { trips: Record<string, Trip> };
+  assert.equal(refreshed.trips["trip-a"].itinerary[0].activities[0].backupPlaceId, "place-a2");
+
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-b", expectedItineraryRevision: 2 }), activityBackupContext("trip-a", "activity-a"))).status, 400);
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-a", expectedItineraryRevision: 2 }), activityBackupContext("trip-a", "activity-a"))).status, 400);
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-a2", expectedItineraryRevision: 2 }), activityBackupContext("trip-a", "missing"))).status, 409);
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-a2", expectedItineraryRevision: 2 }), activityBackupContext("trip-a", "meal-a"))).status, 409);
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-a2", expectedItineraryRevision: 1 }), activityBackupContext("trip-a", "activity-a"))).status, 409);
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await assignActivityBackup(request({ backupPlaceId: "place-a2", expectedItineraryRevision: 2 }), activityBackupContext("trip-a", "activity-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+
+  response = await removeActivityBackup(
+    new Request("http://localhost", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedItineraryRevision: 2 }) }),
+    activityBackupContext("trip-a", "activity-a")
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(await body(response), { ok: true, itineraryRevision: 3 });
+  assert.equal(JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson)[0].activities[0].backupPlaceId, null);
+
+  const withBackup = [{ day: 1, date: "2026-10-01", title: "Central", activities: [{ ...rescueActivity(), backupPlaceId: "place-a2" }] }];
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { itineraryJson: JSON.stringify(withBackup), itineraryRevision: 1 } });
+  await createRescueEvent("trip-a", "event-plan-b");
+  response = await resolveRescue(request({ expectedItineraryRevision: 1 }), rescueContext("trip-a", "event-plan-b"));
+  assert.equal(response.status, 200);
+  const saved = JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson);
+  assert.equal(saved[0].activities[0].placeId, "place-a2");
+  assert.equal(saved[0].activities[0].backupPlaceId, null);
+});
+
+test("invalid saved Plan B leaves Rescue data unchanged", async () => {
+  const itinerary = [{ day: 1, date: "2026-10-01", title: "Central", activities: [{ ...rescueActivity(), backupPlaceId: "missing-place" }] }];
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { itineraryJson: JSON.stringify(itinerary) } });
+  await createRescueEvent("trip-a", "event-invalid-plan-b");
+  const response = await resolveRescue(request({ expectedItineraryRevision: 1 }), rescueContext("trip-a", "event-invalid-plan-b"));
+  assert.equal(response.status, 409);
+  assert.equal((await body(response)).code, "BACKUP_PLACE_NOT_FOUND");
+  assert.deepEqual(JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).itineraryJson), itinerary);
+  assert.equal((await prisma.rescueEvent.findUniqueOrThrow({ where: { id: "event-invalid-plan-b" } })).status, "open");
 });

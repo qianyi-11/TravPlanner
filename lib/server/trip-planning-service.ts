@@ -105,6 +105,110 @@ export async function buildTripItinerary({ tripId, expectedItineraryRevision }: 
   };
 }
 
+function isSavedItinerary(value: unknown): value is ItineraryDay[] {
+  return Array.isArray(value) && value.every((day) => {
+    if (typeof day !== "object" || day === null || !Array.isArray((day as { activities?: unknown }).activities)) return false;
+    return (day as { activities: unknown[] }).activities.every((activity) => {
+      if (typeof activity !== "object" || activity === null) return false;
+      const item = activity as { id?: unknown; type?: unknown; placeId?: unknown; backupPlaceId?: unknown };
+      return typeof item.id === "string" && typeof item.type === "string" &&
+        (item.placeId === null || typeof item.placeId === "string") &&
+        (!Object.prototype.hasOwnProperty.call(item, "backupPlaceId") || item.backupPlaceId === null || typeof item.backupPlaceId === "string");
+    });
+  });
+}
+
+function parseSavedItinerary(value: string): ItineraryDay[] {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!isSavedItinerary(parsed)) throw new Error();
+    return parsed;
+  } catch {
+    throw new ApiError(409, "INVALID_ITINERARY_DATA", "Saved itinerary data is invalid");
+  }
+}
+
+function activityFromItinerary(itinerary: ItineraryDay[], activityId: string) {
+  return itinerary.flatMap((day) => day.activities).find((activity) => activity.id === activityId);
+}
+
+export async function setTripActivityBackup({
+  tripId,
+  activityId,
+  backupPlaceId,
+  expectedItineraryRevision,
+}: {
+  tripId: string;
+  activityId: string;
+  backupPlaceId: string;
+  expectedItineraryRevision: number;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const trip = await tx.trip.findUnique({ where: { id: tripId } });
+    if (!trip) throw new ApiError(404, "TRIP_NOT_FOUND", "Trip not found");
+    if (trip.itineraryRevision !== expectedItineraryRevision) {
+      throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+    }
+
+    const itinerary = parseSavedItinerary(trip.itineraryJson);
+    const activity = activityFromItinerary(itinerary, activityId);
+    if (!activity) throw new ApiError(409, "ACTIVITY_NOT_FOUND", "Itinerary activity not found");
+    if (activity.type !== "place") throw new ApiError(409, "ACTIVITY_NOT_PLACE", "Plan B is only available for place activities");
+    if (!activity.placeId) throw new ApiError(409, "PRIMARY_PLACE_MISSING", "The itinerary activity has no primary place");
+    if (backupPlaceId === activity.placeId) throw new ApiError(400, "BACKUP_EQUALS_PRIMARY", "Plan B must differ from the primary place");
+    const [primary, backup] = await Promise.all([
+      tx.tripPlace.findUnique({ where: { tripId_placeId: { tripId, placeId: activity.placeId } }, select: { placeId: true } }),
+      tx.tripPlace.findUnique({ where: { tripId_placeId: { tripId, placeId: backupPlaceId } }, select: { placeId: true } }),
+    ]);
+    if (!primary) throw new ApiError(409, "PRIMARY_PLACE_NOT_FOUND", "The primary place is not part of this trip");
+    if (!backup) throw new ApiError(400, "BACKUP_PLACE_NOT_IN_TRIP", "Plan B must be a place saved to this trip");
+
+    const updatedItinerary = itinerary.map((day) => ({
+      ...day,
+      activities: day.activities.map((item) => item.id === activityId ? { ...item, backupPlaceId } : item),
+    }));
+    const updated = await tx.trip.updateMany({
+      where: { id: tripId, itineraryRevision: expectedItineraryRevision },
+      data: { itineraryJson: JSON.stringify(updatedItinerary), itineraryRevision: { increment: 1 } },
+    });
+    if (updated.count !== 1) throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+    return { ok: true as const, itineraryRevision: expectedItineraryRevision + 1 };
+  });
+}
+
+export async function removeTripActivityBackup({
+  tripId,
+  activityId,
+  expectedItineraryRevision,
+}: {
+  tripId: string;
+  activityId: string;
+  expectedItineraryRevision: number;
+}) {
+  return prisma.$transaction(async (tx) => {
+    const trip = await tx.trip.findUnique({ where: { id: tripId } });
+    if (!trip) throw new ApiError(404, "TRIP_NOT_FOUND", "Trip not found");
+    if (trip.itineraryRevision !== expectedItineraryRevision) {
+      throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+    }
+    const itinerary = parseSavedItinerary(trip.itineraryJson);
+    const activity = activityFromItinerary(itinerary, activityId);
+    if (!activity) throw new ApiError(409, "ACTIVITY_NOT_FOUND", "Itinerary activity not found");
+    if (activity.type !== "place") throw new ApiError(409, "ACTIVITY_NOT_PLACE", "Plan B is only available for place activities");
+
+    const updatedItinerary = itinerary.map((day) => ({
+      ...day,
+      activities: day.activities.map((item) => item.id === activityId ? { ...item, backupPlaceId: null } : item),
+    }));
+    const updated = await tx.trip.updateMany({
+      where: { id: tripId, itineraryRevision: expectedItineraryRevision },
+      data: { itineraryJson: JSON.stringify(updatedItinerary), itineraryRevision: { increment: 1 } },
+    });
+    if (updated.count !== 1) throw new ApiError(409, "STALE_ITINERARY", "The itinerary changed. Refresh and try again.");
+    return { ok: true as const, itineraryRevision: expectedItineraryRevision + 1 };
+  });
+}
+
 function isAlternative(value: unknown): value is NonNullable<TripRescueEvent["alternative"]> {
   return (
     typeof value === "object" &&
@@ -148,6 +252,30 @@ export async function resolveTripRescue({
       throw new ApiError(409, "RESCUE_DATA_INVALID", "Rescue data is invalid");
     }
 
+    const affectedActivity = activityFromItinerary(itinerary, event.affectedActivityId);
+    if (!affectedActivity) throw new ApiError(409, "AFFECTED_ACTIVITY_NOT_FOUND", "Affected itinerary activity not found");
+    if (affectedActivity.type === "place" && affectedActivity.backupPlaceId) {
+      if (!affectedActivity.placeId) throw new ApiError(409, "PRIMARY_PLACE_MISSING", "The affected activity has no primary place");
+      const primary = await tx.tripPlace.findUnique({
+        where: { tripId_placeId: { tripId, placeId: affectedActivity.placeId } },
+        select: { placeId: true },
+      });
+      const backup = await tx.tripPlace.findUnique({
+        where: { tripId_placeId: { tripId, placeId: affectedActivity.backupPlaceId } },
+        include: { place: true },
+      });
+      if (!primary) throw new ApiError(409, "PRIMARY_PLACE_NOT_FOUND", "The primary place is not part of this trip");
+      if (!backup) throw new ApiError(409, "BACKUP_PLACE_NOT_FOUND", "Saved Plan B is not part of this trip");
+      if (backup.placeId === affectedActivity.placeId) throw new ApiError(409, "BACKUP_EQUALS_PRIMARY", "Saved Plan B matches the primary place");
+      alternative = {
+        placeId: backup.placeId,
+        label: backup.place.name,
+        extraTravelMinutes: 0,
+        available: backup.place.availability === "available",
+        cost: Number.isFinite(affectedActivity.estimatedCost) ? affectedActivity.estimatedCost : 0,
+        note: "Your saved Plan B",
+      };
+    }
     if (!alternative) throw new ApiError(409, "PREPARED_REPLACEMENT_MISSING", "Prepared replacement is missing");
     try {
       itinerary = applyRescueReplacement(itinerary, event.affectedActivityId, alternative);

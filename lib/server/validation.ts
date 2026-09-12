@@ -42,6 +42,25 @@ export function requireItineraryRevision(value: unknown): number {
   return value;
 }
 
+export function requireChecklistTitle(value: unknown): string {
+  if (typeof value !== "string" || !value.trim() || value.trim().length > 120) {
+    throw new ApiError(400, "INVALID_CHECKLIST_TITLE", "title must be 1 to 120 characters");
+  }
+  return value.trim();
+}
+
+export function requireOptionalAssignedMemberId(value: unknown): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return requireId(value, "assignedMemberId");
+}
+
+export function requireOptionalBoolean(value: unknown, field: string): boolean | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "boolean") throw new ApiError(400, "INVALID_REQUEST", `${field} must be a boolean`);
+  return value;
+}
+
 export function requireUniqueIdArray(
   value: unknown,
   field: string,

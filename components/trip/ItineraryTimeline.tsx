@@ -3,6 +3,7 @@
 import { ChevronRight, Footprints, Car, TrainFront } from "lucide-react";
 import type { ItineraryActivity, Place, TransportMode } from "@/lib/types";
 import { ActivityCard } from "./ActivityCard";
+import { PlanBPicker } from "./PlanBPicker";
 
 function directionsMode(transport: TransportMode | undefined, minutes: number): {
   label: string;
@@ -26,6 +27,8 @@ export function ItineraryTimeline({
   selectedId,
   onSelect,
   activeIndex,
+  planBPlaces,
+  itineraryRevision,
 }: {
   activities: ItineraryActivity[];
   places: Record<string, Place>;
@@ -33,6 +36,8 @@ export function ItineraryTimeline({
   tripId?: string;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
+  planBPlaces?: Record<string, Place>;
+  itineraryRevision?: number;
   /** Highlights this row regardless of selection — used for "happening now" in Trip Mode. */
   activeIndex?: number;
 }) {
@@ -70,6 +75,16 @@ export function ItineraryTimeline({
                 onClick={act.placeId && onSelect ? () => onSelect(act.placeId as string) : undefined}
                 detailsHref={place && tripId ? `/trips/${tripId}/places/${place.id}` : undefined}
               />
+
+              {planBPlaces && itineraryRevision !== undefined && tripId && act.type === "place" && (
+                <PlanBPicker
+                  tripId={tripId}
+                  activity={act}
+                  backupPlace={act.backupPlaceId ? planBPlaces[act.backupPlaceId] : undefined}
+                  candidates={planBPlaces}
+                  itineraryRevision={itineraryRevision}
+                />
+              )}
 
               {!isLast && next && (
                 <TravelConnector

@@ -52,3 +52,19 @@ test("a missing affected activity fails instead of producing a false resolution"
     /not found/
   );
 });
+
+test("using a saved Plan B clears it from the replaced activity", () => {
+  const withBackup = [{
+    ...itinerary[0],
+    activities: [{ ...itinerary[0].activities[0], backupPlaceId: "backup-place" }],
+  }];
+  const updated = applyRescueReplacement(withBackup, "activity-1", {
+    placeId: "backup-place",
+    label: "Backup place",
+    extraTravelMinutes: 0,
+    available: true,
+    cost: 25,
+    note: "Your saved Plan B",
+  });
+  assert.equal(updated[0].activities[0].backupPlaceId, null);
+});
