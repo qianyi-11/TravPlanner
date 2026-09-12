@@ -14,8 +14,6 @@ import { signOut } from "next-auth/react";
 
 export default function ProfilePage() {
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
-  const members = usePlannerStore(useShallow((s) => Object.values(s.members)));
-  const switchDemoUser = usePlannerStore((s) => s.switchDemoUser);
   const resetDemoUser = usePlannerStore((s) => s.resetDemoUser);
   const demoAuthEnabled = usePlannerStore((s) => s.demoAuthEnabled);
   const [switchingUser, setSwitchingUser] = useState(false);
@@ -27,16 +25,6 @@ export default function ProfilePage() {
   );
 
   if (!me) return null;
-
-  async function handleDemoUserChange(memberId: string) {
-    if (memberId === me.id) return;
-    setSwitchingUser(true);
-    try {
-      await switchDemoUser(memberId);
-    } finally {
-      setSwitchingUser(false);
-    }
-  }
 
   async function handleResetDemoSession() {
     setSwitchingUser(true);
@@ -62,28 +50,12 @@ export default function ProfilePage() {
       {demoAuthEnabled ? <Card className="mt-8 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="font-display text-lg font-bold">Demo session</h2>
+            <h2 className="font-display text-lg font-bold">Competition demo</h2>
             <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-              Prototype only — choose which traveller you are demonstrating as.
+              Fictional seeded data only. Reset to the starting demo session when needed.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="demo-traveller" className="text-sm font-medium text-[var(--color-ink-soft)]">
-              Demo as
-            </label>
-            <select
-              id="demo-traveller"
-              value={me.id}
-              disabled={switchingUser}
-              onChange={(event) => handleDemoUserChange(event.target.value)}
-              className="rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--color-ink)] outline-none"
-            >
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
             <Button variant="outline" size="sm" disabled={switchingUser} onClick={handleResetDemoSession}>
               Reset demo session
             </Button>

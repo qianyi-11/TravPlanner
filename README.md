@@ -45,18 +45,20 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 - Shared trip checklist with member assignment and completion tracking
 - Trip Rescue using prepared prototype events, alternatives and saved Plan B backups
 - Auth.js with Google OAuth, stable Member provisioning and server-side group/trip authorization
+- Optional competition demo entry with one fixed seeded fictional Member; no personal judge account is required when enabled
 - Prisma persistence with SQLite for local/demo use and PostgreSQL for production
 
 ### Latest Competition-Readiness Status
 
-The `version1.1` branch has been verified locally after the Trippy messaging refinement:
+The `version1.1` branch was verified locally after the fixed competition demo entry was implemented:
 
-- The landing page communicates the flow from different preferences through suggestions, voting and explainable Group Consensus to a shared itinerary.
-- Consensus results show the existing base score, fair score and representation adjustment without changing the deterministic algorithm.
-- The core pages passed a one-off 390 × 844 smoke check with no horizontal overflow.
-- `npm run test:domain`: 45/45 passed; `npm run test:integration`: 38/38 passed.
-- Type generation, TypeScript, full lint and production build passed. The build still reports two generated Prisma tracing warnings.
-- `npm run demo` and `npm run demo:record` passed the full seeded flow, including Plan B, checklist, Split Bill, Trip Rescue and reload persistence.
+- The landing page communicates different preferences → suggestions/votes → explainable Group Consensus → shared itinerary.
+- Consensus results show the existing base score, fair score and representation adjustment; the deterministic algorithm is unchanged.
+- `npm run test:domain`: 45/45 passed; `npm run test:integration`: 39/39 passed.
+- `npx next typegen`, `npx tsc --noEmit`, full `npm run lint`, and `npm run build` passed.
+- `npm run demo` and `npm run demo:record` passed the full seeded flow, including the Try Competition Demo entry, Plan B, checklist, Split Bill, Trip Rescue and reload persistence.
+- Demo auth was tested with the fixed seeded identity, arbitrary member input was ignored, missing demo data failed safely, and production cookie security was verified.
+- The build still reports two generated Prisma tracing warnings from dynamic filesystem access; no runtime failure was observed.
 - The demo uses isolated `prisma/demo.db`; recording output is written locally to `demo-output/travplanner-demo.webm`.
 
 ### Core User Flow
@@ -297,7 +299,7 @@ This comparison describes emphasis, not a claim that another product lacks a cap
 | ORM | Prisma | Server-side database access |
 | Database | SQLite locally; PostgreSQL in production | Seeded local demo and deployable persistence |
 | Maps / Places | Google Maps JavaScript API / Places | Browser-side discovery and map presentation |
-| Authentication | Auth.js + Google OAuth | Stable Member provisioning and JWT identity |
+| Authentication | Auth.js + Google OAuth plus optional demo cookie | Google remains the normal path; demo mode uses one fixed seeded fictional Member |
 
 ## Current Architecture
 
@@ -381,7 +383,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 | Unexpected plan changes | Per-stop Plan B preparation and a prepared Trip Rescue flow that updates the itinerary |
 | Solo travel | The shared planning model can operate with one traveller; dedicated solo UX is limited |
 | Group travel | Primary prototype flow |
-| Deployable demonstration | Local seeded demo verified with isolated SQLite; public UI Prototype link remains TODO |
+| Deployable demonstration | Local seeded demo verified with isolated SQLite; a dedicated seeded PostgreSQL competition deployment is prepared but no public URL exists |
 
 ---
 
@@ -464,7 +466,9 @@ git checkout version1.1
 npm install
 ```
 
-Copy `.env.example` to `.env.local`, configure a local SQLite `DATABASE_URL` and `AUTH_SECRET`, and set `AUTH_DEMO_ENABLED=true` for the deterministic local demo. Then run:
+Copy `.env.example` to `.env.local`, configure a local SQLite `DATABASE_URL` and `AUTH_SECRET`, and set `AUTH_DEMO_ENABLED=true` for the deterministic local demo. The optional `AUTH_DEMO_MEMBER_ID` defaults to the seeded fictional `you` member locally. When demo mode is enabled, the sign-in screen offers **Try Competition Demo**; Google OAuth remains available.
+
+Then run:
 
 ```bash
 npm run db:generate
@@ -483,6 +487,18 @@ For the isolated competition demo, which creates `prisma/demo.db` independently:
 npm run demo
 npm run demo:record
 ```
+
+## Competition deployment checklist
+
+Use a dedicated PostgreSQL database containing only the fictional seeded data:
+
+1. Set `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, Google OAuth credentials, `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`, and `GOOGLE_PLACES_SERVER_API_KEY`.
+2. Set `AUTH_DEMO_ENABLED=true` and `AUTH_DEMO_MEMBER_ID` to the seeded demo member ID, normally `you`.
+3. Run `npm run db:migrate:production`, then `npm run db:seed:production` once during provisioning.
+4. Run `npm run build` and start with `npm run start`.
+5. Keep `AUTH_DEMO_ENABLED=false` on normal user deployments and never run a seed command during normal startup.
+
+The browser Google Maps key uses `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`; the server-only Places key uses `GOOGLE_PLACES_SERVER_API_KEY`. No public deployment URL is currently claimed.
 
 ---
 

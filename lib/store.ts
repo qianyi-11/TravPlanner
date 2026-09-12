@@ -43,7 +43,7 @@ interface PlannerState {
   demoAuthEnabled: boolean;
 
   hydrate: () => Promise<void>;
-  switchDemoUser: (memberId: string) => Promise<boolean>;
+  startDemoSession: () => Promise<boolean>;
   resetDemoUser: () => Promise<boolean>;
   showToast: (msg: string) => void;
   clearToast: () => void;
@@ -118,13 +118,12 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     }
   },
 
-  switchDemoUser: async (memberId) => {
+  startDemoSession: async () => {
     const result = await api("/api/demo-session", {
       method: "POST",
-      body: JSON.stringify({ memberId }),
     });
     if (!result.ok) {
-      set({ toast: result.error ?? "Couldn't switch traveller" });
+      set({ toast: result.error ?? "Couldn't open competition demo" });
       return false;
     }
     await get().hydrate();

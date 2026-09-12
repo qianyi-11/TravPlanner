@@ -33,6 +33,10 @@ async function openChapter(page: Page, suffix: string, title: string, recordingM
 }
 
 test("Trippy product walkthrough", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("button", { name: "Try Competition Demo" })).toBeVisible();
+  await page.getByRole("button", { name: "Try Competition Demo" }).click();
+  await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
   await openChapter(page, "", "Trip Setup — Japan Adventure", 3_500);
   await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Tokyo · Kyoto · Osaka", { exact: true })).toBeVisible();

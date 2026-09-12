@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, beforeEach, test } from "node:test";
+import { after, afterEach, beforeEach, test } from "node:test";
 import { POST as resolveRescue } from "@/app/api/trips/[tripId]/rescue/[eventId]/resolve/route";
 import { POST as buildItinerary } from "@/app/api/trips/[tripId]/build-itinerary/route";
 import { POST as confirmShortlist } from "@/app/api/trips/[tripId]/shortlist/route";
@@ -11,7 +11,7 @@ import { POST as createTrip } from "@/app/api/trips/route";
 import { PATCH as updateTrip } from "@/app/api/trips/[tripId]/route";
 import { POST as updatePreferences } from "@/app/api/members/[memberId]/preferences/route";
 import { POST as addGroupMember } from "@/app/api/groups/[groupId]/members/route";
-import { POST as setDemoSession } from "@/app/api/demo-session/route";
+import { GET as demoStatus, POST as setDemoSession } from "@/app/api/demo-session/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
 import { GET as getPlacePhoto } from "@/app/api/places/[placeId]/photo/route";
 import { GET as getSplitBill, PUT as saveSplitBill } from "@/app/api/trips/[tripId]/split-bill/route";
@@ -157,6 +157,19 @@ beforeEach(async () => {
   setAuthenticatedMemberIdForTests("member-a");
   await resetFixture();
 });
+const originalNodeEnv = process.env.NODE_ENV;
+const originalDemoEnabled = process.env.AUTH_DEMO_ENABLED;
+const originalDemoMemberId = process.env.AUTH_DEMO_MEMBER_ID;
+const testEnv = process.env as unknown as Record<string, string | undefined>;
+const postDemoSession = setDemoSession as unknown as (request?: Request) => Promise<Response>;
+afterEach(() => {
+  if (originalNodeEnv === undefined) delete testEnv.NODE_ENV;
+  else testEnv.NODE_ENV = originalNodeEnv;
+  if (originalDemoEnabled === undefined) delete testEnv.AUTH_DEMO_ENABLED;
+  else testEnv.AUTH_DEMO_ENABLED = originalDemoEnabled;
+  if (originalDemoMemberId === undefined) delete testEnv.AUTH_DEMO_MEMBER_ID;
+  else testEnv.AUTH_DEMO_MEMBER_ID = originalDemoMemberId;
+});
 after(() => prisma.$disconnect());
 
 test("authenticated actor and trip role come from the server", async () => {
@@ -185,10 +198,36 @@ test("missing and stale authenticated actors are rejected", async () => {
   assert.equal((await body(response)).code, "UNAUTHENTICATED");
 });
 
-test("demo identity is disabled in production and at the test boundary", async () => {
+test("demo identity is disabled until explicitly enabled", async () => {
   assert.equal(isDemoAuthEnabled({ AUTH_DEMO_ENABLED: "true", NODE_ENV: "production" }), false);
+  assert.equal(isDemoAuthEnabled({ AUTH_DEMO_ENABLED: "true", AUTH_DEMO_MEMBER_ID: "you", NODE_ENV: "production" }), true);
   assert.equal(isDemoAuthEnabled({ AUTH_DEMO_ENABLED: "true", NODE_ENV: "development" }), true);
-  assert.equal((await setDemoSession(request({ memberId: "member-b" }))).status, 404);
+  assert.equal((await demoStatus()).status, 404);
+  assert.equal((await setDemoSession()).status, 404);
+});
+
+test("public demo login uses only the fixed seeded identity", async () => {
+  process.env.AUTH_DEMO_ENABLED = "true";
+  process.env.AUTH_DEMO_MEMBER_ID = "member-a";
+  assert.deepEqual(await body(await demoStatus()), { enabled: true });
+
+  let response = await postDemoSession(request({ memberId: "member-b" }));
+  assert.equal(response.status, 200);
+  const cookie = response.headers.get("set-cookie") ?? "";
+  assert.match(cookie, /travplanner_demo_user=member-a/);
+  assert.doesNotMatch(cookie, /member-b/);
+  assert.match(cookie, /HttpOnly/i);
+  assert.match(cookie, /SameSite=Lax/i);
+
+  testEnv.NODE_ENV = "production";
+  response = await setDemoSession();
+  assert.match(response.headers.get("set-cookie") ?? "", /Secure/);
+
+  testEnv.NODE_ENV = "test";
+  process.env.AUTH_DEMO_MEMBER_ID = "missing";
+  response = await setDemoSession();
+  assert.equal(response.status, 503);
+  assert.equal(response.headers.get("set-cookie"), null);
 });
 
 test("Google identities provision one stable Member per provider account", async () => {

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { ApiError } from "./api-error";
-import { DEMO_AUTH_COOKIE, isDemoAuthEnabled } from "./demo-auth";
+import { DEMO_AUTH_COOKIE, getDemoMemberId, isDemoAuthEnabled } from "./demo-auth";
 import { prisma } from "./prisma";
 import { assertProductionEnv } from "./env";
 
@@ -25,8 +25,7 @@ export async function resolveCurrentMemberId(): Promise<string | undefined> {
   if (!isDemoAuthEnabled()) return undefined;
 
   const selectedMemberId = (await cookies()).get(DEMO_AUTH_COOKIE)?.value;
-  if (selectedMemberId) return selectedMemberId;
-  return (await prisma.member.findFirst({ where: { isYou: true }, select: { id: true } }))?.id;
+  return selectedMemberId === getDemoMemberId() ? selectedMemberId : undefined;
 }
 
 export async function requireAuthenticatedActor(): Promise<AuthenticatedActor> {

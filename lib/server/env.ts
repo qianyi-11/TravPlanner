@@ -7,6 +7,7 @@ export interface ServerEnv {
   googlePlacesServerApiKey: string | undefined;
   mapsBrowserApiKey: string | undefined;
   authDemoEnabled: boolean;
+  authDemoMemberId: string | undefined;
   appUrl: string | undefined;
   buildVersion: string;
 }
@@ -22,6 +23,7 @@ export function getServerEnv(environment: NodeJS.ProcessEnv = process.env): Serv
       environment.GOOGLE_PLACES_SERVER_API_KEY ?? environment.GOOGLE_MAPS_SERVER_API_KEY ?? environment.GOOGLE_PLACES_API_KEY,
     mapsBrowserApiKey: environment.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
     authDemoEnabled: environment.AUTH_DEMO_ENABLED === "true",
+    authDemoMemberId: environment.AUTH_DEMO_MEMBER_ID?.trim() || undefined,
     appUrl: environment.AUTH_URL ?? environment.NEXTAUTH_URL,
     buildVersion: environment.VERCEL_GIT_COMMIT_SHA ?? environment.NEXT_PUBLIC_APP_VERSION ?? "local",
   };
@@ -40,7 +42,7 @@ export function assertProductionEnv(environment: NodeJS.ProcessEnv = process.env
     ["GOOGLE_PLACES_SERVER_API_KEY", env.googlePlacesServerApiKey],
   ].filter(([, value]) => !value).map(([name]) => name);
 
-  if (env.authDemoEnabled) missing.push("AUTH_DEMO_ENABLED must not be true in production");
+  if (env.authDemoEnabled && !env.authDemoMemberId) missing.push("AUTH_DEMO_MEMBER_ID when AUTH_DEMO_ENABLED is true");
   if (env.databaseUrl && !/^(postgres|postgresql):\/\//.test(env.databaseUrl)) {
     missing.push("DATABASE_URL must use PostgreSQL in production");
   }

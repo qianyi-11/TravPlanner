@@ -46,7 +46,7 @@ For shared model changes, keep both schemas aligned except for provider-specific
 
 `prisma/seed.ts` deletes and recreates deterministic domain data from `lib/mock-data.ts`. Treat both local and production seed commands as destructive. Preserve stable fixture IDs unless the task intentionally changes demo data.
 
-Auth.js provides the production session boundary. Google OAuth maps provider identities to TravPlanner `Member` records. Demo member switching/fallback auth is available only when `AUTH_DEMO_ENABLED=true`; production configuration rejects demo auth and requires PostgreSQL.
+Auth.js provides the production session boundary. Google OAuth maps provider identities to TravPlanner `Member` records. Competition demo access is available only when `AUTH_DEMO_ENABLED=true` and uses one fixed seeded fictional `Member`; production configuration requires PostgreSQL and an explicit `AUTH_DEMO_MEMBER_ID` when demo mode is enabled.
 
 Copy `.env.example` for environment names. Local demo use needs a SQLite `DATABASE_URL`, `AUTH_SECRET`, and `AUTH_DEMO_ENABLED=true`. Production validation also requires Google OAuth credentials plus separate browser and server Google Maps/Places keys. Do not commit `.env*` files other than `.env.example`.
 
@@ -81,5 +81,5 @@ There is no formatter script. Preserve the existing TypeScript style and use the
 - Run `npm run test:integration` for Route Handler, auth/authorization, persistence, or cross-layer workflow changes. Its runner creates and removes `prisma/integration.db`; do not prepare that DB manually.
 - Run `npm run demo` when changing the main seeded browser flow. It uses an isolated `prisma/demo.db` and does not modify the normal development DB.
 - For Prisma model changes, validate both schemas and regenerate the appropriate client. Do not replace production migrations with `db push`.
-- Run full `npm run lint` for frontend/component changes; CI's explicit ESLint target covers only `auth.ts`, `lib/server`, and `app/api`.
+- Run full `npm run lint` for frontend/component changes; CI runs the same full repository lint.
 - Avoid unrelated lockfile churn. Change `package-lock.json` only when dependencies change.
