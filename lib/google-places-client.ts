@@ -3,12 +3,6 @@
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
 import { gradientFor } from "@/lib/mock-data";
 
-let serviceEl: HTMLDivElement | null = null;
-function getService(): google.maps.places.PlacesService {
-  if (!serviceEl) serviceEl = document.createElement("div");
-  return new google.maps.places.PlacesService(serviceEl);
-}
-
 const SKIP_TYPES = new Set([
   "point_of_interest",
   "establishment",
@@ -26,8 +20,14 @@ function prettyCategory(types?: string[]): string {
     .join(" ");
 }
 
-function priceLabelFor(level: number): string {
-  return ["Free", "$", "$$", "$$$", "$$$$"][level] ?? "$$";
+function price(level: google.maps.places.PriceLevelString | null | undefined) {
+  return {
+    FREE: { level: 1, label: "Free" },
+    INEXPENSIVE: { level: 1, label: "$" },
+    MODERATE: { level: 2, label: "$$" },
+    EXPENSIVE: { level: 3, label: "$$$" },
+    VERY_EXPENSIVE: { level: 4, label: "$$$$" },
+  }[level ?? "MODERATE"] ?? { level: 2, label: "$$" };
 }
 
 function guessArea(address: string | undefined, destination: string): string {
@@ -39,66 +39,46 @@ function guessArea(address: string | undefined, destination: string): string {
   return withoutDestination[0] || destination;
 }
 
-function isOpenNow(hours?: google.maps.places.PlaceOpeningHours): boolean {
-  if (!hours) return false;
-  if (typeof hours.isOpen === "function") {
-    try {
-      return hours.isOpen() === true;
-    } catch {
-      return false;
-    }
-  }
-  return (hours as unknown as { open_now?: boolean }).open_now === true;
-}
-
-// `editorial_summary` is returned by the Places API when requested but isn't
-// modeled in @types/google.maps' PlaceResult — augment locally.
-type PlaceResultWithSummary = google.maps.places.PlaceResult & {
-  editorial_summary?: { overview?: string };
-};
-
-function toPlace(result: PlaceResultWithSummary, destination: string): Place {
-  const id = `g-${result.place_id}`;
-  const priceLevel = Math.min(4, Math.max(1, (result.price_level ?? 2) + (result.price_level === 0 ? 1 : 0)));
-  const photo = result.photos?.[0]?.getUrl({ maxWidth: 800, maxHeight: 600 }) ?? gradientFor(id);
+function toPlace(result: google.maps.places.Place, destination: string): Place {
+  const id = `g-${result.id}`;
+  const priceInfo = price(result.priceLevel);
+  const photo = result.photos?.[0]?.getURI({ maxWidth: 800, maxHeight: 600 }) ?? gradientFor(id);
 
   return {
     id,
     source: "google",
-    name: result.name ?? "Unnamed place",
+    name: result.displayName ?? "Unnamed place",
     category: prettyCategory(result.types),
-    area: guessArea(result.formatted_address, destination),
+    area: guessArea(result.formattedAddress ?? undefined, destination),
     destination,
     coordinates: {
-      lat: result.geometry?.location?.lat() ?? 0,
-      lng: result.geometry?.location?.lng() ?? 0,
+      lat: result.location?.lat() ?? 0,
+      lng: result.location?.lng() ?? 0,
     },
-    address: result.formatted_address ?? "",
+    address: result.formattedAddress ?? "",
     photo,
     rating: result.rating ?? 0,
-    reviewCount: result.user_ratings_total ?? 0,
-    priceLevel: priceLevel as Place["priceLevel"],
-    priceLabel: priceLabelFor(result.price_level ?? 2),
-    description: result.editorial_summary?.overview ?? "",
-    openingHours: (result.opening_hours?.weekday_text ?? []).map((line): PlaceOpeningHours => {
+    reviewCount: result.userRatingCount ?? 0,
+    priceLevel: priceInfo.level as Place["priceLevel"],
+    priceLabel: priceInfo.label,
+    description: result.editorialSummary ?? "",
+    openingHours: (result.regularOpeningHours?.weekdayDescriptions ?? []).map((line): PlaceOpeningHours => {
       const idx = line.indexOf(":");
       return idx === -1
         ? { day: line, hours: "" }
         : { day: line.slice(0, idx).trim(), hours: line.slice(idx + 1).trim() };
     }),
     // Legacy import snapshot only; UI uses the saved weekly schedule.
-    isOpenNow: isOpenNow(result.opening_hours),
+    isOpenNow: false,
     closesAt: undefined,
     estimatedDurationMinutes: 60,
-    reviews: (result.reviews ?? []).slice(0, 5).map(
-      (r, i): PlaceReview => ({
-        id: `${id}-review-${i}`,
-        author: r.author_name ?? "Google user",
-        rating: r.rating ?? 0,
-        text: r.text ?? "",
-        date: r.relative_time_description ?? "",
-      })
-    ),
+    reviews: (result.reviews ?? []).slice(0, 5).map((review, i): PlaceReview => ({
+      id: `${id}-review-${i}`,
+      author: review.authorAttribution?.displayName ?? "Google user",
+      rating: review.rating ?? 0,
+      text: review.text ?? "",
+      date: review.relativePublishTimeDescription ?? "",
+    })),
     availability: "unknown",
     suggestedBy: [],
     voteCount: 0,
@@ -107,19 +87,30 @@ function toPlace(result: PlaceResultWithSummary, destination: string): Place {
 }
 
 /** Live text search against Google Places, scoped loosely to a destination. */
-export function searchGooglePlaces(query: string, destination: string): Promise<Place[]> {
-  return new Promise((resolve) => {
-    if (!query.trim()) return resolve([]);
-    const service = getService();
-    service.textSearch(
-      { query: `${query} in ${destination}` },
-      (results, status) => {
-        if (status !== google.maps.places.PlacesServiceStatus.OK || !results) {
-          resolve([]);
-          return;
-        }
-        resolve(results.slice(0, 8).map((r) => toPlace(r, destination)));
-      }
-    );
-  });
+export async function searchGooglePlaces(query: string, destination: string): Promise<Place[]> {
+  if (!query.trim()) return [];
+  try {
+    const { Place: GooglePlace } = await google.maps.importLibrary("places");
+    const { places } = await GooglePlace.searchByText({
+      textQuery: `${query} in ${destination}`,
+      fields: [
+        "id",
+        "displayName",
+        "formattedAddress",
+        "location",
+        "types",
+        "rating",
+        "userRatingCount",
+        "priceLevel",
+        "regularOpeningHours",
+        "editorialSummary",
+        "photos",
+        "reviews",
+      ],
+      maxResultCount: 8,
+    });
+    return places.map((place) => toPlace(place, destination));
+  } catch {
+    return [];
+  }
 }

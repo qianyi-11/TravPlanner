@@ -4,21 +4,27 @@ import { ApiError } from "../api-error";
 import { getServerEnv } from "../env";
 
 type GooglePlaceResult = {
-  place_id?: string;
-  name?: string;
-  formatted_address?: string;
-  geometry?: { location?: { lat?: number; lng?: number } };
+  id?: string;
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
   types?: string[];
   rating?: number;
-  user_ratings_total?: number;
-  price_level?: number;
-  opening_hours?: { open_now?: boolean; weekday_text?: string[] };
-  editorial_summary?: { overview?: string };
-  photos?: Array<{ photo_reference?: string }>;
-  reviews?: Array<{ author_name?: string; rating?: number; text?: string; relative_time_description?: string }>;
+  userRatingCount?: number;
+  priceLevel?: string;
+  regularOpeningHours?: { weekdayDescriptions?: string[] };
+  currentOpeningHours?: { openNow?: boolean; weekdayDescriptions?: string[] };
+  editorialSummary?: { text?: string };
+  photos?: Array<{ name?: string }>;
+  reviews?: Array<{
+    authorAttribution?: { displayName?: string };
+    rating?: number;
+    text?: { text?: string };
+    relativePublishTimeDescription?: string;
+  }>;
 };
 
-type GoogleResponse = { status?: string; error_message?: string; result?: GooglePlaceResult };
+type GoogleErrorResponse = { error?: { message?: string; status?: string } };
 
 const SKIP_TYPES = new Set(["point_of_interest", "establishment", "premise", "political", "geocode"]);
 
@@ -27,8 +33,14 @@ function category(types: string[] | undefined) {
   return value ? value.split("_").map((part) => part[0].toUpperCase() + part.slice(1)).join(" ") : "Place";
 }
 
-function priceLabel(level: number | undefined) {
-  return ["Free", "$", "$$", "$$$", "$$$$"][Math.min(4, Math.max(0, level ?? 2))] ?? "$$";
+function price(level: string | undefined) {
+  return {
+    PRICE_LEVEL_FREE: { level: 1, label: "Free" },
+    PRICE_LEVEL_INEXPENSIVE: { level: 1, label: "$" },
+    PRICE_LEVEL_MODERATE: { level: 2, label: "$$" },
+    PRICE_LEVEL_EXPENSIVE: { level: 3, label: "$$$" },
+    PRICE_LEVEL_VERY_EXPENSIVE: { level: 4, label: "$$$$" },
+  }[level ?? "PRICE_LEVEL_MODERATE"] ?? { level: 2, label: "$$" };
 }
 
 function area(address: string, destination: string) {
@@ -44,17 +56,17 @@ function hours(lines: string[] | undefined): PlaceOpeningHours[] {
 }
 
 export function normalizeGooglePlace(result: GooglePlaceResult, destination: string, fetchedAt = new Date()) {
-  const googlePlaceId = result.place_id;
-  const name = result.name?.trim();
-  const address = result.formatted_address?.trim();
-  const lat = result.geometry?.location?.lat;
-  const lng = result.geometry?.location?.lng;
+  const googlePlaceId = result.id;
+  const name = result.displayName?.text?.trim();
+  const address = result.formattedAddress?.trim();
+  const lat = result.location?.latitude;
+  const lng = result.location?.longitude;
   if (!googlePlaceId || !name || !address || !Number.isFinite(lat) || !Number.isFinite(lng)) {
     throw new ApiError(502, "GOOGLE_PLACE_INVALID", "Google returned an incomplete place");
   }
 
   const id = `g-${googlePlaceId}`;
-  const level = Math.min(4, Math.max(0, result.price_level ?? 2));
+  const priceInfo = price(result.priceLevel);
   return {
     id,
     source: "google" as const,
@@ -68,27 +80,27 @@ export function normalizeGooglePlace(result: GooglePlaceResult, destination: str
     address,
     photo: gradientFor(id),
     rating: Number.isFinite(result.rating) ? result.rating! : 0,
-    reviewCount: Number.isFinite(result.user_ratings_total) ? result.user_ratings_total! : 0,
-    priceLevel: (level === 0 ? 1 : level) as Place["priceLevel"],
-    priceLabel: priceLabel(level),
-    description: result.editorial_summary?.overview ?? "",
-    openingHours: hours(result.opening_hours?.weekday_text),
-    isOpenNow: result.opening_hours?.open_now === true,
+    reviewCount: Number.isFinite(result.userRatingCount) ? result.userRatingCount! : 0,
+    priceLevel: priceInfo.level as Place["priceLevel"],
+    priceLabel: priceInfo.label,
+    description: result.editorialSummary?.text ?? "",
+    openingHours: hours(result.regularOpeningHours?.weekdayDescriptions),
+    isOpenNow: result.currentOpeningHours?.openNow === true,
     estimatedDurationMinutes: 60,
     reviews: (result.reviews ?? []).slice(0, 5).map(
       (review, index): PlaceReview => ({
         id: `${id}-review-${index}`,
-        author: review.author_name ?? "Google user",
+        author: review.authorAttribution?.displayName ?? "Google user",
         rating: review.rating ?? 0,
-        text: review.text ?? "",
-        date: review.relative_time_description ?? "",
+        text: review.text?.text ?? "",
+        date: review.relativePublishTimeDescription ?? "",
       })
     ),
     availability: "unknown" as const,
     suggestedBy: [],
     voteCount: 0,
     votedBy: [],
-    photoRef: result.photos?.[0]?.photo_reference,
+    photoRef: result.photos?.[0]?.name,
   } satisfies Place & { photoRef?: string };
 }
 
@@ -96,39 +108,40 @@ export async function fetchGooglePlace(googlePlaceId: string, destination: strin
   const apiKey = getServerEnv().googlePlacesServerApiKey;
   if (!apiKey) throw new ApiError(503, "GOOGLE_PLACES_NOT_CONFIGURED", "Google Places server access is not configured");
 
-  const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-  url.searchParams.set("place_id", googlePlaceId);
-  url.searchParams.set("fields", "place_id,name,formatted_address,geometry,types,rating,user_ratings_total,price_level,opening_hours,editorial_summary,photos,reviews");
-  url.searchParams.set("key", apiKey);
+  const url = new URL(`https://places.googleapis.com/v1/places/${encodeURIComponent(googlePlaceId)}`);
   let response: Response;
   try {
-    response = await fetch(url, { cache: "no-store" });
+    response = await fetch(url, {
+      cache: "no-store",
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "id,displayName,formattedAddress,location,types,rating,userRatingCount,priceLevel,regularOpeningHours,currentOpeningHours,editorialSummary,photos,reviews",
+      },
+    });
   } catch {
     throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places could not be reached");
   }
-  if (!response.ok) throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places returned an error");
-
-  const payload = (await response.json().catch(() => null)) as GoogleResponse | null;
-  if (!payload || payload.status !== "OK" || !payload.result) {
-    if (payload?.status === "ZERO_RESULTS" || payload?.status === "NOT_FOUND") {
+  const payload = (await response.json().catch(() => null)) as GooglePlaceResult | GoogleErrorResponse | null;
+  if (!response.ok || !payload || !("id" in payload)) {
+    if (response.status === 404 || (payload && "error" in payload && payload.error?.status === "NOT_FOUND")) {
       throw new ApiError(404, "GOOGLE_PLACE_NOT_FOUND", "Google place not found");
     }
-    throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", payload?.error_message ?? "Google Places returned an error");
+    throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", payload && "error" in payload ? payload.error?.message ?? "Google Places returned an error" : "Google Places returned an error");
   }
-  return normalizeGooglePlace(payload.result, destination);
+  return normalizeGooglePlace(payload, destination);
 }
 
-export async function fetchGooglePlacePhoto(photoRef: string) {
+export async function fetchGooglePlacePhoto(photoName: string) {
   const apiKey = getServerEnv().googlePlacesServerApiKey;
   if (!apiKey) throw new ApiError(503, "GOOGLE_PLACES_NOT_CONFIGURED", "Google Places server access is not configured");
+  if (!/^places\/[^/]+\/photos\/[^/]+$/.test(photoName)) throw new ApiError(400, "PLACE_PHOTO_INVALID", "Google photo name is invalid");
 
-  const url = new URL("https://maps.googleapis.com/maps/api/place/photo");
-  url.searchParams.set("maxwidth", "1200");
-  url.searchParams.set("photo_reference", photoRef);
-  url.searchParams.set("key", apiKey);
+  const path = photoName.split("/").map(encodeURIComponent).join("/");
+  const url = new URL(`https://places.googleapis.com/v1/${path}/media`);
+  url.searchParams.set("maxWidthPx", "1200");
   let response: Response;
   try {
-    response = await fetch(url, { cache: "no-store", redirect: "follow" });
+    response = await fetch(url, { cache: "no-store", redirect: "follow", headers: { "X-Goog-Api-Key": apiKey } });
   } catch {
     throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places photo could not be reached");
   }

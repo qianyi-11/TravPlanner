@@ -6,15 +6,15 @@ import { getPlaceFreshness } from "./place-facts";
 test("server Google normalization preserves authoritative identity and freshness", () => {
   const place = normalizeGooglePlace(
     {
-      place_id: "abc",
-      name: "Museum",
-      formatted_address: "1 Tokyo Street",
-      geometry: { location: { lat: 35.68, lng: 139.76 } },
+      id: "abc",
+      displayName: { text: "Museum" },
+      formattedAddress: "1 Tokyo Street",
+      location: { latitude: 35.68, longitude: 139.76 },
       types: ["museum"],
       rating: 4.5,
-      user_ratings_total: 12,
-      price_level: 2,
-      opening_hours: { weekday_text: ["Monday: 9:00 AM – 5:00 PM"] },
+      userRatingCount: 12,
+      priceLevel: "PRICE_LEVEL_MODERATE",
+      regularOpeningHours: { weekdayDescriptions: ["Monday: 9:00 AM – 5:00 PM"] },
     },
     "Tokyo",
     new Date("2026-09-01T00:00:00Z")

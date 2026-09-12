@@ -554,19 +554,16 @@ test("Google place imports use server facts and fail without partial persistence
   const originalFetch = globalThis.fetch;
   process.env.GOOGLE_PLACES_SERVER_API_KEY = "test-server-key";
   globalThis.fetch = (async () => new Response(JSON.stringify({
-    status: "OK",
-    result: {
-      place_id: "provider-place",
-      name: "Server Place",
-      formatted_address: "1 Tokyo Street",
-      geometry: { location: { lat: 35.68, lng: 139.76 } },
-      types: ["museum"],
-      rating: 4.9,
-      user_ratings_total: 99,
-      price_level: 2,
-      opening_hours: { weekday_text: ["Monday: 9:00 AM – 5:00 PM"] },
-      photos: [{ photo_reference: "photo-ref" }],
-    },
+    id: "provider-place",
+    displayName: { text: "Server Place" },
+    formattedAddress: "1 Tokyo Street",
+    location: { latitude: 35.68, longitude: 139.76 },
+    types: ["museum"],
+    rating: 4.9,
+    userRatingCount: 99,
+    priceLevel: "PRICE_LEVEL_MODERATE",
+    regularOpeningHours: { weekdayDescriptions: ["Monday: 9:00 AM – 5:00 PM"] },
+    photos: [{ name: "places/provider-place/photos/photo-ref" }],
   }), { status: 200, headers: { "Content-Type": "application/json" } })) as typeof fetch;
 
   try {
@@ -589,7 +586,7 @@ test("Google place imports use server facts and fail without partial persistence
     assert.equal(forged.status, 400);
     assert.equal((await body(forged)).code, "INVALID_REQUEST");
 
-    globalThis.fetch = (async () => new Response(JSON.stringify({ status: "ZERO_RESULTS" }), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async () => new Response(JSON.stringify({ error: { status: "NOT_FOUND" } }), { status: 404 })) as typeof fetch;
     const failed = await addSuggestion(request({ googlePlaceId: "missing-place" }), tripContext("trip-a"));
     assert.equal(failed.status, 404);
     assert.equal((await body(failed)).code, "GOOGLE_PLACE_NOT_FOUND");
@@ -601,7 +598,7 @@ test("Google place imports use server facts and fail without partial persistence
 });
 
 test("Google place photos are authorized, proxied, and safely unavailable", async () => {
-  await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "catalog-photo" } });
+  await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "places/place-a/photos/catalog-photo" } });
   const originalFetch = globalThis.fetch;
   let fetchCount = 0;
   process.env.GOOGLE_PLACES_SERVER_API_KEY = "test-server-key";
@@ -627,7 +624,7 @@ test("Google place photos are authorized, proxied, and safely unavailable", asyn
     const missing = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
     assert.equal(missing.status, 404);
 
-    await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "broken-photo" } });
+    await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "places/place-a/photos/broken-photo" } });
     globalThis.fetch = (async () => new Response("not an image", { status: 200, headers: { "Content-Type": "text/plain" } })) as typeof fetch;
     const broken = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
     assert.equal(broken.status, 503);
