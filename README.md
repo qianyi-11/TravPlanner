@@ -47,6 +47,18 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 - Auth.js with Google OAuth, stable Member provisioning and server-side group/trip authorization
 - Prisma persistence with SQLite for local/demo use and PostgreSQL for production
 
+### Latest Competition-Readiness Status
+
+The `version1.1` branch has been verified locally after the Trippy messaging refinement:
+
+- The landing page communicates the flow from different preferences through suggestions, voting and explainable Group Consensus to a shared itinerary.
+- Consensus results show the existing base score, fair score and representation adjustment without changing the deterministic algorithm.
+- The core pages passed a one-off 390 × 844 smoke check with no horizontal overflow.
+- `npm run test:domain`: 45/45 passed; `npm run test:integration`: 38/38 passed.
+- Type generation, TypeScript, full lint and production build passed. The build still reports two generated Prisma tracing warnings.
+- `npm run demo` and `npm run demo:record` passed the full seeded flow, including Plan B, checklist, Split Bill, Trip Rescue and reload persistence.
+- The demo uses isolated `prisma/demo.db`; recording output is written locally to `demo-output/travplanner-demo.webm`.
+
 ### Core User Flow
 
 ```text
@@ -369,7 +381,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 | Unexpected plan changes | Per-stop Plan B preparation and a prepared Trip Rescue flow that updates the itinerary |
 | Solo travel | The shared planning model can operate with one traveller; dedicated solo UX is limited |
 | Group travel | Primary prototype flow |
-| Deployable demonstration | TODO — public UI Prototype link required |
+| Deployable demonstration | Local seeded demo verified with isolated SQLite; public UI Prototype link remains TODO |
 
 ---
 
@@ -464,6 +476,13 @@ npm run dev
 Open `http://localhost:3000`. Production uses the PostgreSQL schema and migrations, Google OAuth credentials, and separate browser/server Google keys.
 
 `npm run db:seed` replaces existing domain data with deterministic demo fixtures.
+
+For the isolated competition demo, which creates `prisma/demo.db` independently:
+
+```bash
+npm run demo
+npm run demo:record
+```
 
 ---
 
