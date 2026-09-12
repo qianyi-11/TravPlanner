@@ -48,6 +48,7 @@ interface PlannerState {
 
   createGroup: (input: { name: string; emoji: string; description?: string; coverColor: string }) => Promise<string>;
   renameGroup: (groupId: string, name: string) => Promise<boolean>;
+  deleteGroup: (groupId: string) => Promise<boolean>;
   createGroupInvite: (groupId: string) => Promise<string>;
   addMember: (groupId: string, name: string) => Promise<boolean>;
 
@@ -170,6 +171,16 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     const result = await api(`/api/groups/${groupId}`, { method: "PATCH", body: JSON.stringify({ name }) });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't rename group" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
+  },
+
+  deleteGroup: async (groupId) => {
+    const result = await api(`/api/groups/${groupId}`, { method: "DELETE" });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't delete group" });
       return false;
     }
     await get().hydrate();

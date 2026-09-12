@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useState } from "react";
-import { notFound } from "next/navigation";
-import { Compass, Plus, UserPlus } from "lucide-react";
+import { notFound, useRouter } from "next/navigation";
+import { Compass, Plus, Trash2, UserPlus } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { Button, LinkButton } from "@/components/ui/Button";
@@ -12,9 +12,11 @@ import { EmptyState } from "@/components/ui/States";
 import { MemberAvatar } from "@/components/ui/Avatar";
 import { TripCard } from "@/components/trip/TripCard";
 import { EditableTitle } from "@/components/ui/EditableTitle";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export default function GroupRoomPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = use(params);
+  const router = useRouter();
   const group = usePlannerStore((s) => s.groups[groupId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const members = usePlannerStore(
@@ -25,6 +27,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
   );
   const addMember = usePlannerStore((s) => s.addMember);
   const renameGroup = usePlannerStore((s) => s.renameGroup);
+  const deleteGroup = usePlannerStore((s) => s.deleteGroup);
   const createGroupInvite = usePlannerStore((s) => s.createGroupInvite);
   const showToast = usePlannerStore((s) => s.showToast);
   const [addOpen, setAddOpen] = useState(false);
@@ -32,6 +35,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
 
   if (!group) notFound();
@@ -160,6 +164,31 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
           {inviteLink && <p className="mt-2 break-all text-xs text-[var(--color-ink-soft)]">{inviteLink}</p>}
         </Card>
       </div>
+
+      {isOrganizer && (
+        <Card className="mt-6 border-[var(--color-danger)] p-5">
+          <h2 className="font-display text-base font-bold text-[var(--color-danger)]">Danger Zone</h2>
+          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Delete this group and all planning data inside it.</p>
+          <Button className="mt-4" variant="danger" size="sm" icon={<Trash2 size={14} />} onClick={() => setDeleteOpen(true)}>
+            Delete Group
+          </Button>
+        </Card>
+      )}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title={`Delete ${group.name}?`}
+        description={`${trips.length} trip${trips.length === 1 ? "" : "s"} and all related planning data will be deleted. This cannot be undone.`}
+        confirmLabel="Delete Group"
+        danger
+        onConfirm={async () => {
+          if (await deleteGroup(groupId)) {
+            showToast(`${group.name} was deleted`);
+            router.push("/groups");
+          }
+        }}
+      />
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)} title="Add a member">
         <form onSubmit={handleAdd} className="space-y-4">

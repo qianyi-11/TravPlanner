@@ -25,3 +25,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ gr
     return apiErrorResponse(error);
   }
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ groupId: string }> }) {
+  try {
+    const groupId = requireId((await params).groupId, "groupId");
+    await requireGroupOrganizer(groupId);
+    const group = await prisma.group.findUniqueOrThrow({
+      where: { id: groupId },
+      select: { _count: { select: { trips: true } } },
+    });
+    await prisma.group.delete({ where: { id: groupId } });
+    return NextResponse.json({ ok: true, deletedTrips: group._count.trips });
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}

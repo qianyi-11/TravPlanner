@@ -14,7 +14,7 @@ import { POST as setDemoSession } from "@/app/api/demo-session/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
 import { POST as createInvite } from "@/app/api/groups/[groupId]/invite/route";
 import { POST as joinInvite } from "@/app/api/invites/[token]/join/route";
-import { PATCH as renameGroup } from "@/app/api/groups/[groupId]/route";
+import { DELETE as deleteGroup, PATCH as renameGroup } from "@/app/api/groups/[groupId]/route";
 import { prisma } from "@/lib/server/prisma";
 import { provisionGoogleMember } from "@/lib/server/auth-identities";
 import { requireTripActor, requireTripOrganizer } from "@/lib/server/authorization";
@@ -249,6 +249,28 @@ test("group rename is organizer-only and strictly validated", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await body(response), { ok: true, name: "Renamed" });
   assert.equal((await prisma.group.findUniqueOrThrow({ where: { id: "group-a" } })).name, "Renamed");
+});
+
+test("group deletion is organizer-only and preserves identities and unrelated data", async () => {
+  for (const actor of ["member-b", "outsider"]) {
+    setAuthenticatedMemberIdForTests(actor);
+    assert.equal((await deleteGroup(deleteRequest({}), groupContext("group-a"))).status, 403);
+  }
+
+  await prisma.authIdentity.create({
+    data: { memberId: "member-a", provider: "google", providerAccountId: "member-a-google" },
+  });
+  setAuthenticatedMemberIdForTests("member-a");
+  const response = await deleteGroup(deleteRequest({}), groupContext("group-a"));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await body(response), { ok: true, deletedTrips: 1 });
+  assert.equal(await prisma.group.findUnique({ where: { id: "group-a" } }), null);
+  assert.equal(await prisma.trip.findUnique({ where: { id: "trip-a" } }), null);
+  assert.equal(await prisma.groupMember.count({ where: { groupId: "group-a" } }), 0);
+  assert.ok(await prisma.member.findUnique({ where: { id: "member-a" } }));
+  assert.ok(await prisma.authIdentity.findUnique({ where: { provider_providerAccountId: { provider: "google", providerAccountId: "member-a-google" } } }));
+  assert.ok(await prisma.group.findUnique({ where: { id: "group-b" } }));
+  assert.ok(await prisma.trip.findUnique({ where: { id: "trip-b" } }));
 });
 
 test("client memberId cannot spoof planning identity", async () => {
