@@ -1,6 +1,7 @@
 import type { ItineraryActivity, ItineraryDay, Place, TransportMode } from "./types";
 import { daysBetween } from "./utils";
 import { timeToMinutes } from "./date-time";
+import { isFoodPlace } from "./place-category";
 
 interface ItineraryBuildInput {
   trip: {
@@ -27,13 +28,6 @@ const SPEED_KMH: Record<TransportMode, number> = {
   Taxi: 24,
   Mixed: 16,
 };
-
-const FOOD_PATTERN = /\b(food market|bar & grill|hot ?pot|ice cream|restaurant|cafe|café|bakery|ramen|noodle|dessert|coffee|tea|bistro|diner|eatery|kitchen|grill|sushi|pizza|burger|buffet|bagel|brunch|deli|steakhouse|seafood|meal)\b/i;
-const NON_FOOD_PATTERN = /\b(supply|appliance|equipment)\b/i;
-
-export function isFoodPlace(place: Pick<Place, "category">): boolean {
-  return !NON_FOOD_PATTERN.test(place.category) && FOOD_PATTERN.test(place.category);
-}
 
 function formatTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;

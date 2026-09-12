@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { applyRescueReplacement } from "./rescue";
 import { getActivePlanPlaceIds } from "./plan-places";
-import { buildItinerary, isFoodPlace } from "./itinerary-builder";
+import { buildItinerary } from "./itinerary-builder";
+import { isFoodPlace } from "./place-category";
 import type { Place, Trip } from "./types";
 
 const trip = (overrides: Partial<Pick<Trip, "startDate" | "endDate" | "dailyStart" | "dailyEnd" | "transport">> = {}) => ({
@@ -52,7 +53,7 @@ test("food classification is word-aware and category-only", () => {
   for (const category of ["Restaurant", "Cafe", "Bakery", "Ramen", "Sushi", "Dessert", "Seafood", "Food Market"]) {
     assert.equal(isFoodPlace(place("food", category)), true, category);
   }
-  for (const category of ["Museum", "Park", "Shrine", "Kitchen Supply Store"]) {
+  for (const category of ["Museum", "Park", "Shrine", "Kitchen Appliance Store", "Restaurant Supply Store", "Equipment Store"]) {
     assert.equal(isFoodPlace(place("sight", category)), false, category);
   }
 });
