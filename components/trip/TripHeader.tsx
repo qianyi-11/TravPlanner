@@ -47,7 +47,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
             <CalendarDays size={15} /> {formatDateRange(trip.startDate, trip.endDate)}
           </span>
           <span className="flex items-center gap-1.5">
-            <Users size={15} /> {trip.groupSize} travelers
+            <Users size={15} /> {trip.memberIds.length} travelers
           </span>
           <span className="flex items-center gap-1.5">
             <Wallet size={15} /> {formatCurrency(trip.budgetTotal)} budget

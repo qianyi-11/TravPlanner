@@ -127,6 +127,6 @@ export function computeBudgetBreakdown(trip: Trip): BudgetBreakdown {
   }
   const accommodation = Math.round(trip.budgetTotal * 0.35);
   const total = transport + food + activities + accommodation;
-  const perPerson = Math.round(total / Math.max(1, trip.groupSize));
+  const perPerson = Math.round(total / Math.max(1, trip.memberIds.length));
   return { transport, food, activities, accommodation, total, perPerson };
 }

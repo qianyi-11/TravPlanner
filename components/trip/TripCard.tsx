@@ -54,7 +54,7 @@ export function TripCard({ trip }: { trip: Trip }) {
               {formatDateRange(trip.startDate, trip.endDate)}
             </span>
             <span className="flex items-center gap-1">
-              <Users size={13} /> {trip.groupSize} travelers
+              <Users size={13} /> {trip.memberIds.length} travelers
             </span>
           </div>
 
