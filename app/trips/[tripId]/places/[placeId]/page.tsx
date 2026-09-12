@@ -27,6 +27,8 @@ import {
   getPricePresentation,
   getPlaceFreshnessPresentation,
 } from "@/lib/place-facts";
+import { isFoodPlace } from "@/lib/place-category";
+import { estimatedMealSpend } from "@/lib/place-cost";
 
 export default function PlaceDetailsPage({
   params,
@@ -47,6 +49,7 @@ export default function PlaceDetailsPage({
   const price = getPricePresentation(place);
   const freshness = getPlaceFreshnessPresentation(place);
   const hasHours = getOpeningHoursState(place.openingHours) === "AVAILABLE";
+  const mealSpend = isFoodPlace(place) ? estimatedMealSpend(place.priceLevel) : null;
 
   return (
     <div>
@@ -176,6 +179,13 @@ export default function PlaceDetailsPage({
             <p className="font-display text-lg font-bold">{price.value}</p>
             <p className="mt-1 text-xs text-[var(--color-ink-soft)]">{price.description}</p>
           </Card>
+          {mealSpend && (
+            <Card className="p-5">
+              <h3 className="font-display text-sm font-bold">Estimated meal spend</h3>
+              <p className="mt-2 font-display text-lg font-bold">{mealSpend} per person</p>
+              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">TravPlanner estimate based on the venue&apos;s relative price level; actual prices may differ.</p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
