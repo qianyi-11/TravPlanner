@@ -25,11 +25,11 @@ export default function HomePage() {
             Plan together, not alone
           </span>
           <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[var(--color-ink)] sm:text-5xl">
-            Turn different travel wishes into one shared plan.
+            Build one fair plan from everyone&apos;s travel wishes.
           </h1>
           <p className="mt-4 max-w-lg text-base text-[var(--color-ink-soft)] sm:text-lg">
-            Trippy turns different preferences, suggestions and votes into an explainable Group Consensus, then a
-            shared itinerary everyone can use.
+            Trippy turns preferences, must-dos, dislikes and votes into a Fair Group Consensus. It shows when a choice
+            changes so an overlooked traveller is represented, then carries that decision into one shared itinerary.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton href="/groups" size="lg" icon={<Plus size={18} />}>
@@ -43,7 +43,7 @@ export default function HomePage() {
           <div className="mt-10 flex flex-wrap gap-6 text-sm text-[var(--color-ink-soft)]">
             <Step icon={Users2} label="Different preferences" />
             <Step icon={Vote} label="Suggestions + votes" />
-            <Step icon={Scale} label="Consensus explains why" />
+            <Step icon={Scale} label="Fairness explains each choice" />
             <Step icon={CalendarDays} label="Shared itinerary" />
           </div>
         </div>
@@ -69,7 +69,7 @@ export default function HomePage() {
           {[
             { title: "Suggest", desc: "Every member adds the places they want to visit." },
             { title: "Vote", desc: "The group votes on the ideas that matter most." },
-            { title: "Review", desc: "Review saved ratings, hours, costs, and availability notes." },
+            { title: "Agree", desc: "Fair Group Consensus shows who is represented and why a choice changed." },
             { title: "Build", desc: "We arrange the selected places into one planned itinerary." },
           ].map((s, i) => (
             <div key={s.title}>

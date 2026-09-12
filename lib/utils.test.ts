@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { computeBudgetBreakdown } from "./utils";
+import { computeBudgetBreakdown, stageFromTripPathname } from "./utils";
 import type { Trip } from "./types";
 
 test("current membership drives traveler calculations", () => {
@@ -37,4 +37,14 @@ test("budget breakdown separates known meals from unknown activity and transport
     perPersonKnownSpend: 13,
     unknownCostActivityCount: 2,
   });
+});
+
+test("trip paths select the visible planning step", () => {
+  assert.equal(stageFromTripPathname("/trips/trip-a/places/mine"), "ideas");
+  assert.equal(stageFromTripPathname("/trips/trip-a/preferences"), "preferences");
+  assert.equal(stageFromTripPathname("/trips/trip-a/vote/results"), "voting");
+  assert.equal(stageFromTripPathname("/trips/trip-a/shortlist"), "validation");
+  assert.equal(stageFromTripPathname("/trips/trip-a/route"), "route");
+  assert.equal(stageFromTripPathname("/trips/trip-a/plan"), "itinerary");
+  assert.equal(stageFromTripPathname("/groups/group-a"), undefined);
 });

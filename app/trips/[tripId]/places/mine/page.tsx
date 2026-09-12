@@ -42,7 +42,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
     if (submitting) return;
     setSubmitting(true);
     try {
-      if (await submit(tripId) && solo) router.push(`/trips/${tripId}/vote/results`);
+      if (await submit(tripId)) router.push(`/trips/${tripId}/preferences`);
     } finally {
       setSubmitting(false);
     }
@@ -108,8 +108,8 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
               {solo ? (
                 <>
                   <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Your preferences and places will create a deterministic shortlist.</p>
-                  <LinkButton href={`/trips/${tripId}/vote/results`} size="sm" fullWidth className="mt-5">
-                    Build My Shortlist
+                  <LinkButton href={`/trips/${tripId}/preferences`} size="sm" fullWidth className="mt-5">
+                    Continue to Preferences
                   </LinkButton>
                 </>
               ) : (

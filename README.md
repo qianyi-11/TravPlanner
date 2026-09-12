@@ -26,7 +26,7 @@ The challenge spans budgeting, itinerary building, group preferences, traveller 
 
 ## Our Solution
 
-Trippy is a collaborative travel planner for solo travellers and small groups. Its main differentiator is explainable **Group Consensus**, which turns member preferences, suggestions and votes into a shared shortlist. The confirmed shortlist then feeds validation, a sequence preview and a persisted itinerary. **Trip Rescue** demonstrates how that itinerary can be adjusted after a prepared plan change.
+Trippy is a collaborative travel planner for solo travellers and small groups. Its main differentiator is **Fair Group Consensus**, which turns member preferences, must-dos, dislikes, suggestions and votes into an auditable shortlist. It shows when representation changes a close decision so an overlooked traveller is included, then carries that decision into a persisted itinerary. **Trip Rescue** is the secondary proof that the agreed plan can remain useful after a prepared plan change.
 
 ### Current Prototype Features
 
@@ -34,7 +34,7 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 - Member preference profiles
 - Collaborative place suggestions and trip-scoped voting
 - Google Places discovery with saved provider snapshots
-- Server-authoritative deterministic Group Consensus with explainable trade-offs
+- Server-authoritative deterministic Fair Group Consensus with explainable representation trade-offs
 - Persisted consensus shortlist
 - Validation and deterministic itinerary building from a confirmed shortlist
 - Sequence preview and map visualisation without route optimisation
@@ -52,7 +52,7 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 
 The `version1.1` branch was verified locally after the fixed competition demo entry was implemented:
 
-- The landing page communicates different preferences → suggestions/votes → explainable Group Consensus → shared itinerary.
+- The landing page communicates different preferences → suggestions/votes → Fair Group Consensus → shared itinerary.
 - Consensus results show the existing base score, fair score and representation adjustment; the deterministic algorithm is unchanged.
 - `npm run test:domain`: 45/45 passed; `npm run test:integration`: 39/39 passed.
 - `npx next typegen`, `npx tsc --noEmit`, full `npm run lint`, and `npm run build` passed.
@@ -60,6 +60,19 @@ The `version1.1` branch was verified locally after the fixed competition demo en
 - Demo auth was tested with the fixed seeded identity, arbitrary member input was ignored, missing demo data failed safely, and production cookie security was verified.
 - The build still reports two generated Prisma tracing warnings from dynamic filesystem access; no runtime failure was observed.
 - The demo uses isolated `prisma/demo.db`; recording output is written locally to `demo-output/travplanner-demo.webm`.
+
+### Submission Blockers
+
+The product MVP is working, but the competition submission is not ready until these external deliverables are supplied and verified:
+
+| Blocker | Required evidence |
+|---|---|
+| Team identity | Team name and member names in the submission header |
+| Public prototype | Hosted competition demo that opens without a judge account |
+| Prototype evidence | 6–8 current screenshots with short captions |
+| Impact validation | Three short sessions with people who have organised a student or friend-group trip; record completion, understanding, friction and the resulting change |
+| Presentation | Public slides and a 3–5 minute unlisted YouTube video titled with the team name |
+| Link verification | Prototype, slides and video opened successfully in an incognito window |
 
 ### Core User Flow
 
@@ -74,7 +87,7 @@ Suggest Places
      ↓
 Vote
      ↓
-Group Consensus
+Fair Group Consensus
      ↓
 Confirm Shortlist
      ↓
@@ -100,8 +113,8 @@ Trip Rescue
 | Idea | Decision | Reason |
 |---|---|---|
 | Collaborative group planner | **Kept** | Directly addresses fragmented planning and group coordination. |
-| Group voting | **Refined** | Voting captures opinions, but alone was not distinctive enough; it now feeds explainable Group Consensus. |
-| Explainable Group Consensus | **Implemented** | Turns preferences and votes into a server-authoritative, deterministic and fairness-aware shared shortlist. |
+| Group voting | **Refined** | Voting captures opinions, but alone is common in group planners; it now feeds Fair Group Consensus. |
+| Fair Group Consensus | **Implemented** | Turns preferences and votes into a server-authoritative shortlist and exposes when representation changes a close decision. |
 | Group Availability Poll | **Deferred** | Useful for finding overlapping free time, but the team prioritised the core planning flow and competition demo. |
 | Meeting Point Recommendation | **Deferred** | Useful when members start in different places, but it requires additional location and travel-time logic outside the current MVP. |
 | Flight-ticket integration | **Deferred** | It could broaden the platform but does not strengthen the core MVP enough to justify implementation before submission. |
@@ -126,28 +139,29 @@ Trip Rescue
 
 ## 2.2 Ideation Boards
 
-### Problem and Solution Map
+### Problem, Evolution and User Flow
 
-The planned map should show how fragmented tools, group disagreement, budget uncertainty and plan changes connect to the product. It influenced the decision to keep one guided workflow centred on Group Consensus rather than a collection of disconnected utilities.
+This diagram consolidates the documented team decisions and mentor feedback. It does not add undocumented research or feedback.
 
-**Consolidated ideation map based on documented team decisions and mentor feedback:**
-
-```text
-Fragmented travel tools + different traveller preferences
-                         ↓
-              Group disagreement + plan changes
-                         ↓
-                 Coordination overhead
-                         ↓
-Structured preferences → Voting → Explainable Group Consensus
-                         ↓
-Shared itinerary → Plan B, Shared Checklist, Split Bill → Trip Rescue
+```mermaid
+flowchart TD
+    A[Fragmented tools] --> D[High coordination overhead]
+    B[Different preferences and budgets] --> D
+    C[Unexpected plan changes] --> D
+    D --> E[Initial direction: collaborative voting]
+    E --> F[Mentor feedback: voting alone is not distinctive]
+    F --> G[Fair Group Consensus]
+    G --> H[Preferences + must-dos + dislikes + votes]
+    H --> I[Auditable shortlist and representation trade-off]
+    I --> J[Shared itinerary]
+    J --> K[Plan B + Trip Rescue]
+    J --> L[Checklist + Split Bill]
 ```
 
 ### User Flow
 
 ```text
-Trip setup → Preferences → Suggestions → Voting → Group Consensus
+Trip setup → Preferences → Suggestions → Voting → Fair Group Consensus
 → Shortlist → Validation → Sequence Preview → Itinerary → Trip Rescue
 ```
 
@@ -156,7 +170,7 @@ This flow demonstrates the coordination problem from opinions to an actionable p
 **Consolidated user-flow map based on the implemented prototype:**
 
 ```text
-Trip setup → Preferences → Suggestions → Voting → Group Consensus
+Trip setup → Preferences → Suggestions → Voting → Fair Group Consensus
 → Shortlist → Validation → Sequence Preview → Itinerary
 → Plan B + Checklist + Split Bill → Trip Rescue
 ```
@@ -180,12 +194,12 @@ Trip setup → Preferences → Suggestions → Voting → Group Consensus
 | 09/09/2026 | Mentor 1 | Groups with different schedules struggle to find a suitable meeting time; consider a calendar or availability input that identifies overlaps. | Considered a Group Availability Poll; deferred it from the current MVP to prioritise the core collaborative planning flow and competition demo. |
 | 09/09/2026 | Mentor 1 | Members starting from different places need a practical meeting point; consider using distance or travel time to suggest a location such as a café. | Considered a Meeting Point Recommendation; deferred it because the extra location and travel-time logic is outside the current MVP. |
 | 09/09/2026 | Mentor 1 | Study existing travel planners, particularly Wanderlog, and clarify why travellers would choose Trippy. | Strengthened conservative competitive analysis and positioned Trippy around the group decision process between individual preferences and one shared itinerary. |
-| 09/09/2026 | Mentor 1 | Voting was a promising direction, but the team needed to examine the problem more deeply and establish a clearer unique selling point. | The feedback pushed us to strengthen simple voting into a more differentiated **Preferences → Voting → Explainable Group Consensus → Shared Plan** workflow. |
+| 09/09/2026 | Mentor 1 | Voting was a promising direction, but the team needed to examine the problem more deeply and establish a clearer unique selling point. | The feedback pushed us to strengthen simple voting into a more differentiated **Preferences → Voting → Fair Group Consensus → Shared Plan** workflow. |
 | 09/09/2026 | Mentor 1 | Survey the market, compare competitors and explain what makes Trippy stand out. | Added a comparison focused on Trippy’s own product emphasis without claiming unverified gaps in competing products. |
 | 09/09/2026 | Mentor 1 | Explore broader ideas including flight-ticket functionality and automatic travel-data extraction from a URL. | Recorded both as deferred ideas; neither directly strengthens the core MVP enough to justify implementation before submission. |
 | 09/09/2026 | Jarod Tan | Research previous hackathon travel and group-planning projects to understand common patterns. | **Decision:** research previous hackathon projects before finalising differentiation; no completed findings are claimed here. |
-| 09/09/2026 | Jarod Tan | Group voting alone was not sufficiently distinctive because similar voting and preference mechanisms are common. | Repositioned basic voting as an input to the stronger Explainable Group Consensus workflow rather than the innovation itself. |
-| 09/09/2026 | Jarod Tan | Look for a more memorable or ambitious product direction. | Based on this feedback, the team reviewed how to make the product more distinctive, retaining Group Consensus as primary and strengthening the supporting story around Trip Rescue, Plan B, Shared Checklist and Split Bill. |
+| 09/09/2026 | Jarod Tan | Group voting alone was not sufficiently distinctive because similar voting and preference mechanisms are common. | Repositioned basic voting as an input to the stronger Fair Group Consensus workflow rather than the innovation itself. |
+| 09/09/2026 | Jarod Tan | Look for a more memorable or ambitious product direction. | Based on this feedback, the team reviewed how to make the product more distinctive, retaining Fair Group Consensus as primary and strengthening the supporting story around Trip Rescue, Plan B, Shared Checklist and Split Bill. |
 
 Before mentorship, Trippy was primarily framed as a travel planner with collaborative voting. After the sessions, the team focused more strongly on the difficult group-coordination problem: **different preferences → voting → explainable consensus → shared itinerary → coordinated preparation → adjustment when plans change**. The mentors did not design the implemented features or scoring algorithm; their feedback prompted the team to sharpen the product’s differentiation and document why ideas were implemented or deferred.
 
@@ -193,9 +207,43 @@ Before mentorship, Trippy was primarily framed as a travel planner with collabor
 
 # 3. Design & Prototype
 
-**UI Prototype:** TODO — use the public link from the submission header.
+**UI Prototype:** TODO - use the public link from the submission header.
 
-Screenshots have not been added to the repository and still need to be captured before submission.
+The following screenshots were captured from the current deterministic demo at 88% browser zoom. They cover the core prototype journey and are also available as individual files in [`public/submission-screenshots/`](public/submission-screenshots/).
+
+### Captured Prototype Screens
+
+![Trip dashboard and product promise](public/submission-screenshots/01-trip-dashboard.png)
+
+*Trip dashboard: the product promise, active trips and planning progress are visible in one workspace.*
+
+![Preferences](public/submission-screenshots/02-preferences.png)
+
+*Preferences: each traveller contributes interests, food preferences, pace, dislikes and budget.*
+
+![Fair Group Consensus](public/submission-screenshots/03-fair-group-consensus.png)
+
+*Fair Group Consensus: the selected shortlist, baseline choice, scores, representation and trade-off are explicit.*
+
+![Itinerary](public/submission-screenshots/04-itinerary.png)
+
+*Itinerary: the confirmed shortlist becomes a day-by-day plan with timing, places and estimated travel.*
+
+![Plan B and shared checklist](public/submission-screenshots/05-plan-b-and-checklist.png)
+
+*Plan B and checklist: the group prepares a backup activity and tracks shared preparation tasks.*
+
+![Split Bill](public/submission-screenshots/06-split-bill.png)
+
+*Split Bill: a shared expense is calculated and the saved per-person amounts are shown.*
+
+![Trip Rescue](public/submission-screenshots/07-trip-rescue.png)
+
+*Trip Rescue: the prepared alternative is accepted and the shared itinerary is updated.*
+
+![Final plan](public/submission-screenshots/08-final-plan.png)
+
+*Final plan: the replacement persists and the group can continue from one shared workspace.*
 
 ## Key Screens
 
@@ -213,7 +261,7 @@ Screenshots have not been added to the repository and still need to be captured 
 
 ### 4. Group Voting and Consensus
 
-**Does:** Displays trip-scoped votes and the explainable Group Consensus result together. **Interaction:** Vote, choose shortlist capacity and review selection reasons and fairness trade-offs. **Matters:** Makes Trippy’s server-authoritative primary differentiator visible at the decision point.
+**Does:** Displays trip-scoped votes and Fair Group Consensus together. **Interaction:** Choose shortlist capacity, compare the fairness-adjusted choice against the unadjusted baseline and review selection reasons. **Matters:** Makes Trippy’s primary differentiator visible at the decision point.
 
 ### 5. Shortlist and Validation
 
@@ -239,19 +287,19 @@ Screenshots have not been added to the repository and still need to be captured 
 
 Trippy exposes the decisions that produce the itinerary:
 
-**Preferences → Suggestions → Voting → Group Consensus → Shortlist → Validation → Sequence Preview → Itinerary**
+**Preferences → Suggestions → Voting → Fair Group Consensus → Shortlist → Validation → Sequence Preview → Itinerary**
 
 The itinerary is an outcome of visible group decisions, not an unexplained starting point.
 
-## Explainable Group Consensus
+## Fair Group Consensus
 
-Group Consensus is the primary differentiator. The client chooses shortlist capacity; the server derives the authoritative shortlist from trip membership, member preferences, candidate places and trip-scoped votes. Exact must-dos take priority and may expand capacity. Other candidates use:
+Fair Group Consensus is the primary differentiator. The client chooses shortlist capacity; the server derives the authoritative shortlist from trip membership, member preferences, candidate places and trip-scoped votes. Exact must-dos take priority and may expand capacity. Other candidates use:
 
 ```text
 base score = 2 × votes + preference matches - 2 × dislike conflicts
 ```
 
-A bounded `+3` representation bonus can change close choices, and stable IDs break final ties. The UI exposes base and fair scores, selection reasons, member representation and fairness trade-offs. The server persists the derived shortlist and advances the planning stage.
+A bounded `+3` representation bonus can change close choices, and stable IDs break final ties. The UI exposes the selected and baseline choices, base and fair scores, traveller coverage, selection reasons and the resulting trade-off. This audit trail—not voting or consensus alone—is Trippy's main product twist. The server persists the derived shortlist and advances the planning stage.
 
 ## Trip Rescue
 
@@ -259,7 +307,7 @@ Trip Rescue is the secondary differentiator. Travellers can prepare a backup pla
 
 ## Continuous Planning Workspace
 
-Groups can move through preferences, suggestions, votes, shortlist confirmation, itinerary, budget context, a shared checklist, shared expense splitting, per-stop Plan B preparation and plan adjustment without rebuilding the trip in separate documents. Group Consensus remains the primary differentiator, Trip Rescue is secondary, and these coordination tools support the shared plan.
+Groups can move through preferences, suggestions, votes, shortlist confirmation, itinerary, budget context, a shared checklist, shared expense splitting, per-stop Plan B preparation and plan adjustment without rebuilding the trip in separate documents. Fair Group Consensus remains the primary differentiator, Trip Rescue is secondary, and these coordination tools support the shared plan.
 
 ## Known Limitations
 
@@ -273,15 +321,15 @@ Groups can move through preferences, suggestions, votes, shortlist confirmation,
 
 ## Existing Solution Comparison
 
-This comparison describes emphasis, not a claim that another product lacks a capability.
+This comparison records current public product emphasis, checked on 12 September 2026. It does not claim that another product lacks an undocumented capability.
 
-| Dimension | Trippy Prototype | Existing Planners such as Wanderlog |
+| Product | Current public emphasis | Trippy's distinct focus |
 |---|---|---|
-| Starting point | Structured preferences, suggestions and votes | Commonly include itinerary, map and place-planning workflows |
-| Group decision process | Explicit voting followed by Group Consensus | Collaboration capabilities vary by product and plan |
-| Explainability | Shows rule-based scores, representation and trade-offs | Not evaluated here; consult each product’s current documentation |
-| Itinerary planning | Deterministic builder from a confirmed shortlist | Itinerary-planning capabilities are available |
-| Unexpected-plan adjustment | Prepared Trip Rescue demonstration | No comparative claim is made without current product verification |
+| [WePlanify](https://www.weplanify.com/en) | Group polls, itinerary, shared budget and assigned packing tasks | Shows when a representation adjustment changes the shortlist and identifies the affected travellers and baseline choice |
+| [MonkeyTravel](https://monkeytravel.app/group-trip-planner) | AI itineraries, four-level activity voting, weighted consensus and participation rates | Uses deterministic rules and exposes the exact fairness adjustment rather than presenting only the resulting consensus score |
+| [Jettova](https://www.jettova.com/group-travel) | Voting on vibes, budgets, destinations and activities with live consensus | Audits a fairness-aware activity shortlist and carries that shortlist into validation, itinerary and prepared recovery |
+
+Voting, collaboration, checklists and expense tools are therefore supporting capabilities, not novelty claims. Trippy's defensible promise is: **a fair group shortlist that shows exactly when and why a choice changed to represent someone who would otherwise be overlooked**.
 
 ---
 
@@ -323,7 +371,7 @@ Persisted mutations normally follow **UI → store action → authenticated API 
 |---|---|---|
 | Group planning | Persisted group/trip workflow | Real-time collaboration and concurrency controls |
 | Preferences, suggestions and voting | Persisted inputs and trip-scoped votes | Richer profiles and decision policies |
-| Group Consensus | Server-authoritative deterministic shortlist with explainable trade-offs | Richer policies, concurrency and collaboration controls |
+| Fair Group Consensus | Server-authoritative deterministic shortlist with explainable representation trade-offs | Richer policies, concurrency and collaboration controls |
 | Shortlist | Client-selected capacity; server-derived and persisted selection | Richer policy and approval controls |
 | Validation | Deterministic saved-data checks | Richer opening-hours, cost and routing validation |
 | Sequence preview | Saved stop order, area grouping and estimated travel time | Live route optimisation and travel-time services |
@@ -347,7 +395,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 
 - Group/trip setup, authentication and persistence
 - Preferences, suggestions and voting
-- Group Consensus and shortlist confirmation
+- Fair Group Consensus and shortlist confirmation
 - Validation, sequence preview and itinerary
 - Known estimated spend summary
 - Plan B per itinerary stop
@@ -378,7 +426,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 | End-to-end trip planning | Guided flow from setup and preferences through itinerary |
 | Budgeting | Known estimated spend with incomplete costs identified as unknown; shared persisted Split Bill |
 | Itinerary building | Deterministic day-by-day itinerary from a confirmed shortlist |
-| Group preferences | Member preferences, suggestions, votes and explainable Group Consensus |
+| Group preferences | Member preferences, suggestions, votes and Fair Group Consensus |
 | Traveller coordination | Visible stages, a shared persisted trip plan, member-assigned checklist and Split Bill |
 | Unexpected plan changes | Per-stop Plan B preparation and a prepared Trip Rescue flow that updates the itinerary |
 | Solo travel | The shared planning model can operate with one traveller; dedicated solo UX is limited |
@@ -391,10 +439,8 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 
 ## Target Users
 
-- Small friend groups
-- University and student travel groups
-- Young collaborative travellers
-- Solo travellers who want a structured planning flow
+- Student and friend groups of roughly 3–8 travellers where one organiser currently reconciles everyone's wishes
+- Solo travellers who want the same structured planning flow without the fairness adjustment
 
 ## Before Trippy
 
@@ -408,11 +454,11 @@ Ideas, preferences and decisions are spread across tools, so one person must man
 ## With Trippy
 
 ```text
-Preferences → Suggestions → Voting → Group Consensus
+Preferences → Suggestions → Voting → Fair Group Consensus
 → Shortlist → Itinerary → Final Plan → Trip Rescue
 ```
 
-Group Consensus makes agreement explicit before the itinerary is built, and the saved workflow keeps later changes connected to the same plan.
+Fair Group Consensus makes agreement and representation explicit before the itinerary is built, and the saved workflow keeps later changes connected to the same plan.
 
 ## Expected Impact
 
@@ -466,7 +512,7 @@ git checkout version1.1
 npm install
 ```
 
-Copy `.env.example` to `.env.local`, configure a local SQLite `DATABASE_URL` and `AUTH_SECRET`, and set `AUTH_DEMO_ENABLED=true` for the deterministic local demo. The optional `AUTH_DEMO_MEMBER_ID` defaults to the seeded fictional `you` member locally. When demo mode is enabled, the sign-in screen offers **Try Competition Demo**; Google OAuth remains available.
+Copy `.env.example` to `.env.local`, keep `DATABASE_URL="file:./dev.db"`, set a strong `AUTH_SECRET`, and set `AUTH_DEMO_ENABLED=true` for the deterministic local demo. The optional `AUTH_DEMO_MEMBER_ID` defaults to the seeded fictional `you` member locally. Local database scripts load `.env.local` through Node's built-in environment-file support. When demo mode is enabled, the sign-in screen offers **Try Competition Demo**; Google OAuth remains available.
 
 Then run:
 
@@ -528,6 +574,7 @@ The checked `version1.1` implementation is the source of truth for current capab
 # 12. Submission Links
 
 - **GitHub:** https://github.com/qianyi-11/TravPlanner
+- **Demo walkthrough:** [DEMO_FLOW.md](DEMO_FLOW.md)
 - **UI Prototype:** TODO — public link required
 - **Video Presentation:** TODO — unlisted YouTube link required
 - **Presentation Slides:** TODO — public link required

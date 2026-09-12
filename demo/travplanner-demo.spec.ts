@@ -1,8 +1,12 @@
+import { mkdirSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const TRIP_ID = process.env.DEMO_TRIP_ID ?? "trip-japan";
 const configuredPause = Number.parseInt(process.env.DEMO_PAUSE_MS ?? "", 10);
 const RECORDING = process.env.DEMO_RECORD === "1";
+const SCREENSHOTS = process.env.DEMO_SCREENSHOTS === "1";
+const screenshotDirectory = join(process.cwd(), "public", "submission-screenshots");
 const startedAt = Date.now();
 
 function tripRoute(suffix = "") {
@@ -25,6 +29,18 @@ async function pointAt(page: Page, locator: Locator, recordingMs = 1_000) {
   await page.waitForTimeout(waitDuration(recordingMs));
 }
 
+async function saveScreenshot(page: Page, filename: string) {
+  if (!SCREENSHOTS) return;
+  mkdirSync(screenshotDirectory, { recursive: true });
+  await page.evaluate(() => {
+    document.documentElement.style.zoom = "0.88";
+  });
+  await page.screenshot({ path: join(screenshotDirectory, filename), fullPage: true });
+  await page.evaluate(() => {
+    document.documentElement.style.zoom = "";
+  });
+}
+
 async function openChapter(page: Page, suffix: string, title: string, recordingMs = 3_500) {
   const response = await page.goto(tripRoute(suffix), { waitUntil: "domcontentloaded" });
   if (response && !response.ok()) throw new Error(`${title} failed to load: HTTP ${response.status()}`);
@@ -37,6 +53,7 @@ test("Trippy product walkthrough", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Try Competition Demo" })).toBeVisible();
   await page.getByRole("button", { name: "Try Competition Demo" }).click();
   await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
+  await saveScreenshot(page, "01-trip-dashboard.png");
   await openChapter(page, "", "Trip Setup — Japan Adventure", 3_500);
   await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Tokyo · Kyoto · Osaka", { exact: true })).toBeVisible();
@@ -45,18 +62,23 @@ test("Trippy product walkthrough", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Your preferences" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Group preferences" })).toBeVisible();
   await pointAt(page, page.getByText("Personal budget", { exact: true }));
+  await saveScreenshot(page, "02-preferences.png");
 
   await openChapter(page, "/vote", "Voting — the group narrows the options", 3_000);
   await expect(page.getByRole("heading", { name: "Where should we go?" })).toBeVisible();
   await expect(page.getByText(/votes used/)).toBeVisible();
   await pointAt(page, page.getByRole("button", { name: "Voted", exact: true }).first());
 
-  await openChapter(page, "/vote/results", "Group Consensus — fairness at capacity 10", 1_000);
+  await openChapter(page, "/vote/results", "Fair Group Consensus — fairness at capacity 10", 1_000);
   const capacity = page.getByTestId("shortlist-capacity");
   const tradeoff = page.getByTestId("consensus-tradeoff");
   await capacity.fill("10");
   await expect(tradeoff).toBeVisible();
+  await expect(tradeoff).toContainText("With group fairness");
+  await expect(page.getByTestId("consensus-selected")).toBeVisible();
+  await expect(page.getByTestId("consensus-unselected")).toContainText("View 9 unselected options");
   await pointAt(page, tradeoff, 800);
+  await saveScreenshot(page, "03-fair-group-consensus.png");
   await pause(page, "Consensus trade-off at capacity 10", 5_000);
   await capacity.fill("11");
   await expect(tradeoff).toHaveCount(0);
@@ -74,6 +96,7 @@ test("Trippy product walkthrough", async ({ page }) => {
   await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
   await expect(page.getByText("teamLab Borderless", { exact: true })).toBeVisible();
   await pointAt(page, page.getByText("teamLab Borderless", { exact: true }));
+  await saveScreenshot(page, "04-itinerary.png");
 
   await openChapter(page, "/plan", "Plan B — prepare a saved backup", 2_000);
   await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
@@ -98,6 +121,7 @@ test("Trippy product walkthrough", async ({ page }) => {
   await hotelToggle.click();
   await expect(hotelToggle).toBeChecked();
   await pause(page, "Shared Checklist — Confirm Kyoto hotel is complete", 3_000);
+  await saveScreenshot(page, "05-plan-b-and-checklist.png");
 
   await openChapter(page, "/split-bill", "Split Bill — one shared expense, clearly divided", 2_000);
   const splitBill = page.getByTestId("split-bill-card");
@@ -109,6 +133,7 @@ test("Trippy product walkthrough", async ({ page }) => {
   await expect(page.getByTestId("split-bill-save-status")).toHaveText("Saved");
   await pointAt(page, page.getByTestId("split-bill-breakdown"));
   await pause(page, "Split Bill breakdown and saved state", 4_000);
+  await saveScreenshot(page, "06-split-bill.png");
 
   await openChapter(page, "/live", "Trip Rescue — use the saved Plan B", 2_000);
   await expect(page.getByText("Trip Rescue", { exact: true })).toBeVisible();
@@ -119,6 +144,7 @@ test("Trippy product walkthrough", async ({ page }) => {
   await acceptRescue.click();
   await expect(page.getByText("You accepted the new activity. Trip itinerary updated for everyone.")).toBeVisible();
   await pause(page, "Trip Rescue accepted", 3_500);
+  await saveScreenshot(page, "07-trip-rescue.png");
 
   await openChapter(page, "/itinerary", "Updated Plan — replacement accepted for everyone", 1_500);
   await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
@@ -135,5 +161,6 @@ test("Trippy product walkthrough", async ({ page }) => {
   await expect(page.getByTestId("checklist-toggle-checklist-japan-hotel")).toBeChecked();
   await pointAt(page, page.getByText("Shared checklist", { exact: true }), 1_000);
   await pause(page, "Final active plan", 5_000);
+  await saveScreenshot(page, "08-final-plan.png");
   console.log("[DEMO] Recording flow completed successfully");
 });

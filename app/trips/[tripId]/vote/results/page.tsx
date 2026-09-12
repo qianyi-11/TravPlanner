@@ -44,15 +44,13 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const selectedById = new Map(consensus.shortlist.map((item) => [item.candidateId, item]));
   const fairSelection = fairPlace ? selectedById.get(fairPlace.id) : undefined;
   const selectedIds = new Set(selectedById.keys());
-  const orderedPlaces = [
-    ...consensus.shortlist
-      .map((item) => places.find((place) => place.id === item.candidateId))
-      .filter((place): place is (typeof places)[number] => Boolean(place)),
-    ...consensus.candidateOrder
-      .filter((id) => !selectedIds.has(id))
-      .map((id) => places.find((place) => place.id === id))
-      .filter((place): place is (typeof places)[number] => Boolean(place)),
-  ];
+  const selectedPlaces = consensus.shortlist
+    .map((item) => places.find((place) => place.id === item.candidateId))
+    .filter((place): place is (typeof places)[number] => Boolean(place));
+  const unselectedPlaces = consensus.candidateOrder
+    .filter((id) => !selectedIds.has(id))
+    .map((id) => places.find((place) => place.id === id))
+    .filter((place): place is (typeof places)[number] => Boolean(place));
 
   if (!trip) notFound();
 
@@ -66,16 +64,76 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
     }
   }
 
+  function resultRow(place: (typeof places)[number], index: number) {
+    const result = consensus.candidates[place.id];
+    const selected = selectedById.get(place.id);
+    const mustDoNames = result.mustDoMemberIds.map((id) => members[id]?.name ?? id);
+
+    return (
+      <div key={place.id} className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)] sm:flex sm:items-center">
+        <div
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
+            index === 0
+              ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
+              : selected
+              ? "bg-[var(--color-teal-soft)] text-[var(--color-teal-dark)]"
+              : "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
+          }`}
+        >
+          {index === 0 ? <Trophy size={16} /> : `#${index + 1}`}
+        </div>
+        <PlaceCover photo={place.photo} category={place.category} className="h-12 w-12 shrink-0 rounded-xl" iconSize={16} />
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-bold">{place.name}</p>
+          <p className="text-xs text-[var(--color-ink-soft)]">
+            {place.category} · {place.area}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-[var(--color-ink-soft)]">
+            <span className="font-semibold text-[var(--color-primary-dark)]">Preference signal {result.groupMatchPercent}%</span>
+            <span>Base score {result.baseScore}</span>
+            {selected && <span>Fair score {selected.fairScore}</span>}
+            <span>{result.preferenceMatchCount}/{tripMembers.length} preference coverage</span>
+            <span>{result.dislikeConflictCount ? `${result.dislikeConflictCount} preference conflict${result.dislikeConflictCount === 1 ? "" : "s"}` : "No conflicts"}</span>
+          </div>
+          {selected && <p className="mt-1 text-xs text-[var(--color-ink)]">{selected.reason}</p>}
+          <div className="mt-1 flex flex-wrap gap-1">
+            {mustDoNames.length > 0 && (
+              <span className="rounded-full bg-[var(--color-teal-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-teal-dark)]">
+                Must-do · {mustDoNames.join(", ")}
+              </span>
+            )}
+            {selected?.selectionReason === "REPRESENTATION" && (
+              <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-primary-dark)]">
+                Improves group representation
+              </span>
+            )}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
+            <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
+            <span className="text-right text-sm font-bold">{result.voteCount} votes</span>
+          </div>
+        </div>
+        <div className="hidden sm:block">
+          <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
+        </div>
+        <span className="hidden w-16 shrink-0 text-right text-sm font-bold sm:block">{result.voteCount} votes</span>
+      </div>
+    );
+  }
+
   return (
     <div>
       <TripHeader trip={trip} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Voting results</h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
-            Ranked by votes, preferences and balanced group representation.
-          </p>
+      <div className="mt-6">
+        <h1 className="font-display text-2xl font-bold">Fair Group Consensus</h1>
+        <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+          See who the shortlist represents, why each place ranks, and when fairness changes a decision.
+        </p>
+      </div>
+
+      <div className="mt-5 grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="order-2 lg:order-1">
 
           {primaryTradeoff && fairPlace && baselinePlace && (
             <Card data-testid="consensus-tradeoff" className="mt-5 p-5">
@@ -119,68 +177,27 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
             </Card>
           )}
 
-          <div className="mt-5 space-y-2.5">
-            {orderedPlaces.map((place, i) => {
-              const result = consensus.candidates[place.id];
-              const selected = selectedById.get(place.id);
-              const mustDoNames = result.mustDoMemberIds.map((id) => members[id]?.name ?? id);
-              return (
-              <div key={place.id} className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)] sm:flex sm:items-center">
-                <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
-                    i === 0
-                      ? "bg-[var(--color-warning-bg)] text-[var(--color-warning)]"
-                      : selected
-                      ? "bg-[var(--color-teal-soft)] text-[var(--color-teal-dark)]"
-                      : "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
-                  }`}
-                >
-                  {i === 0 ? <Trophy size={16} /> : `#${i + 1}`}
-                </div>
-                <PlaceCover photo={place.photo} category={place.category} className="h-12 w-12 shrink-0 rounded-xl" iconSize={16} />
-                <div className="min-w-0 flex-1">
-                  <p className="break-words text-sm font-bold">{place.name}</p>
-                  <p className="text-xs text-[var(--color-ink-soft)]">
-                    {place.category} · {place.area}
-                  </p>
-                  <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-[var(--color-ink-soft)]">
-                    <span className="font-semibold text-[var(--color-primary-dark)]">Preference signal {result.groupMatchPercent}%</span>
-                    <span>Base score {result.baseScore}</span>
-                    {selected && <span>Fair score {selected.fairScore}</span>}
-                    <span>{result.preferenceMatchCount}/{tripMembers.length} preference coverage</span>
-                    <span>{result.dislikeConflictCount ? `${result.dislikeConflictCount} preference conflict${result.dislikeConflictCount === 1 ? "" : "s"}` : "No conflicts"}</span>
-                  </div>
-                  {selected && <p className="mt-1 text-xs text-[var(--color-ink)]">{selected.reason}</p>}
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {mustDoNames.length > 0 && (
-                      <span className="rounded-full bg-[var(--color-teal-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-teal-dark)]">
-                        Must-do · {mustDoNames.join(", ")}
-                      </span>
-                    )}
-                    {selected?.selectionReason === "REPRESENTATION" && (
-                      <span className="rounded-full bg-[var(--color-primary-soft)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-primary-dark)]">
-                        Improves group representation
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
-                    <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
-                    <span className="text-right text-sm font-bold">{result.voteCount} votes</span>
-                  </div>
-                </div>
-                <div className="hidden sm:block">
-                  <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
-                </div>
-                <span className="hidden w-16 shrink-0 text-right text-sm font-bold sm:block">{result.voteCount} votes</span>
-              </div>
-            )})}
+          <div data-testid="consensus-selected" className="mt-5 space-y-2.5">
+            <h2 className="font-display text-lg font-bold">Selected shortlist</h2>
+            {selectedPlaces.map(resultRow)}
           </div>
+
+          {unselectedPlaces.length > 0 && (
+            <details data-testid="consensus-unselected" className="mt-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-sand)] p-4">
+              <summary className="cursor-pointer font-display text-sm font-bold">
+                View {unselectedPlaces.length} unselected option{unselectedPlaces.length === 1 ? "" : "s"}
+              </summary>
+              <div className="mt-4 space-y-2.5">
+                {unselectedPlaces.map((place, index) => resultRow(place, selectedPlaces.length + index))}
+              </div>
+            </details>
+          )}
         </div>
 
-        <Card className="h-fit p-5">
+        <Card data-testid="consensus-controls" className="order-1 h-fit p-5 lg:order-2 lg:sticky lg:top-24">
           <div className="mb-3 flex items-center gap-2">
             <Info size={16} className="text-[var(--color-primary)]" />
-            <h3 className="font-display text-base font-bold">How many places?</h3>
+            <h2 className="font-display text-base font-bold">Choose shortlist size</h2>
           </div>
           <div className="space-y-1 text-sm text-[var(--color-ink-soft)]">
             {rec?.reasoning.map((reason) => <p key={reason}>{reason}</p>)}
@@ -204,6 +221,16 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
 
           <p className="mt-3 text-xs text-[var(--color-ink-soft)]">
             {consensus.shortlist.length} of {places.length} suggested places will move forward.
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--color-teal-dark)]">
+            Represents {consensus.representedMemberCount} of {tripMembers.length} travellers.
+          </p>
+          <p className="mt-2 text-xs text-[var(--color-ink-soft)]">
+            {places.length > 0 && consensus.shortlist.length === places.length
+              ? "Every suggestion fits. Choose a tighter shortlist to compare the trade-offs."
+              : consensus.tradeoffs.length
+              ? `Fairness changed ${consensus.tradeoffs.length} shortlist decision${consensus.tradeoffs.length === 1 ? "" : "s"}.`
+              : "No representation adjustment changes the shortlist at this size."}
           </p>
 
           <Button data-testid="confirm-shortlist" fullWidth className="mt-5" onClick={handleConfirm} disabled={places.length === 0 || submitting}>

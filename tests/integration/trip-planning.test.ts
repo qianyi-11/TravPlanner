@@ -446,6 +446,17 @@ test("submission progress is trip-scoped and actor-scoped", async () => {
   assert.equal((await submitVotes(request({}), tripContext("trip-a2"))).status, 403);
 });
 
+test("the last ideas submission advances the group to preferences", async () => {
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { stage: "ideas" } });
+
+  assert.equal((await submitSuggestions(request({}), tripContext("trip-a"))).status, 200);
+  assert.equal((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).stage, "ideas");
+
+  setAuthenticatedMemberIdForTests("member-b");
+  assert.equal((await submitSuggestions(request({}), tripContext("trip-a"))).status, 200);
+  assert.equal((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).stage, "preferences");
+});
+
 test("desired vote writes are idempotent in both directions", async () => {
   const context = tripContext("trip-a");
   assert.deepEqual(await body(await toggleVote(request({ placeId: "place-a", voted: true }), context)), { ok: true, voted: true });

@@ -14,14 +14,14 @@
     "demo:record": "tsx scripts/run-demo.ts --record",
     "demo:browser-install": "playwright install chromium",
     "postinstall": "prisma generate",
-    "db:generate": "prisma generate --schema=prisma/schema.sqlite.prisma",
+    "db:generate": "node --env-file-if-exists=.env.local node_modules/prisma/build/index.js generate --schema=prisma/schema.sqlite.prisma",
     "db:generate:production": "prisma generate --schema=prisma/schema.prisma",
-    "db:push": "prisma db push --schema=prisma/schema.sqlite.prisma",
+    "db:push": "node --env-file-if-exists=.env.local node_modules/prisma/build/index.js db push --schema=prisma/schema.sqlite.prisma",
     "db:push:production": "prisma db push --schema=prisma/schema.prisma",
-    "db:seed": "prisma db seed --schema=prisma/schema.sqlite.prisma",
+    "db:seed": "node --env-file-if-exists=.env.local node_modules/prisma/build/index.js db seed --schema=prisma/schema.sqlite.prisma",
     "db:seed:production": "prisma db seed --schema=prisma/schema.prisma",
     "db:migrate:production": "prisma migrate deploy --schema=prisma/schema.prisma",
-    "db:studio": "prisma studio"
+    "db:studio": "node --env-file-if-exists=.env.local node_modules/prisma/build/index.js studio --schema=prisma/schema.sqlite.prisma"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

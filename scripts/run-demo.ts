@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
@@ -51,7 +51,11 @@ for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${demoDbPath}${su
 writeFileSync(demoDbPath, "");
 
 console.log("\n[1/3] Creating demo database...");
-run(npxCommand, ["prisma", "generate", "--schema=prisma/schema.sqlite.prisma"]);
+if (existsSync(join(root, "lib", "generated", "prisma", "index.js"))) {
+  console.log("Using existing generated Prisma client.");
+} else {
+  run(npxCommand, ["prisma", "generate", "--schema=prisma/schema.sqlite.prisma"]);
+}
 run(npxCommand, ["prisma", "db", "push", "--schema=prisma/schema.sqlite.prisma", "--skip-generate", "--accept-data-loss"]);
 console.log("\n[2/3] Loading deterministic demo fixture...");
 run(npxCommand, ["prisma", "db", "seed"]);

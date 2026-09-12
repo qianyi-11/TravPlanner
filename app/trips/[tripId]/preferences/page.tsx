@@ -16,6 +16,7 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
   const { tripId } = use(params);
   const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
+  const tripMemberProgress = usePlannerStore((s) => s.tripMemberProgress[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
   const members = usePlannerStore(
@@ -34,6 +35,11 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
   const [budget, setBudget] = useState(me?.preferences?.personalBudget ?? 1500);
 
   if (!trip) notFound();
+
+  const allSuggestionsSubmitted = members.length > 0 && members.every(
+    (member) => tripMemberProgress?.[member.id]?.submittedSuggestions
+  );
+  const solo = members.length === 1;
 
   function toggle<T>(list: T[], setList: (v: T[]) => void, value: T) {
     setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -54,8 +60,15 @@ export default function PreferencesPage({ params }: { params: Promise<{ tripId: 
       dislikes,
       personalBudget: budget,
     }))) return;
-    showToast("Preferences saved");
-    router.push(`/trips/${tripId}/places`);
+    if (solo) {
+      showToast("Preferences saved — building your shortlist");
+      router.push(`/trips/${tripId}/vote/results`);
+    } else if (allSuggestionsSubmitted) {
+      showToast("Preferences saved — starting the vote");
+      router.push(`/trips/${tripId}/generating`);
+    } else {
+      showToast("Preferences saved. Voting opens when everyone submits their ideas.");
+    }
   }
 
   return (

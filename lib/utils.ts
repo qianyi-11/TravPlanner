@@ -82,6 +82,23 @@ export function stageStatus(
   return "upcoming";
 }
 
+const STAGE_PATHS: Record<string, PlanningStage> = {
+  places: "ideas",
+  preferences: "preferences",
+  vote: "voting",
+  generating: "voting",
+  shortlist: "validation",
+  validate: "validation",
+  route: "route",
+  itinerary: "itinerary",
+  plan: "itinerary",
+};
+
+export function stageFromTripPathname(pathname: string): PlanningStage | undefined {
+  const segment = pathname.match(/^\/trips\/[^/]+\/([^/]+)/)?.[1];
+  return segment ? STAGE_PATHS[segment] : undefined;
+}
+
 export function recommendPlaceCount(trip: Pick<Trip, "startDate" | "endDate" | "dailyStart" | "dailyEnd">): {
   count: number;
   reasoning: string;

@@ -2,8 +2,9 @@
 
 import { Check } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { STAGE_LABELS, STAGE_ORDER, type PlanningStage } from "@/lib/types";
-import { cx, stageStatus } from "@/lib/utils";
+import { cx, stageFromTripPathname, stageStatus } from "@/lib/utils";
 
 const STAGE_HREF: Record<PlanningStage, string> = {
   ideas: "places",
@@ -23,35 +24,39 @@ export function ProgressStepper({
   current: PlanningStage;
   linkable?: boolean;
 }) {
+  const active = stageFromTripPathname(usePathname()) ?? current;
+
   return (
     <div className="flex items-center gap-0 overflow-x-auto scrollbar-none -mx-1 px-1">
       {STAGE_ORDER.map((stage, i) => {
         const status = stageStatus(stage, current);
+        const isActive = stage === active;
+        const canNavigate = status !== "upcoming" || (current === "ideas" && stage === "preferences");
         const isLast = i === STAGE_ORDER.length - 1;
         const content = (
           <div
             className={cx(
               "group flex items-center gap-2.5 rounded-full px-3.5 py-2 transition-colors shrink-0",
-              status === "current" && "bg-[var(--color-ink)]",
-              status !== "current" && linkable && "hover:bg-[var(--color-sand)]"
+              isActive && "bg-[var(--color-ink)]",
+              !isActive && linkable && canNavigate && "hover:bg-[var(--color-sand)]"
             )}
           >
             <span
               className={cx(
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold font-display",
-                status === "done" && "bg-[var(--color-teal)] text-white",
-                status === "current" && "bg-white text-[var(--color-ink)]",
-                status === "upcoming" && "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
+                status === "done" && !isActive && "bg-[var(--color-teal)] text-white",
+                isActive && "bg-white text-[var(--color-ink)]",
+                status === "upcoming" && !isActive && "bg-[var(--color-sand)] text-[var(--color-ink-soft)]"
               )}
             >
-              {status === "done" ? <Check size={13} strokeWidth={3} /> : String(i + 1).padStart(2, "0")}
+              {status === "done" && !isActive ? <Check size={13} strokeWidth={3} /> : String(i + 1).padStart(2, "0")}
             </span>
             <span
               className={cx(
                 "text-sm font-semibold whitespace-nowrap",
-                status === "current" && "text-white",
-                status === "done" && "text-[var(--color-ink)]",
-                status === "upcoming" && "text-[var(--color-ink-soft)]"
+                isActive && "text-white",
+                status === "done" && !isActive && "text-[var(--color-ink)]",
+                status === "upcoming" && !isActive && "text-[var(--color-ink-soft)]"
               )}
             >
               {STAGE_LABELS[stage]}
@@ -60,10 +65,10 @@ export function ProgressStepper({
         );
         return (
           <div key={stage} className="flex items-center shrink-0">
-            {linkable ? (
-              <Link href={`/trips/${tripId}/${STAGE_HREF[stage]}`}>{content}</Link>
+            {linkable && canNavigate ? (
+              <Link href={`/trips/${tripId}/${STAGE_HREF[stage]}`} aria-current={isActive ? "step" : undefined}>{content}</Link>
             ) : (
-              content
+              <span aria-disabled={linkable ? "true" : undefined} title={linkable ? "Complete the current step first" : undefined}>{content}</span>
             )}
             {!isLast && (
               <div
