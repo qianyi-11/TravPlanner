@@ -17,7 +17,7 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { gradientFor } from "@/lib/mock-data";
+import { gradientFor } from "@/lib/utils";
 
 const CATEGORY_ICON: Record<string, LucideIcon> = {
   Temple: Landmark,

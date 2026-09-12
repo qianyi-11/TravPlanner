@@ -3,14 +3,6 @@ import { requireAccessiblePlaceActor } from "@/lib/server/authorization";
 import { fetchGooglePlacePhoto } from "@/lib/server/google/places";
 import { requireId } from "@/lib/server/validation";
 
-export async function PATCH() {
-  try {
-    throw new ApiError(410, "PLACE_PHOTO_SERVER_ONLY", "Place photos are resolved by the server during import");
-  } catch (error) {
-    return apiErrorResponse(error);
-  }
-}
-
 export async function GET(_request: Request, { params }: { params: Promise<{ placeId: string }> }) {
   try {
     const placeId = requireId((await params).placeId, "placeId");

@@ -1,10 +1,9 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = process.cwd();
 const demoDbPath = join(root, "prisma", "demo.db");
-const schemaDbPath = join(root, "prisma", "prisma", "dev.db");
 const recording = process.argv.includes("--record") || process.env.DEMO_RECORD === "1";
 const recordingOutput = join(root, "demo-output", "travplanner-demo.webm");
 const demoEnvironment: NodeJS.ProcessEnv = {
@@ -42,13 +41,13 @@ function findVideos(directory: string): string[] {
   }
 }
 
-console.log("TravPlanner CodeNection Demo");
+console.log("Trippy CodeNection Demo");
 console.log("Using isolated database: prisma/demo.db");
 console.log("Your normal development database is not modified.");
 if (recording) rmSync(recordingOutput, { force: true });
 
 for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(`${demoDbPath}${suffix}`, { force: true });
-copyFileSync(schemaDbPath, demoDbPath);
+writeFileSync(demoDbPath, "");
 
 console.log("\n[1/3] Creating demo database...");
 run(npxCommand, ["prisma", "generate", "--schema=prisma/schema.sqlite.prisma"]);

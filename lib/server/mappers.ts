@@ -48,8 +48,6 @@ export function mapMember(
     preferences: row.preferencesJson ? (JSON.parse(row.preferencesJson) as MemberPreferences) : undefined,
     suggestedPlaceIds: ctx.suggestedPlaceIds,
     votedPlaceIds: ctx.votedPlaceIds,
-    hasSubmittedSuggestions: row.hasSubmittedSuggestions,
-    hasSubmittedVotes: row.hasSubmittedVotes,
   };
 }
 

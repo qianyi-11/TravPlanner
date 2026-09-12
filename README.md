@@ -1,4 +1,4 @@
-# TravPlanner
+# Trippy — Plan your trip together
 
 **Team:** TODO
 
@@ -22,11 +22,11 @@
 
 Travel planning is fragmented across place discovery, group chats, polls, maps, itineraries, budgets and expense tools. Group travel adds the harder coordination problem: different travellers bring different interests, budgets, priorities and must-dos, but the group still needs one plan.
 
-The challenge spans budgeting, itinerary building, group preferences, traveller coordination, unexpected plan changes, and both solo and group travel. Existing solutions such as Wanderlog show how useful it is to combine itineraries, maps, budgeting and collaboration. TravPlanner targets a narrower gap: **converting different individual preferences into one shared plan whose trade-offs remain visible**.
+The challenge spans budgeting, itinerary building, group preferences, traveller coordination, unexpected plan changes, and both solo and group travel. Existing solutions such as Wanderlog show how useful it is to combine itineraries, maps, budgeting and collaboration. Trippy targets a narrower gap: **converting different individual preferences into one shared plan whose trade-offs remain visible**.
 
 ## Our Solution
 
-TravPlanner is a collaborative travel planner for solo travellers and small groups. Its main differentiator is explainable **Group Consensus**, which turns member preferences, suggestions and votes into a shared shortlist. The confirmed shortlist then feeds validation, a sequence preview and a persisted itinerary. **Trip Rescue** demonstrates how that itinerary can be adjusted after a prepared plan change.
+Trippy is a collaborative travel planner for solo travellers and small groups. Its main differentiator is explainable **Group Consensus**, which turns member preferences, suggestions and votes into a shared shortlist. The confirmed shortlist then feeds validation, a sequence preview and a persisted itinerary. **Trip Rescue** demonstrates how that itinerary can be adjusted after a prepared plan change.
 
 ### Current Prototype Features
 
@@ -116,7 +116,19 @@ Trip Rescue
 
 The planned map should show how fragmented tools, group disagreement, budget uncertainty and plan changes connect to the product. It influenced the decision to keep one guided workflow centred on Group Consensus rather than a collection of disconnected utilities.
 
-**Additional ideation artefact:** TODO — add the team’s actual problem/solution map or mindmap before submission.
+**Consolidated ideation map based on documented team decisions and mentor feedback:**
+
+```text
+Fragmented travel tools + different traveller preferences
+                         ↓
+              Group disagreement + plan changes
+                         ↓
+                 Coordination overhead
+                         ↓
+Structured preferences → Voting → Explainable Group Consensus
+                         ↓
+Shared itinerary → Plan B, Shared Checklist, Split Bill → Trip Rescue
+```
 
 ### User Flow
 
@@ -127,7 +139,13 @@ Trip setup → Preferences → Suggestions → Voting → Group Consensus
 
 This flow demonstrates the coordination problem from opinions to an actionable plan. It influenced the stage-based interface and the decision to keep each planning transition visible.
 
-**User-flow artefact:** TODO — add the team’s actual diagram before submission.
+**Consolidated user-flow map based on the implemented prototype:**
+
+```text
+Trip setup → Preferences → Suggestions → Voting → Group Consensus
+→ Shortlist → Validation → Sequence Preview → Itinerary
+→ Plan B + Checklist + Split Bill → Trip Rescue
+```
 
 ## 2.3 Idea Evolution
 
@@ -147,15 +165,15 @@ This flow demonstrates the coordination problem from opinions to an actionable p
 |---|---|---|---|
 | 09/09/2026 | Mentor 1 | Groups with different schedules struggle to find a suitable meeting time; consider a calendar or availability input that identifies overlaps. | Considered a Group Availability Poll; deferred it from the current MVP to prioritise the core collaborative planning flow and competition demo. |
 | 09/09/2026 | Mentor 1 | Members starting from different places need a practical meeting point; consider using distance or travel time to suggest a location such as a café. | Considered a Meeting Point Recommendation; deferred it because the extra location and travel-time logic is outside the current MVP. |
-| 09/09/2026 | Mentor 1 | Study existing travel planners, particularly Wanderlog, and clarify why travellers would choose TravPlanner. | Strengthened conservative competitive analysis and positioned TravPlanner around the group decision process between individual preferences and one shared itinerary. |
+| 09/09/2026 | Mentor 1 | Study existing travel planners, particularly Wanderlog, and clarify why travellers would choose Trippy. | Strengthened conservative competitive analysis and positioned Trippy around the group decision process between individual preferences and one shared itinerary. |
 | 09/09/2026 | Mentor 1 | Voting was a promising direction, but the team needed to examine the problem more deeply and establish a clearer unique selling point. | The feedback pushed us to strengthen simple voting into a more differentiated **Preferences → Voting → Explainable Group Consensus → Shared Plan** workflow. |
-| 09/09/2026 | Mentor 1 | Survey the market, compare competitors and explain what makes TravPlanner stand out. | Added a comparison focused on TravPlanner’s own product emphasis without claiming unverified gaps in competing products. |
+| 09/09/2026 | Mentor 1 | Survey the market, compare competitors and explain what makes Trippy stand out. | Added a comparison focused on Trippy’s own product emphasis without claiming unverified gaps in competing products. |
 | 09/09/2026 | Mentor 1 | Explore broader ideas including flight-ticket functionality and automatic travel-data extraction from a URL. | Recorded both as deferred ideas; neither directly strengthens the core MVP enough to justify implementation before submission. |
 | 09/09/2026 | Jarod Tan | Research previous hackathon travel and group-planning projects to understand common patterns. | **Decision:** research previous hackathon projects before finalising differentiation; no completed findings are claimed here. |
 | 09/09/2026 | Jarod Tan | Group voting alone was not sufficiently distinctive because similar voting and preference mechanisms are common. | Repositioned basic voting as an input to the stronger Explainable Group Consensus workflow rather than the innovation itself. |
 | 09/09/2026 | Jarod Tan | Look for a more memorable or ambitious product direction. | Based on this feedback, the team reviewed how to make the product more distinctive, retaining Group Consensus as primary and strengthening the supporting story around Trip Rescue, Plan B, Shared Checklist and Split Bill. |
 
-Before mentorship, TravPlanner was primarily framed as a travel planner with collaborative voting. After the sessions, the team focused more strongly on the difficult group-coordination problem: **different preferences → voting → explainable consensus → shared itinerary → coordinated preparation → adjustment when plans change**. The mentors did not design the implemented features or scoring algorithm; their feedback prompted the team to sharpen the product’s differentiation and document why ideas were implemented or deferred.
+Before mentorship, Trippy was primarily framed as a travel planner with collaborative voting. After the sessions, the team focused more strongly on the difficult group-coordination problem: **different preferences → voting → explainable consensus → shared itinerary → coordinated preparation → adjustment when plans change**. The mentors did not design the implemented features or scoring algorithm; their feedback prompted the team to sharpen the product’s differentiation and document why ideas were implemented or deferred.
 
 ---
 
@@ -181,7 +199,7 @@ Screenshots have not been added to the repository and still need to be captured 
 
 ### 4. Group Voting and Consensus
 
-**Does:** Displays trip-scoped votes and the explainable Group Consensus result together. **Interaction:** Vote, choose shortlist capacity and review selection reasons and fairness trade-offs. **Matters:** Makes TravPlanner’s server-authoritative primary differentiator visible at the decision point.
+**Does:** Displays trip-scoped votes and the explainable Group Consensus result together. **Interaction:** Vote, choose shortlist capacity and review selection reasons and fairness trade-offs. **Matters:** Makes Trippy’s server-authoritative primary differentiator visible at the decision point.
 
 ### 5. Shortlist and Validation
 
@@ -205,7 +223,7 @@ Screenshots have not been added to the repository and still need to be captured 
 
 ## Planning as a Visible Process
 
-TravPlanner exposes the decisions that produce the itinerary:
+Trippy exposes the decisions that produce the itinerary:
 
 **Preferences → Suggestions → Voting → Group Consensus → Shortlist → Validation → Sequence Preview → Itinerary**
 
@@ -223,7 +241,7 @@ A bounded `+3` representation bonus can change close choices, and stable IDs bre
 
 ## Trip Rescue
 
-Trip Rescue is the secondary differentiator. Travellers can prepare a backup place for important itinerary stops before disruption occurs. When an event affects a stop, the saved Plan B is used when available; otherwise the existing prepared fallback remains. Accepting a replacement modifies the persisted itinerary and resolves the event in one database transaction. TravPlanner does not automatically detect live disruptions, search for live alternatives or verify live availability.
+Trip Rescue is the secondary differentiator. Travellers can prepare a backup place for important itinerary stops before disruption occurs. When an event affects a stop, the saved Plan B is used when available; otherwise the existing prepared fallback remains. Accepting a replacement modifies the persisted itinerary and resolves the event in one database transaction. Trippy does not automatically detect live disruptions, search for live alternatives or verify live availability.
 
 ## Continuous Planning Workspace
 
@@ -243,7 +261,7 @@ Groups can move through preferences, suggestions, votes, shortlist confirmation,
 
 This comparison describes emphasis, not a claim that another product lacks a capability.
 
-| Dimension | TravPlanner Prototype | Existing Planners such as Wanderlog |
+| Dimension | Trippy Prototype | Existing Planners such as Wanderlog |
 |---|---|---|
 | Starting point | Structured preferences, suggestions and votes | Commonly include itinerary, map and place-planning workflows |
 | Group decision process | Explicit voting followed by Group Consensus | Collaboration capabilities vary by product and plan |
@@ -341,7 +359,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 
 # 6. Competition Requirement Coverage
 
-| Requirement | TravPlanner Prototype |
+| Requirement | Trippy Prototype |
 |---|---|
 | End-to-end trip planning | Guided flow from setup and preferences through itinerary |
 | Budgeting | Known estimated spend with incomplete costs identified as unknown; shared persisted Split Bill |
@@ -364,7 +382,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 - Young collaborative travellers
 - Solo travellers who want a structured planning flow
 
-## Before TravPlanner
+## Before Trippy
 
 ```text
 Group chat + maps + saved places + polls + spreadsheet
@@ -373,7 +391,7 @@ Group chat + maps + saved places + polls + spreadsheet
 
 Ideas, preferences and decisions are spread across tools, so one person must manually reconcile them into a plan.
 
-## With TravPlanner
+## With Trippy
 
 ```text
 Preferences → Suggestions → Voting → Group Consensus
@@ -394,7 +412,7 @@ These are expected product outcomes; the repository does not contain completed u
 
 ## Scalability
 
-TravPlanner starts with small friend and student groups. A realistic path is to support larger social and family groups, managed infrastructure, real-time collaboration, more destinations, richer travel providers and additional external services after the core decision flow is validated.
+Trippy starts with small friend and student groups. A realistic path is to support larger social and family groups, managed infrastructure, real-time collaboration, more destinations, richer travel providers and additional external services after the core decision flow is validated.
 
 ---
 

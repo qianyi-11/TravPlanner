@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import { mapCatalogPlace, mapGroup, mapMember, mapPlaceForTrip, mapTrip } from "@/lib/server/mappers";
-import type { Group, Member, Place, Trip } from "@/lib/types";
+import type { Group, Member, Place, Trip, TripMemberProgress } from "@/lib/types";
 import { apiErrorResponse } from "@/lib/server/api-error";
 import { requireAuthenticatedActor } from "@/lib/server/auth";
 import { isDemoAuthEnabled } from "@/lib/server/demo-auth";
@@ -43,6 +43,9 @@ export async function GET() {
     ]);
 
     const tripIds = tripRows.map(({ id }) => id);
+    const progressRows = tripIds.length
+      ? await prisma.tripMemberProgress.findMany({ where: { tripId: { in: tripIds } } })
+      : [];
     const placeRows = tripIds.length
       ? await prisma.place.findMany({
           where: { tripPlaces: { some: { tripId: { in: tripIds } } } },
@@ -87,7 +90,17 @@ export async function GET() {
       trips[row.id] = mapTrip(row, row.group.members.map((member) => member.memberId));
     }
 
-    return NextResponse.json({ groups, members, trips, places, tripPlaces, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
+    const tripMemberProgress: Record<string, Record<string, TripMemberProgress>> = {};
+    for (const row of progressRows) {
+      (tripMemberProgress[row.tripId] ??= {})[row.memberId] = {
+        tripId: row.tripId,
+        memberId: row.memberId,
+        submittedSuggestions: row.submittedSuggestions,
+        submittedVotes: row.submittedVotes,
+      };
+    }
+
+    return NextResponse.json({ groups, members, trips, places, tripPlaces, tripMemberProgress, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
   } catch (error) {
     return apiErrorResponse(error);
   }

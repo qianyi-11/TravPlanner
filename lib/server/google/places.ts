@@ -1,4 +1,4 @@
-import { gradientFor } from "@/lib/mock-data";
+import { gradientFor } from "@/lib/utils";
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
 import { ApiError } from "../api-error";
 import { getServerEnv } from "../env";

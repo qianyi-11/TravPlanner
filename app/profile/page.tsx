@@ -93,7 +93,7 @@ export default function ProfilePage() {
       </Card> : <Card className="mt-8 flex items-center justify-between gap-4 p-5">
         <div>
           <h2 className="font-display text-lg font-bold">Signed in</h2>
-          <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Your Google account is linked to this TravPlanner profile.</p>
+            <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Your Google account is linked to this Trippy profile.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: "/" })}>Sign out</Button>
       </Card>}

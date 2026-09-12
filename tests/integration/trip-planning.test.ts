@@ -378,8 +378,33 @@ test("client memberId cannot spoof planning identity", async () => {
   }));
   assert.equal(await prisma.suggestion.count({ where: { memberId: "member-b" } }), 0);
   assert.equal(await prisma.vote.count({ where: { memberId: "member-b" } }), 0);
-  assert.equal((await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).hasSubmittedSuggestions, true);
-  assert.equal((await prisma.member.findUniqueOrThrow({ where: { id: "member-a" } })).hasSubmittedVotes, true);
+  const progress = await prisma.tripMemberProgress.findUniqueOrThrow({
+    where: { tripId_memberId: { tripId: "trip-a", memberId: "member-a" } },
+  });
+  assert.equal(progress.submittedSuggestions, true);
+  assert.equal(progress.submittedVotes, true);
+});
+
+test("submission progress is trip-scoped and actor-scoped", async () => {
+  await prisma.trip.create({ data: trip("trip-a2", "group-a") });
+
+  assert.equal((await submitSuggestions(request({}), tripContext("trip-a"))).status, 200);
+  assert.equal((await submitVotes(request({}), tripContext("trip-a"))).status, 200);
+  assert.deepEqual(
+    await prisma.tripMemberProgress.findUnique({ where: { tripId_memberId: { tripId: "trip-a2", memberId: "member-a" } } }),
+    null
+  );
+
+  assert.equal((await submitSuggestions(request({}), tripContext("trip-a2"))).status, 200);
+  const secondTripProgress = await prisma.tripMemberProgress.findUniqueOrThrow({
+    where: { tripId_memberId: { tripId: "trip-a2", memberId: "member-a" } },
+  });
+  assert.equal(secondTripProgress.submittedSuggestions, true);
+  assert.equal(secondTripProgress.submittedVotes, false);
+
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await submitSuggestions(request({}), tripContext("trip-a2"))).status, 403);
+  assert.equal((await submitVotes(request({}), tripContext("trip-a2"))).status, 403);
 });
 
 test("desired vote writes are idempotent in both directions", async () => {

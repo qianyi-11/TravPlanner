@@ -17,6 +17,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
   const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
+  const tripMemberProgress = usePlannerStore((s) => s.tripMemberProgress[tripId]);
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
   const members = usePlannerStore(
     useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
@@ -34,7 +35,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
 
   if (!trip || !me) notFound();
 
-  const submittedCount = members.filter((m) => m.hasSubmittedSuggestions).length;
+  const submittedCount = members.filter((m) => tripMemberProgress?.[m.id]?.submittedSuggestions).length;
   const solo = members.length === 1;
 
   async function handleSubmit() {
@@ -52,7 +53,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
       <TripHeader trip={trip} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div>
+        <div className="min-w-0">
           <div className="mb-5 flex items-center justify-between">
             <div>
               <h1 className="font-display text-2xl font-bold">Your Suggestions</h1>
@@ -100,7 +101,7 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
         </div>
 
         <Card className="h-fit p-5">
-          {me.hasSubmittedSuggestions ? (
+          {tripMemberProgress?.[me.id]?.submittedSuggestions ? (
             <div className="text-center">
               <PartyPopper className="mx-auto text-[var(--color-primary)]" size={32} />
               <h3 className="mt-3 font-display text-lg font-bold">{solo ? "Ready to build your plan" : "You're all set 🎉"}</h3>

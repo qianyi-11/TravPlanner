@@ -80,6 +80,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
   const members = usePlannerStore(
     useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
   );
+  const tripMemberProgress = usePlannerStore((s) => s.tripMemberProgress[tripId]);
   const places = usePlannerStore(
     useShallow((s) => (trip ? trip.placeIds.map((id) => s.places[id]).filter(Boolean) : []))
   );
@@ -98,8 +99,8 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
   const shortlistCount = trip.shortlistPlaceIds.length;
   const tone = pressureTone(trip.pricePressure.level);
 
-  const suggestedDone = members.filter((m) => m.hasSubmittedSuggestions).length;
-  const votedDone = members.filter((m) => m.hasSubmittedVotes).length;
+  const suggestedDone = members.filter((m) => tripMemberProgress?.[m.id]?.submittedSuggestions).length;
+  const votedDone = members.filter((m) => tripMemberProgress?.[m.id]?.submittedVotes).length;
 
   return (
     <div>
@@ -181,9 +182,9 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
                     <div key={m.id} className="flex items-center gap-3">
                       <MemberAvatar member={m} size="sm" />
                       <span className="flex-1 truncate text-sm font-medium">{m.name}</span>
-                      {m.hasSubmittedVotes ? (
+                      {tripMemberProgress?.[m.id]?.submittedVotes ? (
                         <CheckCircle2 size={16} className="text-[var(--color-teal)]" />
-                      ) : m.hasSubmittedSuggestions ? (
+                      ) : tripMemberProgress?.[m.id]?.submittedSuggestions ? (
                         <Circle size={16} className="text-[var(--color-warning)]" fill="var(--color-warning-bg)" />
                       ) : (
                         <Circle size={16} className="text-[var(--color-border)]" />

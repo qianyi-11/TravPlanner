@@ -27,8 +27,13 @@ export interface Member {
   preferences?: MemberPreferences;
   suggestedPlaceIds?: string[];
   votedPlaceIds?: string[];
-  hasSubmittedSuggestions?: boolean;
-  hasSubmittedVotes?: boolean;
+}
+
+export interface TripMemberProgress {
+  tripId: string;
+  memberId: string;
+  submittedSuggestions: boolean;
+  submittedVotes: boolean;
 }
 
 export interface MemberPreferences {

@@ -28,7 +28,9 @@ model Member {
   avatarColor             String
   isYou                   Boolean  @default(false)
   preferencesJson         String?
+  /// Deprecated: kept for compatibility with existing local databases; use TripMemberProgress.
   hasSubmittedSuggestions Boolean  @default(false)
+  /// Deprecated: kept for compatibility with existing local databases; use TripMemberProgress.
   hasSubmittedVotes       Boolean  @default(false)
   createdAt               DateTime @default(now())
 
@@ -36,6 +38,7 @@ model Member {
   authIdentities AuthIdentity[]
   createdInvites GroupInvite[] @relation("MemberCreatedInvites")
   checklistItems TripChecklistItem[] @relation("ChecklistAssignee")
+  tripMemberProgress TripMemberProgress[]
   suggestions Suggestion[]
   votes       Vote[]
 }
@@ -94,8 +97,26 @@ model Trip {
 
   group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   tripPlaces   TripPlace[]
+  memberProgress TripMemberProgress[]
   checklistItems TripChecklistItem[]
   rescueEvents RescueEvent[]
+}
+
+model TripMemberProgress {
+  id                   String   @id @default(cuid())
+  tripId               String
+  memberId             String
+  submittedSuggestions Boolean  @default(false)
+  submittedVotes       Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, memberId])
+  @@index([tripId])
+  @@index([memberId])
 }
 
 model Place {

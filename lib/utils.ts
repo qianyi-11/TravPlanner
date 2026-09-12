@@ -5,6 +5,23 @@ export function cx(...args: Array<string | false | null | undefined>) {
   return args.filter(Boolean).join(" ");
 }
 
+const GRADIENTS = [
+  "linear-gradient(135deg,#F6D9B8,#E8622F)",
+  "linear-gradient(135deg,#BFE3DE,#0E7C74)",
+  "linear-gradient(135deg,#F3C7D6,#C2578B)",
+  "linear-gradient(135deg,#CBD9F2,#4C7BD9)",
+  "linear-gradient(135deg,#E4D6F7,#8A5CF6)",
+  "linear-gradient(135deg,#F7E29B,#D8A62B)",
+  "linear-gradient(135deg,#D6E8C7,#5C8A3A)",
+  "linear-gradient(135deg,#F2C9BE,#D8674A)",
+];
+
+export function gradientFor(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return GRADIENTS[hash % GRADIENTS.length];
+}
+
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",

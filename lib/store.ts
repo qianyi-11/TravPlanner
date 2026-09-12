@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { Group, Member, MemberPreferences, Place, PlanningStage, Trip } from "./types";
+import type { Group, Member, MemberPreferences, Place, PlanningStage, Trip, TripMemberProgress } from "./types";
 
 interface BootstrapPayload {
   groups: Record<string, Group>;
@@ -9,6 +9,7 @@ interface BootstrapPayload {
   members: Record<string, Member>;
   places: Record<string, Place>;
   tripPlaces: Record<string, Record<string, Place>>;
+  tripMemberProgress: Record<string, Record<string, TripMemberProgress>>;
   currentUserId: string;
   demoAuthEnabled: boolean;
 }
@@ -33,6 +34,7 @@ interface PlannerState {
   members: Record<string, Member>;
   places: Record<string, Place>;
   tripPlaces: Record<string, Record<string, Place>>;
+  tripMemberProgress: Record<string, Record<string, TripMemberProgress>>;
   currentUserId: string;
   toast: string | null;
   initialized: boolean;
@@ -73,7 +75,6 @@ interface PlannerState {
   updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<boolean>;
 
   addPlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
-  importAndSuggestPlace: (tripId: string, place: Place) => Promise<void>;
   removePlaceSuggestion: (tripId: string, placeId: string) => Promise<void>;
   submitMySuggestions: (tripId: string) => Promise<boolean>;
 
@@ -82,8 +83,7 @@ interface PlannerState {
 
   confirmShortlist: (tripId: string, capacity: number) => Promise<boolean>;
   buildItinerary: (tripId: string) => Promise<boolean>;
-  setStage: (tripId: string, stage: PlanningStage) => Promise<void>;
-  advanceStage: (tripId: string) => Promise<void>;
+  setStage: (tripId: string, stage: PlanningStage) => Promise<boolean>;
 
   resolveRescue: (tripId: string, eventId: string) => Promise<boolean>;
 }
@@ -94,6 +94,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   members: {},
   places: {},
   tripPlaces: {},
+  tripMemberProgress: {},
   currentUserId: "",
   toast: null,
   initialized: false,
@@ -245,18 +246,6 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
   },
 
-  importAndSuggestPlace: async (tripId, place) => {
-    const result = await api(`/api/trips/${tripId}/places`, {
-      method: "POST",
-      body: JSON.stringify({ placeId: place.id }),
-    });
-    if (!result.ok) {
-      set({ toast: result.error ?? "Couldn't add place" });
-      return;
-    }
-    await get().hydrate();
-  },
-
   removePlaceSuggestion: async (tripId, placeId) => {
     const result = await api(`/api/trips/${tripId}/places`, {
       method: "DELETE",
@@ -366,18 +355,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't update stage" });
-      return;
+      return false;
     }
     await get().hydrate();
-  },
-
-  advanceStage: async (tripId) => {
-    const result = await api(`/api/trips/${tripId}/advance-stage`, { method: "POST" });
-    if (!result.ok) {
-      set({ toast: result.error ?? "Couldn't advance stage" });
-      return;
-    }
-    await get().hydrate();
+    return true;
   },
 
   resolveRescue: async (tripId, eventId) => {

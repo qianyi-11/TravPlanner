@@ -10,7 +10,7 @@ const env = getServerEnv();
 
 const demoProvider = Credentials({
   id: "demo",
-  name: "TravPlanner demo user",
+  name: "Trippy demo user",
   credentials: {
     memberId: { label: "Member ID", type: "text" },
   },

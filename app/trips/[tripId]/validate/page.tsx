@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
 import { ArrowRight, BadgeCheck, Clock, MapPin, ShieldCheck, Star, Wallet } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -20,6 +20,7 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
     useShallow((s) => (trip ? trip.shortlistPlaceIds.map((id) => s.places[id]).filter(Boolean) : []))
   );
   const setStage = usePlannerStore((s) => s.setStage);
+  const [advancing, setAdvancing] = useState(false);
 
   if (!trip) notFound();
 
@@ -28,9 +29,14 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
   const available = places.filter((p) => p.availability === "available").length;
   const unknown = places.filter((p) => p.availability === "unknown").length;
 
-  function handleContinue() {
-    setStage(tripId, "route");
-    router.push(`/trips/${tripId}/route`);
+  async function handleContinue() {
+    if (advancing) return;
+    setAdvancing(true);
+    try {
+      if (await setStage(tripId, "route")) router.push(`/trips/${tripId}/route`);
+    } finally {
+      setAdvancing(false);
+    }
   }
 
   return (
@@ -44,8 +50,8 @@ export default function ValidatePage({ params }: { params: Promise<{ tripId: str
             Review saved ratings, opening hours, cost information and availability notes before continuing.
           </p>
         </div>
-        <Button onClick={handleContinue} iconRight={<ArrowRight size={15} />}>
-          Continue to Route
+        <Button onClick={handleContinue} disabled={advancing} aria-busy={advancing} iconRight={<ArrowRight size={15} />}>
+          {advancing ? "Saving…" : "Continue to Route"}
         </Button>
       </div>
 

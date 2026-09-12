@@ -35,7 +35,7 @@ export function MapView(props: MapViewProps) {
   );
 }
 
-function makeMarkerIcon(index: number, selected: boolean): google.maps.Icon {
+function makeMarkerIcon(selected: boolean): google.maps.Icon {
   const color = selected ? "#E15A2A" : "#1C1B19";
   const r = selected ? 13 : 11;
   const size = r * 2 + 4;
@@ -54,7 +54,10 @@ function LiveGoogleMap({ places, selectedId, onSelect, showRoute = true }: MapVi
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const onSelectRef = useRef(onSelect);
-  onSelectRef.current = onSelect;
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -93,7 +96,7 @@ function LiveGoogleMap({ places, selectedId, onSelect, showRoute = true }: MapVi
         marker.setPosition(pos);
       }
       const selected = place.id === selectedId;
-      marker.setIcon(makeMarkerIcon(i + 1, selected));
+      marker.setIcon(makeMarkerIcon(selected));
       marker.setLabel({ text: String(i + 1), color: "white", fontSize: "11px", fontWeight: "700" });
       marker.setZIndex(selected ? 999 : i);
     });
@@ -130,7 +133,7 @@ function LiveGoogleMap({ places, selectedId, onSelect, showRoute = true }: MapVi
       const marker = markersRef.current.get(place.id);
       if (!marker) return;
       const selected = place.id === selectedId;
-      marker.setIcon(makeMarkerIcon(i + 1, selected));
+      marker.setIcon(makeMarkerIcon(selected));
       marker.setZIndex(selected ? 999 : i);
     });
     if (selectedId) {

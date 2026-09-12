@@ -59,7 +59,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
       </div>
 
       <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)] sm:p-4">
-        <div className="min-w-0 flex-1">
+        <div className="w-0 min-w-0 flex-1 overflow-hidden">
           <ProgressStepper tripId={trip.id} current={trip.stage} />
         </div>
         <Link

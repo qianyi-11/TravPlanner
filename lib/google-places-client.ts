@@ -1,7 +1,7 @@
 "use client";
 
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
-import { gradientFor } from "@/lib/mock-data";
+import { gradientFor } from "@/lib/utils";
 
 const SKIP_TYPES = new Set([
   "point_of_interest",

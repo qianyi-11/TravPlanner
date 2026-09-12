@@ -32,7 +32,7 @@ async function openChapter(page: Page, suffix: string, title: string, recordingM
   await pause(page, title, recordingMs);
 }
 
-test("TravPlanner product walkthrough", async ({ page }) => {
+test("Trippy product walkthrough", async ({ page }) => {
   await openChapter(page, "", "Trip Setup — Japan Adventure", 3_500);
   await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Tokyo · Kyoto · Osaka", { exact: true })).toBeVisible();

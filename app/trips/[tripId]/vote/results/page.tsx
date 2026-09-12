@@ -86,13 +86,13 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
               </div>
               {consensus.tradeoffs.length > 1 && <p className="mt-2 text-xs font-semibold text-[var(--color-ink-soft)]">Most important trade-off</p>}
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-semibold text-[var(--color-teal-dark)]">With group fairness</p>
-                  <p className="font-display font-bold">{fairPlace.name}</p>
+                  <p className="break-words font-display font-bold">{fairPlace.name}</p>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Without representation adjustment</p>
-                  <p className="font-display font-bold">{baselinePlace.name}</p>
+                  <p className="break-words font-display font-bold">{baselinePlace.name}</p>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-[var(--color-ink-soft)]">
@@ -113,7 +113,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
               const selected = selectedById.get(place.id);
               const mustDoNames = result.mustDoMemberIds.map((id) => members[id]?.name ?? id);
               return (
-              <div key={place.id} className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)]">
+              <div key={place.id} className="grid min-w-0 grid-cols-[auto_auto_minmax(0,1fr)] items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-soft)] sm:flex sm:items-center">
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold ${
                     i === 0
@@ -127,7 +127,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                 </div>
                 <PlaceCover photo={place.photo} category={place.category} className="h-12 w-12 shrink-0 rounded-xl" iconSize={16} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{place.name}</p>
+                  <p className="break-words text-sm font-bold">{place.name}</p>
                   <p className="text-xs text-[var(--color-ink-soft)]">
                     {place.category} · {place.area}
                   </p>
@@ -149,9 +149,15 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                       </span>
                     )}
                   </div>
+                  <div className="mt-2 flex items-center justify-between gap-2 sm:hidden">
+                    <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
+                    <span className="text-right text-sm font-bold">{result.voteCount} votes</span>
+                  </div>
                 </div>
-                <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
-                <span className="w-16 shrink-0 text-right text-sm font-bold">{result.voteCount} votes</span>
+                <div className="hidden sm:block">
+                  <MemberStack members={place.votedBy.map((id) => members[id]).filter(Boolean)} max={3} size="xs" />
+                </div>
+                <span className="hidden w-16 shrink-0 text-right text-sm font-bold sm:block">{result.voteCount} votes</span>
               </div>
             )})}
           </div>

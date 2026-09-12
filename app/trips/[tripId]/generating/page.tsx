@@ -18,12 +18,14 @@ export default function GeneratingPage({ params }: { params: Promise<{ tripId: s
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const setStage = usePlannerStore((s) => s.setStage);
   const [stepIndex, setStepIndex] = useState(0);
+  const [persisting, setPersisting] = useState(false);
 
   useEffect(() => {
     if (stepIndex >= STEPS.length) {
-      const t = setTimeout(() => {
-        setStage(tripId, "voting");
-        router.push(`/trips/${tripId}/vote`);
+      const t = setTimeout(async () => {
+        setPersisting(true);
+        if (await setStage(tripId, "voting")) router.push(`/trips/${tripId}/vote`);
+        else setPersisting(false);
       }, 500);
       return () => clearTimeout(t);
     }
@@ -76,6 +78,7 @@ export default function GeneratingPage({ params }: { params: Promise<{ tripId: s
           );
         })}
       </div>
+      {persisting && <p className="mt-4 text-xs text-[var(--color-ink-soft)]">Saving your planning stage…</p>}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type {
   PlaceReview,
   Trip,
 } from "./types";
+import { gradientFor } from "./utils";
 
 // ---------------------------------------------------------------------------
 // Members
@@ -19,8 +20,6 @@ export const MEMBERS: Record<string, Member> = {
     avatarColor: "var(--color-primary)",
     isYou: true,
     role: "organizer",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: true,
     preferences: {
       interests: ["Culture", "Food", "Photography", "History"],
       foodPreferences: ["Local Food", "Street Food", "Cafe"],
@@ -36,8 +35,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "S",
     avatarColor: "#D8674A",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: true,
     preferences: {
       interests: ["Shopping", "Food", "Nightlife", "Architecture"],
       foodPreferences: ["Fine Dining", "Dessert", "Cafe"],
@@ -53,8 +50,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "J",
     avatarColor: "#3E7C7B",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: true,
     preferences: {
       interests: ["Nature", "Relaxation"],
       foodPreferences: [],
@@ -70,8 +65,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "D",
     avatarColor: "#8A5CF6",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: true,
     preferences: {
       interests: ["History", "Museums", "Culture"],
       foodPreferences: ["Local Food", "Vegetarian"],
@@ -87,8 +80,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "M",
     avatarColor: "#C2578B",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: false,
     preferences: {
       interests: ["Relaxation", "Food", "Photography"],
       foodPreferences: ["Cafe", "Dessert", "Halal"],
@@ -104,8 +95,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "A",
     avatarColor: "#4C7BD9",
     role: "member",
-    hasSubmittedSuggestions: false,
-    hasSubmittedVotes: false,
     preferences: {
       interests: ["Food", "Culture", "Shopping"],
       foodPreferences: ["Halal", "Street Food"],
@@ -121,8 +110,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "R",
     avatarColor: "#3E7C7B",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: true,
     preferences: {
       interests: ["Food", "Nightlife", "Photography"],
       foodPreferences: ["Street Food", "Local Food"],
@@ -138,8 +125,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "N",
     avatarColor: "#C2578B",
     role: "member",
-    hasSubmittedSuggestions: true,
-    hasSubmittedVotes: false,
     preferences: {
       interests: ["Shopping", "Food", "Relaxation"],
       foodPreferences: ["Halal", "Cafe"],
@@ -155,8 +140,6 @@ export const MEMBERS: Record<string, Member> = {
     initials: "W",
     avatarColor: "#8A5CF6",
     role: "member",
-    hasSubmittedSuggestions: false,
-    hasSubmittedVotes: false,
   },
 };
 
@@ -166,23 +149,6 @@ export const MEMBERS: Record<string, Member> = {
 
 function review(author: string, rating: number, text: string, date: string): PlaceReview {
   return { id: `${author}-${date}`, author, rating, text, date };
-}
-
-const GRADIENTS = [
-  "linear-gradient(135deg,#F6D9B8,#E8622F)",
-  "linear-gradient(135deg,#BFE3DE,#0E7C74)",
-  "linear-gradient(135deg,#F3C7D6,#C2578B)",
-  "linear-gradient(135deg,#CBD9F2,#4C7BD9)",
-  "linear-gradient(135deg,#E4D6F7,#8A5CF6)",
-  "linear-gradient(135deg,#F7E29B,#D8A62B)",
-  "linear-gradient(135deg,#D6E8C7,#5C8A3A)",
-  "linear-gradient(135deg,#F2C9BE,#D8674A)",
-];
-
-export function gradientFor(id: string) {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return GRADIENTS[hash % GRADIENTS.length];
 }
 
 // ---------------------------------------------------------------------------

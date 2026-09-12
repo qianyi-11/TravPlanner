@@ -31,7 +31,7 @@ export default function JoinGroupPage({ params }: { params: Promise<{ token: str
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-6">
-        <h1 className="font-display text-2xl font-bold">Join a TravPlanner group</h1>
+        <h1 className="font-display text-2xl font-bold">Join a Trippy group</h1>
         <p className="mt-2 text-sm text-[var(--color-ink-soft)]">{message}</p>
         <Button className="mt-5" fullWidth onClick={join} disabled={state === "joining"}>
           {state === "joining" ? "Joining…" : "Sign in and join"}

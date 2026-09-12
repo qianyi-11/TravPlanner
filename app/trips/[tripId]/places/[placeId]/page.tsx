@@ -179,7 +179,7 @@ export default function PlaceDetailsPage({
             <Card className="p-5">
               <h3 className="font-display text-sm font-bold">Estimated meal spend</h3>
               <p className="mt-2 font-display text-lg font-bold">{mealSpend} per person</p>
-              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">TravPlanner estimate based on the venue&apos;s relative price level; actual prices may differ.</p>
+              <p className="mt-1 text-xs text-[var(--color-ink-soft)]">Trippy estimate based on the venue&apos;s relative price level; actual prices may differ.</p>
             </Card>
           )}
         </div>

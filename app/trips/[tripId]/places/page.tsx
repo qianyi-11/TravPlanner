@@ -23,7 +23,6 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   const allPlaces = usePlannerStore(useShallow((s) => Object.values(s.places)));
   const tripPlacesById = usePlannerStore((s) => s.tripPlaces[tripId] ?? EMPTY_TRIP_PLACES);
   const addSuggestion = usePlannerStore((s) => s.addPlaceSuggestion);
-  const importAndSuggest = usePlannerStore((s) => s.importAndSuggestPlace);
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
   const showToast = usePlannerStore((s) => s.showToast);
 
@@ -90,14 +89,8 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   const solo = trip.memberIds.length === 1;
 
   async function handleAdd(place: Place) {
-    const alreadyImported = allPlaces.some((candidate) => candidate.id === place.id);
-    if (alreadyImported) {
-      await addSuggestion(tripId, place.id);
-      showToast(`${place.name} added to your suggestions`);
-      return;
-    }
     setAddingId(place.id);
-    await importAndSuggest(tripId, place);
+    await addSuggestion(tripId, place.id);
     setAddingId(null);
     showToast(`${place.name} added to your suggestions`);
   }

@@ -9,7 +9,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ tripId:
     const tripId = requireId((await params).tripId, "tripId");
     await parseJsonObject(req);
     const { memberId } = await requireTripActor(tripId);
-    await prisma.member.update({ where: { id: memberId }, data: { hasSubmittedSuggestions: true } });
+    await prisma.tripMemberProgress.upsert({
+      where: { tripId_memberId: { tripId, memberId } },
+      create: { tripId, memberId, submittedSuggestions: true },
+      update: { submittedSuggestions: true },
+    });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiErrorResponse(error);

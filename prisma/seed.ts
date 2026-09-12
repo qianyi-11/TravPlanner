@@ -56,8 +56,6 @@ async function main() {
         avatarColor: member.avatarColor,
         isYou: member.isYou ?? false,
         preferencesJson: member.preferences ? JSON.stringify(member.preferences) : null,
-        hasSubmittedSuggestions: member.hasSubmittedSuggestions ?? false,
-        hasSubmittedVotes: member.hasSubmittedVotes ?? false,
       },
     });
   }
@@ -138,6 +136,14 @@ async function main() {
     });
 
     if (trip.id === "trip-japan") {
+      await prisma.tripMemberProgress.createMany({
+        data: ["you", "sarah", "jason", "daniel", "michelle", "aisyah"].map((memberId) => ({
+          tripId: trip.id,
+          memberId,
+          submittedSuggestions: memberId !== "aisyah",
+          submittedVotes: ["you", "sarah", "jason", "daniel"].includes(memberId),
+        })),
+      });
       await prisma.tripChecklistItem.createMany({ data: JAPAN_CHECKLIST.map((item) => ({ ...item, tripId: trip.id })) });
     }
 
