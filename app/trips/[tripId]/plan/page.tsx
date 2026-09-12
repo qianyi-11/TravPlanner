@@ -1,0 +1,187 @@
+"use client";
+
+import { use, useMemo, useState } from "react";
+import { notFound } from "next/navigation";
+import {
+  CalendarRange,
+  ChevronDown,
+  ListTree,
+  MapPinned,
+  Receipt,
+  Ticket,
+  Wallet,
+} from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
+import { usePlannerStore } from "@/lib/store";
+import { ItineraryTimeline } from "@/components/trip/ItineraryTimeline";
+import { MapView } from "@/components/trip/MapView";
+import { PlaceCard } from "@/components/trip/PlaceCard";
+import { BudgetCard } from "@/components/trip/BudgetCard";
+import { PressureRadar } from "@/components/trip/PressureRadar";
+import { Badge, Card } from "@/components/ui/Card";
+import { LinkButton } from "@/components/ui/Button";
+import { formatDateRange, daysBetween, cx, formatWeekday } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/States";
+
+const TABS = [
+  { key: "itinerary", label: "Itinerary", icon: ListTree },
+  { key: "map", label: "Map", icon: MapPinned },
+  { key: "budget", label: "Budget", icon: Wallet },
+  { key: "bookings", label: "Bookings", icon: Ticket },
+  { key: "places", label: "Places", icon: CalendarRange },
+] as const;
+
+type TabKey = (typeof TABS)[number]["key"];
+
+export default function FinalPlanPage({ params }: { params: Promise<{ tripId: string }> }) {
+  const { tripId } = use(params);
+  const trip = usePlannerStore((s) => s.trips[tripId]);
+  const placesMap = usePlannerStore((s) => s.places);
+  const shortlist = usePlannerStore(
+    useShallow((s) => (trip ? trip.shortlistPlaceIds.map((id) => s.places[id]).filter(Boolean) : []))
+  );
+  const [tab, setTab] = useState<TabKey>("itinerary");
+  const [openDay, setOpenDay] = useState(0);
+
+  const orderedPlaces = useMemo(() => {
+    if (!trip) return [];
+    const ids = trip.itinerary
+      .flatMap((d) => d.activities)
+      .filter((a) => a.type === "place" && a.placeId)
+      .map((a) => a.placeId as string);
+    const seen = new Set<string>();
+    const out = [];
+    for (const id of ids) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const p = placesMap[id];
+      if (p) out.push(p);
+    }
+    return out;
+  }, [trip, placesMap]);
+
+  if (!trip) notFound();
+
+  const days = daysBetween(trip.startDate, trip.endDate);
+  const activityCount = trip.itinerary.reduce((s, d) => s + d.activities.filter((a) => a.type === "place").length, 0);
+
+  const bookingItems = shortlist.filter((p) => p.availability !== "available" || p.priceLevel >= 3);
+
+  return (
+    <div>
+      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8" style={{ background: trip.coverColor }}>
+        <p className="text-sm font-medium text-white/70">{trip.destinations.join(" · ")}</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
+        <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/90">
+          <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
+          <span>{trip.memberIds.length} travelers</span>
+          <span>{days} days</span>
+          <span>{activityCount} activities</span>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-1.5 overflow-x-auto scrollbar-none rounded-2xl border border-[var(--color-border)] bg-white p-1.5 shadow-[var(--shadow-soft)]">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={cx(
+              "flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
+              tab === t.key ? "bg-[var(--color-ink)] text-white" : "text-[var(--color-ink-soft)] hover:bg-[var(--color-sand)]"
+            )}
+          >
+            <t.icon size={14} /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-6">
+        {tab === "itinerary" &&
+          (trip.itinerary.length === 0 ? (
+            <EmptyState icon={ListTree} title="No itinerary yet" />
+          ) : (
+            <div className="space-y-3">
+              {trip.itinerary.map((day, i) => (
+                <Card key={day.day} className="overflow-hidden">
+                  <button
+                    onClick={() => setOpenDay(openDay === i ? -1 : i)}
+                    className="flex w-full items-center justify-between p-4 text-left"
+                  >
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-[var(--color-ink-soft)]">
+                        Day {day.day} · {formatWeekday(day.date)}
+                      </p>
+                      <p className="font-display text-base font-bold">{day.title}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge tone="neutral">{day.activities.length} stops</Badge>
+                      <ChevronDown size={16} className={cx("transition-transform", openDay === i && "rotate-180")} />
+                    </div>
+                  </button>
+                  {openDay === i && (
+                    <div className="border-t border-[var(--color-border-soft)] p-4">
+                      <ItineraryTimeline activities={day.activities} places={placesMap} transport={trip.transport} tripId={tripId} />
+                    </div>
+                  )}
+                </Card>
+              ))}
+              <LinkButton href={`/trips/${tripId}/itinerary`} variant="outline" fullWidth>
+                Open full itinerary view
+              </LinkButton>
+            </div>
+          ))}
+
+        {tab === "map" &&
+          (orderedPlaces.length > 0 ? (
+            <div style={{ height: 480 }}>
+              <MapView places={orderedPlaces} />
+            </div>
+          ) : (
+            <EmptyState icon={MapPinned} title="No route yet" />
+          ))}
+
+        {tab === "budget" && (
+          <div className="space-y-5">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <BudgetCard trip={trip} />
+              <PressureRadar pressure={trip.pricePressure} />
+            </div>
+            <LinkButton href={`/trips/${tripId}/split-bill`} variant="outline" icon={<Receipt size={15} />}>
+              Split a Bill
+            </LinkButton>
+          </div>
+        )}
+
+        {tab === "bookings" && (
+          <div className="space-y-3">
+            {bookingItems.length === 0 ? (
+              <EmptyState icon={Ticket} title="Nothing to book" description="All your places are free or walk-in." />
+            ) : (
+              bookingItems.map((p) => (
+                <Card key={p.id} className="flex items-center justify-between gap-3 p-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold">{p.name}</p>
+                    <p className="text-xs text-[var(--color-ink-soft)]">{p.priceLabel}</p>
+                  </div>
+                  <Badge
+                    tone={p.availability === "sold_out" ? "danger" : p.availability === "limited" ? "warning" : "neutral"}
+                  >
+                    {p.availability === "sold_out" ? "Unavailable" : p.availability === "limited" ? "Book Early" : "Pay on arrival"}
+                  </Badge>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {tab === "places" && (
+          <div className="space-y-3">
+            {shortlist.map((p) => (
+              <PlaceCard key={p.id} place={p} detailsHref={`/trips/${tripId}/places/${p.id}`} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,159 @@
+import type {
+  Group as PGroup,
+  Member as PMember,
+  Place as PPlace,
+  RescueEvent as PRescueEvent,
+  Suggestion as PSuggestion,
+  Trip as PTrip,
+  TripPlace as PTripPlace,
+  Vote as PVote,
+} from "@/lib/generated/prisma";
+import type {
+  Group,
+  ItineraryDay,
+  Member,
+  MemberPreferences,
+  Place,
+  PricePressure,
+  Trip,
+  TripRescueEvent,
+} from "@/lib/types";
+
+export function mapGroup(
+  row: PGroup & { members: { memberId: string }[]; trips: { id: string }[] }
+): Group {
+  return {
+    id: row.id,
+    name: row.name,
+    emoji: row.emoji,
+    coverColor: row.coverColor,
+    description: row.description ?? undefined,
+    memberIds: row.members.map((m) => m.memberId),
+    tripIds: row.trips.map((t) => t.id),
+  };
+}
+
+export function mapMember(
+  row: PMember,
+  ctx: { suggestedPlaceIds: string[]; votedPlaceIds: string[]; role?: string }
+): Member {
+  return {
+    id: row.id,
+    name: row.name,
+    initials: row.initials,
+    avatarColor: row.avatarColor,
+    isYou: row.isYou,
+    role: (ctx.role as Member["role"]) ?? "member",
+    preferences: row.preferencesJson ? (JSON.parse(row.preferencesJson) as MemberPreferences) : undefined,
+    suggestedPlaceIds: ctx.suggestedPlaceIds,
+    votedPlaceIds: ctx.votedPlaceIds,
+    hasSubmittedSuggestions: row.hasSubmittedSuggestions,
+    hasSubmittedVotes: row.hasSubmittedVotes,
+  };
+}
+
+function basePlaceFields(row: PPlace) {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    area: row.area,
+    destination: row.destination,
+    coordinates: { lat: row.lat, lng: row.lng },
+    address: row.address,
+    photo: row.photo,
+    photos: row.photosJson ? (JSON.parse(row.photosJson) as string[]) : undefined,
+    rating: row.rating,
+    reviewCount: row.reviewCount,
+    priceLevel: row.priceLevel as Place["priceLevel"],
+    priceLabel: row.priceLabel,
+    description: row.description,
+    openingHours: JSON.parse(row.openingHoursJson),
+    isOpenNow: row.isOpenNow,
+    closesAt: row.closesAt ?? undefined,
+    estimatedDurationMinutes: row.estimatedDurationMinutes,
+    reviews: JSON.parse(row.reviewsJson),
+    availability: row.availability as Place["availability"],
+  };
+}
+
+type TripPlaceWithJoins = PTripPlace & { suggestions: PSuggestion[]; votes: PVote[] };
+
+/**
+ * The shared catalogue entry for a place — static details only.
+ *
+ * Suggestions and votes are deliberately empty here: they only mean anything
+ * inside one trip. Two groups can both plan Petronas Towers without either
+ * seeing the other's picks, so per-trip state comes from mapPlaceForTrip.
+ */
+export function mapCatalogPlace(row: PPlace & { tripPlaces?: TripPlaceWithJoins[] }): Place {
+  return {
+    ...basePlaceFields(row),
+    suggestedBy: [],
+    voteCount: 0,
+    votedBy: [],
+  };
+}
+
+/** The same place, scoped to one trip: who suggested it and who voted for it there. */
+export function mapPlaceForTrip(row: PPlace, tripPlace: TripPlaceWithJoins): Place {
+  const votedBy = Array.from(new Set(tripPlace.votes.map((v) => v.memberId)));
+  return {
+    ...basePlaceFields(row),
+    suggestedBy: Array.from(new Set(tripPlace.suggestions.map((s) => s.memberId))),
+    voteCount: votedBy.length,
+    votedBy,
+  };
+}
+
+function mapRescueEvent(row: PRescueEvent): TripRescueEvent {
+  return {
+    id: row.id,
+    type: row.type as TripRescueEvent["type"],
+    message: row.message,
+    affectedActivityId: row.affectedActivityId,
+    createdAt: row.createdAt.toISOString(),
+    status: row.status as TripRescueEvent["status"],
+    alternative: row.alternativeJson ? JSON.parse(row.alternativeJson) : undefined,
+  };
+}
+
+export function mapTrip(
+  row: PTrip & {
+    tripPlaces: { placeId: string; place?: { destination: string } }[];
+    rescueEvents: PRescueEvent[];
+  },
+  memberIds: string[]
+): Trip {
+  // A trip no longer names its destination up front — it fills in from wherever
+  // the group's suggested places actually are. An explicit list still wins.
+  const stored = JSON.parse(row.destinationsJson) as string[];
+  const derived = Array.from(
+    new Set(row.tripPlaces.map((tp) => tp.place?.destination).filter((d): d is string => Boolean(d)))
+  );
+
+  return {
+    id: row.id,
+    groupId: row.groupId,
+    name: row.name,
+    destinations: stored.length > 0 ? stored : derived,
+    coverColor: row.coverColor,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    budgetTotal: row.budgetTotal,
+    groupSize: row.groupSize,
+    dailyStart: row.dailyStart,
+    dailyEnd: row.dailyEnd,
+    transport: row.transport as Trip["transport"],
+    stage: row.stage as Trip["stage"],
+    memberIds,
+    placeIds: row.tripPlaces.map((tp) => tp.placeId),
+    shortlistPlaceIds: JSON.parse(row.shortlistJson),
+    recommendedPlaceCount: row.recommendedPlaceCount,
+    votesPerMember: row.votesPerMember,
+    itinerary: JSON.parse(row.itineraryJson) as ItineraryDay[],
+    pricePressure: JSON.parse(row.pricePressureJson) as PricePressure,
+    rescueEvents: row.rescueEvents.map(mapRescueEvent),
+    isLive: row.isLive,
+  };
+}

@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Group {
+  id          String   @id
+  name        String
+  emoji       String
+  coverColor  String
+  description String?
+  createdAt   DateTime @default(now())
+
+  members GroupMember[]
+  trips   Trip[]
+}
+
+/// A person, as a global identity — the same Member can belong to multiple
+/// Groups (e.g. "you" are a member of every group you create or join).
+model Member {
+  id                      String   @id
+  name                    String
+  initials                String
+  avatarColor             String
+  isYou                   Boolean  @default(false)
+  preferencesJson         String?
+  hasSubmittedSuggestions Boolean  @default(false)
+  hasSubmittedVotes       Boolean  @default(false)
+  createdAt               DateTime @default(now())
+
+  memberships GroupMember[]
+  suggestions Suggestion[]
+  votes       Vote[]
+}
+
+/// Join table: which Members belong to which Group, and their role there.
+model GroupMember {
+  id       String @id @default(cuid())
+  groupId  String
+  memberId String
+  role     String @default("member")
+
+  group  Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, memberId])
+}
+
+model Trip {
+  id                    String   @id
+  groupId               String
+  name                  String
+  destinationsJson      String
+  coverColor            String
+  startDate             String
+  endDate               String
+  budgetTotal           Int
+  groupSize             Int
+  dailyStart            String
+  dailyEnd              String
+  transport             String
+  stage                 String   @default("ideas")
+  shortlistJson         String   @default("[]")
+  recommendedPlaceCount Int      @default(8)
+  votesPerMember        Int      @default(10)
+  itineraryJson         String   @default("[]")
+  pricePressureJson     String
+  isLive                Boolean  @default(false)
+  createdAt             DateTime @default(now())
+
+  group        Group         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  tripPlaces   TripPlace[]
+  rescueEvents RescueEvent[]
+}
+
+model Place {
+  id                       String   @id
+  name                     String
+  category                 String
+  area                     String
+  destination              String
+  lat                      Float
+  lng                      Float
+  address                  String
+  photo                    String
+  rating                   Float
+  reviewCount              Int
+  priceLevel               Int
+  priceLabel               String
+  description              String
+  openingHoursJson         String
+  isOpenNow                Boolean
+  closesAt                 String?
+  estimatedDurationMinutes Int
+  reviewsJson              String
+  availability             String
+  source                   String   @default("catalog") // "catalog" | "google"
+  googlePlaceId            String?
+  photoRef                 String?
+  photosJson               String?  // JSON string[] — gallery photos, photo[0] is the cover
+  createdAt                DateTime @default(now())
+
+  tripPlaces TripPlace[]
+}
+
+model TripPlace {
+  id        String   @id @default(cuid())
+  tripId    String
+  placeId   String
+  createdAt DateTime @default(now())
+
+  trip        Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  place       Place        @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  suggestions Suggestion[]
+  votes       Vote[]
+
+  @@unique([tripId, placeId])
+}
+
+model Suggestion {
+  id          String   @id @default(cuid())
+  tripPlaceId String
+  memberId    String
+  createdAt   DateTime @default(now())
+
+  tripPlace TripPlace @relation(fields: [tripPlaceId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripPlaceId, memberId])
+}
+
+model Vote {
+  id          String   @id @default(cuid())
+  tripPlaceId String
+  memberId    String
+  createdAt   DateTime @default(now())
+
+  tripPlace TripPlace @relation(fields: [tripPlaceId], references: [id], onDelete: Cascade)
+  member    Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([tripPlaceId, memberId])
+}
+
+model RescueEvent {
+  id                 String   @id @default(cuid())
+  tripId             String
+  type               String
+  message            String
+  affectedActivityId String
+  status             String   @default("open")
+  alternativeJson    String?
+  createdAt          DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+}
