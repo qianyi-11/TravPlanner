@@ -47,6 +47,7 @@ export interface Group {
   coverColor: string;
   description?: string;
   memberIds: string[];
+  organizerIds?: string[];
   tripIds: string[];
 }
 

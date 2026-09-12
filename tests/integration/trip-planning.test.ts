@@ -14,6 +14,7 @@ import { POST as setDemoSession } from "@/app/api/demo-session/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
 import { POST as createInvite } from "@/app/api/groups/[groupId]/invite/route";
 import { POST as joinInvite } from "@/app/api/invites/[token]/join/route";
+import { PATCH as renameGroup } from "@/app/api/groups/[groupId]/route";
 import { prisma } from "@/lib/server/prisma";
 import { provisionGoogleMember } from "@/lib/server/auth-identities";
 import { requireTripActor, requireTripOrganizer } from "@/lib/server/authorization";
@@ -230,6 +231,24 @@ test("unauthenticated bootstrap is rejected", async () => {
   const response = await bootstrap();
   assert.equal(response.status, 401);
   assert.equal((await body(response)).code, "UNAUTHENTICATED");
+});
+
+test("group rename is organizer-only and strictly validated", async () => {
+  setAuthenticatedMemberIdForTests(null);
+  assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("group-a"))).status, 401);
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("group-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-b");
+  assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("group-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+  assert.equal((await renameGroup(request({ name: "" }), groupContext("group-a"))).status, 400);
+  assert.equal((await renameGroup(request({ name: "   " }), groupContext("group-a"))).status, 400);
+  assert.equal((await renameGroup(request({ name: "Renamed", role: "organizer" }), groupContext("group-a"))).status, 400);
+  assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("missing"))).status, 404);
+  const response = await renameGroup(request({ name: "  Renamed  " }), groupContext("group-a"));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await body(response), { ok: true, name: "Renamed" });
+  assert.equal((await prisma.group.findUniqueOrThrow({ where: { id: "group-a" } })).name, "Renamed");
 });
 
 test("client memberId cannot spoof planning identity", async () => {

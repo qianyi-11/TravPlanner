@@ -21,7 +21,7 @@ export async function GET() {
       groupIds.length
         ? prisma.group.findMany({
             where: { id: { in: groupIds } },
-            include: { members: { select: { memberId: true } }, trips: { select: { id: true } } },
+            include: { members: { select: { memberId: true, role: true } }, trips: { select: { id: true } } },
           })
         : [],
       groupIds.length

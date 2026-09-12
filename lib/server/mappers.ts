@@ -20,7 +20,7 @@ import type {
 } from "@/lib/types";
 
 export function mapGroup(
-  row: PGroup & { members: { memberId: string }[]; trips: { id: string }[] }
+  row: PGroup & { members: { memberId: string; role: string }[]; trips: { id: string }[] }
 ): Group {
   return {
     id: row.id,
@@ -29,6 +29,7 @@ export function mapGroup(
     coverColor: row.coverColor,
     description: row.description ?? undefined,
     memberIds: row.members.map((m) => m.memberId),
+    organizerIds: row.members.filter((member) => member.role === "organizer").map((member) => member.memberId),
     tripIds: row.trips.map((t) => t.id),
   };
 }

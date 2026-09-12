@@ -47,6 +47,7 @@ interface PlannerState {
   clearToast: () => void;
 
   createGroup: (input: { name: string; emoji: string; description?: string; coverColor: string }) => Promise<string>;
+  renameGroup: (groupId: string, name: string) => Promise<boolean>;
   createGroupInvite: (groupId: string) => Promise<string>;
   addMember: (groupId: string, name: string) => Promise<boolean>;
 
@@ -159,6 +160,16 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't add member" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
+  },
+
+  renameGroup: async (groupId, name) => {
+    const result = await api(`/api/groups/${groupId}`, { method: "PATCH", body: JSON.stringify({ name }) });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't rename group" });
       return false;
     }
     await get().hydrate();

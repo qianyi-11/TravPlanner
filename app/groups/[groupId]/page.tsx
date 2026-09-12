@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { EmptyState } from "@/components/ui/States";
 import { MemberAvatar } from "@/components/ui/Avatar";
 import { TripCard } from "@/components/trip/TripCard";
+import { EditableTitle } from "@/components/ui/EditableTitle";
 
 export default function GroupRoomPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = use(params);
@@ -23,6 +24,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
     useShallow((s) => (group ? group.tripIds.map((id) => s.trips[id]).filter(Boolean) : []))
   );
   const addMember = usePlannerStore((s) => s.addMember);
+  const renameGroup = usePlannerStore((s) => s.renameGroup);
   const createGroupInvite = usePlannerStore((s) => s.createGroupInvite);
   const showToast = usePlannerStore((s) => s.showToast);
   const [addOpen, setAddOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
-  const isOrganizer = members.find((member) => member.id === currentUserId)?.role === "organizer";
+  const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
 
   if (!group) notFound();
 
@@ -76,9 +78,11 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
               {group.emoji}
             </div>
             <div>
-              <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
-                {group.name} {group.emoji}
-              </h1>
+              {isOrganizer ? (
+                <EditableTitle value={group.name} onSave={(name) => renameGroup(groupId, name)} className="font-display text-2xl font-bold text-white sm:text-3xl" />
+              ) : (
+                <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">{group.name}</h1>
+              )}
               {group.description && (
                 <p className="mt-1 max-w-md text-sm text-white/75">{group.description}</p>
               )}
