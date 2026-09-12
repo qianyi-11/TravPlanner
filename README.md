@@ -1,7 +1,17 @@
 # TravPlanner
 
-**Competition branch:** `version1.1`
-**Problem Statement:** Planning an Escape — Travel Planner  
+**Team:** TODO
+
+**Team Members:** TODO
+
+**Problem Statement:** Planning an Escape — Travel Planner
+
+**Video Presentation:** TODO — unlisted YouTube link required
+
+**Presentation Slides:** TODO — public link required
+
+**UI Prototype:** TODO — public link required
+
 **Repository:** https://github.com/qianyi-11/TravPlanner
 
 ---
@@ -10,55 +20,31 @@
 
 ## The Problem
 
-Planning a trip is rarely handled in one place.
+Travel planning is fragmented across place discovery, group chats, polls, maps, itineraries, budgets and expense tools. Group travel adds the harder coordination problem: different travellers bring different interests, budgets, priorities and must-dos, but the group still needs one plan.
 
-Travellers may use separate tools for:
-
-- finding places,
-- discussing options in group chats,
-- building an itinerary,
-- checking routes,
-- tracking a budget,
-- splitting expenses,
-- and reacting when plans change.
-
-This becomes harder for group trips. Everyone may have different interests, budgets and priorities. Someone still needs to turn those opinions into one practical plan.
-
-Existing travel planners such as **Wanderlog** already combine useful features such as itineraries, maps, route optimisation, budgeting and collaboration.
-
-TravPlanner explores a different part of the problem:
-
-> **How can a group move from individual preferences to a shared plan, while still being able to react when that plan stops working?**
-
-Instead of treating the itinerary as the starting point, TravPlanner makes the **group decision process** part of the planning flow.
+The challenge spans budgeting, itinerary building, group preferences, traveller coordination, unexpected plan changes, and both solo and group travel. Existing solutions such as Wanderlog show how useful it is to combine itineraries, maps, budgeting and collaboration. TravPlanner targets a narrower gap: **converting different individual preferences into one shared plan whose trade-offs remain visible**.
 
 ## Our Solution
 
-**TravPlanner converts different traveller preferences into one shared, explainable and persistent trip plan.** It supports solo travellers and small groups.
-
-Users progress through a guided planning flow: define the trip, express preferences, suggest places, vote together, create a shortlist, review practical constraints, organise the route and view the final itinerary.
-
-The prototype also introduces **Trip Rescue**, which demonstrates how an existing itinerary could adapt when an activity becomes unavailable or unsuitable during the trip.
+TravPlanner is a collaborative travel planner for solo travellers and small groups. Its main differentiator is explainable **Group Consensus**, which turns member preferences, suggestions and votes into a shared shortlist. The confirmed shortlist then feeds validation, a sequence preview and a persisted itinerary. **Trip Rescue** demonstrates how that itinerary can be adjusted after a prepared plan change.
 
 ### Current Prototype Features
 
-- Create and manage travel groups
-- Create trips with dates, destination and budget
-- Group member preference profiles
-- Collaborative place suggestions
-- Place discovery and map integration
-- Group voting
-- **Deterministic Group Consensus** with explainable fair shortlists
-- Shared shortlist
-- Validation-oriented planning stage
-- Route and map visualisation
-- Day-by-day itinerary
-- Trip budget overview
-- Booking/price pressure indicators
-- Split-bill calculator
-- **Trip Rescue** for demonstrating unexpected-plan adjustment
-- Shared final trip plan
-- Authenticated persistence through Prisma, with SQLite for local/demo use and PostgreSQL for production
+- Group and trip setup
+- Member preference profiles
+- Collaborative place suggestions and trip-scoped voting
+- Google Places discovery with saved provider snapshots
+- Server-authoritative deterministic Group Consensus with explainable trade-offs
+- Persisted consensus shortlist
+- Validation and deterministic itinerary building from a confirmed shortlist
+- Sequence preview and map visualisation without route optimisation
+- Day-by-day itinerary and final plan
+- Known estimated itinerary spend with incomplete costs kept in scope as unknown
+- Calendar-based planning urgency computed from days until departure, not price or demand prediction
+- Shared persisted trip Split Bill with revision protection
+- Trip Rescue using prepared prototype events and alternatives
+- Auth.js with Google OAuth, stable Member provisioning and server-side group/trip authorization
+- Prisma persistence with SQLite for local/demo use and PostgreSQL for production
 
 ### Core User Flow
 
@@ -71,21 +57,21 @@ Set Preferences
      ↓
 Suggest Places
      ↓
-Group Voting
+Vote
      ↓
 Group Consensus
      ↓
-Build Shortlist
+Confirm Shortlist
      ↓
-Validate Choices
+Validate
      ↓
 Sequence Preview
      ↓
-Itinerary
+Build Itinerary
      ↓
 Final Plan
      ↓
-Trip Rescue when plans change
+Trip Rescue
 ```
 
 ---
@@ -94,218 +80,158 @@ Trip Rescue when plans change
 
 ## 2.1 Ideas We Considered
 
-Our initial design was significantly larger than the final prototype.
-
-During planning, we explored a production-oriented architecture involving authentication, detailed workflow state machines, deterministic validation, automated itinerary generation, approval systems, itinerary versioning, external travel APIs and AI explanations.
-
-As development progressed, we narrowed the scope to prioritise a complete and demonstrable user experience.
+### Solution Directions Considered
 
 | Idea | Decision | Reason |
 |---|---|---|
-| Collaborative place suggestions | **Kept** | Directly addresses fragmented group planning. |
-| Member travel preferences | **Kept** | Gives the group a structured way to express different interests. |
-| Group voting | **Kept** | Converts discussion into an explicit group decision. |
-| Shared shortlist | **Kept** | Reduces many suggestions into a manageable planning set. |
-| Route-oriented planning | **Kept** | Helps turn selected places into a practical trip. |
-| Day-by-day itinerary | **Kept** | Required for the end-to-end planning experience. |
-| Budget overview | **Kept** | Budget is a core requirement of the challenge. |
-| Trip Rescue | **Kept** | Demonstrates how TravPlanner reacts when an existing plan changes. |
-| Split Bill | **Added as prototype extra** | Useful during group travel and could reuse the trip's member structure. |
-| Full deterministic constraint validator | **Simplified** | Production-level opening-hour, routing, budget and scheduling validation was too large for the available prototype time. |
-| Up to three automatically optimised itinerary variants | **Deferred** | Required a much larger planning engine and validation layer. |
-| Firebase Auth + Firestore + Cloud Functions architecture | **Replaced for prototype** | We prioritised a simpler Next.js + Prisma architecture that the team could complete and demonstrate reliably. |
-| Complex OWNER/MEMBER approval workflow | **Deferred** | Valuable for production collaboration, but too complex for the prototype scope. |
-| Immutable itinerary version history | **Deferred** | Not required to demonstrate the core planning concept. |
-| Full post-finalisation Change Requests | **Deferred** | Trip Rescue communicates the more important adjustment concept with less complexity. |
-| AI-generated itinerary | **Deferred** | We wanted the planning logic to remain understandable rather than depend on AI-generated schedules. |
-| AI explanation layer | **Deferred** | Useful as a future enhancement after the core planning flow is stable. |
-| Flight and hotel booking integrations | **Deferred** | They increase API and operational complexity without being necessary to demonstrate the central concept. |
-| Automatic weather/disruption monitoring | **Deferred** | The prototype demonstrates the response flow rather than production event detection. |
+| Collaborative group planner | **Kept** | Directly addresses fragmented planning and group coordination. |
+| AI-generated itinerary approach | **Deferred** | Deterministic behaviour is easier to explain and demonstrate reliably. |
+| Dynamic Trip Rescue / replanning | **Simplified** | A prepared event and alternative demonstrate adjustment without claiming live detection. |
+| Budget and Split Bill support | **Simplified** | The prototype shows known estimated spend and a shared Split Bill without claiming a settlement-grade ledger. |
+| Large production-oriented planning platform | **Replaced** | The scope was too broad for a complete prototype journey. |
 
-### Major Pivot
+### Technical and Scope Decisions
 
-The largest change was:
-
-```text
-Original direction
-Production-oriented collaborative planning platform
-with detailed backend authority and optimisation
-                    ↓
-Final prototype direction
-Complete, understandable and demonstrable
-group travel-planning experience
-```
-
-The original design remains useful as a long-term architecture reference. However, the implemented prototype intentionally focuses on the parts that communicate the product idea most clearly.
-
----
+| Decision | Status | Reason |
+|---|---|---|
+| Firebase-oriented architecture | **Replaced** by Next.js + Prisma | A single application and SQLite-backed persistence were achievable for the prototype. |
+| Complex approval workflow | **Deferred** | It was not required to demonstrate group decision-making. |
+| Itinerary history and versioning | **Deferred** | A single persisted itinerary is enough for the current journey. |
+| Flight and hotel integrations | **Deferred** | Provider and operational complexity would distract from the core concept. |
+| AI explanation layer | **Deferred** | Rule-based explanations already expose the current trade-offs. |
+| Live disruption monitoring | **Deferred** | Trip Rescue demonstrates response, not automatic detection. |
 
 ## 2.2 Ideation Boards
 
 ### Problem and Solution Map
 
-```mermaid
-flowchart LR
-    A[Scattered places and group-chat decisions] --> B[Different preferences and budgets]
-    B --> C[TravPlanner consensus]
-    C --> D[One explainable shortlist]
-    D --> E[Persistent itinerary]
-    E --> F[Trip Rescue when plans change]
-```
+The planned map should show how fragmented tools, group disagreement, budget uncertainty and plan changes connect to the product. It influenced the decision to keep one guided workflow centred on Group Consensus rather than a collection of disconnected utilities.
 
-The problem is fragmented coordination. The solution is a visible decision path that turns individual input into one shared plan.
+**Additional ideation artefact:** TODO — add the team’s actual problem/solution map or mindmap before submission.
 
 ### User Flow
 
-Recommended flow:
-
 ```text
-Trip setup
-   ↓
-Group preferences
-   ↓
-Place suggestions
-   ↓
-Voting
-   ↓
-Shortlist
-   ↓
-Validation
-   ↓
-Route
-   ↓
-Itinerary
-   ↓
-Trip Rescue
+Trip setup → Preferences → Suggestions → Voting → Group Consensus
+→ Shortlist → Validation → Sequence Preview → Itinerary → Trip Rescue
 ```
 
-The purpose of this diagram is to show that TravPlanner was designed as a **planning process**, rather than a collection of unrelated travel tools.
+This flow demonstrates the coordination problem from opinions to an actionable plan. It influenced the stage-based interface and the decision to keep each planning transition visible.
 
----
+**User-flow artefact:** TODO — add the team’s actual diagram before submission.
 
-## 2.3 Mentor Consultation
+## 2.3 Idea Evolution
 
-Mentor notes are not stored in this repository, so no feedback is attributed here. The documented scope decisions are based on the implemented prototype and should be updated only from actual consultation notes.
+| Stage | Direction | Why It Changed |
+|---|---|---|
+| Initial direction | Production-oriented collaborative travel platform | It covered too many workflows, integrations and infrastructure concerns for the prototype period. |
+| Problem found | Scope was too broad | A partial platform would not prove the complete group-planning journey. |
+| Refinement | Prioritise one end-to-end group-planning flow | This made the main user problem demonstrable from preferences through itinerary. |
+| Key product decision | Deterministic, explainable consensus instead of opaque AI-generated planning | Reviewers and travellers can see why places are selected. |
+| Technical simplification | Replace the Firebase-oriented architecture with Next.js, Prisma and SQLite | The smaller stack supports reliable local and seeded demonstration. |
+| Final prototype direction | Preferences → voting → consensus → shortlist → itinerary → Trip Rescue | This keeps group agreement primary and post-plan adjustment secondary. |
+
+## 2.4 Mentor Consultation
+
+No mentor consultation record is present in the repository. Replace this TODO with evidence from the team’s real notes before submission.
+
+| Date | Mentor | Feedback | Team Decision / Change |
+|---|---|---|---|
+| TODO | TODO | TODO — actual mentor feedback required | TODO — actual team response required |
 
 ---
 
 # 3. Design & Prototype
 
-The repository is the source for the current UI prototype. A public deployment URL is intentionally omitted until one is available.
+**UI Prototype:** TODO — use the public link from the submission header.
 
-TravPlanner uses a guided stage-based interface so users always know what part of the planning process they are currently completing.
-
-The implemented prototype follows these main stages:
-
-1. Ideas
-2. Preferences
-3. Voting
-4. Validation
-5. Route
-6. Itinerary
+Screenshots have not been added to the repository and still need to be captured before submission.
 
 ## Key Screens
 
-The following screens are implemented in the application. Screenshot assets are not included in this repository; the seeded local demo is the reproducible evidence path.
-
 ### 1. Group and Trip Dashboard
 
-Users organise trips around a travel group and can see the trips associated with that group.
+**Does:** Organises trips around their travel groups. **Interaction:** Create or open a group and trip. **Matters:** Establishes who is planning together and gives the journey one shared starting point.
 
 ### 2. Trip Planning Progress
 
-The trip overview shows the current planning stage, dates, budget, group participation and planning progress.
+**Does:** Shows dates, budget, participation and the current planning stage. **Interaction:** Continue to the next available stage. **Matters:** Makes the planning process and remaining work visible.
 
-### 3. Preferences and Place Suggestions
+### 3. Preferences and Suggestions
 
-Members express their travel preferences and contribute places they would like the group to consider.
+**Does:** Captures interests, food preferences, pace, must-dos, dislikes and candidate places. **Interaction:** Submit preferences and suggest places. **Matters:** Turns individual opinions into structured planning inputs.
 
-### 4. Group Voting
+### 4. Group Voting and Consensus
 
-Suggested places become shared decisions through the voting stage.
+**Does:** Displays trip-scoped votes and the explainable Group Consensus result together. **Interaction:** Vote, choose shortlist capacity and review selection reasons and fairness trade-offs. **Matters:** Makes TravPlanner’s server-authoritative primary differentiator visible at the decision point.
 
 ### 5. Shortlist and Validation
 
-The group narrows the available choices and reviews practical information before building the trip.
+**Does:** Presents the confirmed candidates and saved place details for review. **Interaction:** Confirm the shortlist and inspect practical information. **Matters:** Creates a deliberate checkpoint before itinerary building.
 
-### 6. Route and Map
+### 6. Sequence Preview / Map
 
-Selected activities can be viewed spatially to make the trip easier to understand and reduce unnecessary backtracking.
+**Does:** Displays the saved stop order and geographic grouping. **Interaction:** Inspect stops and continue to itinerary building. **Matters:** Makes the proposed sequence understandable without claiming route optimisation.
 
-### 7. Final Plan and Budget
+### 7. Itinerary and Final Plan
 
-The final trip workspace combines the itinerary, map, budget, booking indicators and selected places.
+**Does:** Combines the persisted day-by-day itinerary, map, known estimates and planning urgency. **Interaction:** Review daily activities and the final shared plan. **Matters:** Converts selected ideas into an actionable schedule while leaving unknown costs explicit.
 
 ### 8. Trip Rescue
 
-Trip Rescue demonstrates an unexpected event affecting the itinerary, evaluates a prepared alternative and lets the traveller accept the replacement.
+**Does:** Shows a prepared event, evaluates a prepared alternative and updates the persisted itinerary after acceptance. **Interaction:** Compare and accept the replacement. **Matters:** Demonstrates how the plan can remain useful after circumstances change.
 
 ---
 
 # 4. What Makes It Different
 
-TravPlanner's main idea is not simply to generate an itinerary.
+## Planning as a Visible Process
 
-It focuses on the **transition from individual group preferences to a shared, usable plan**.
+TravPlanner exposes the decisions that produce the itinerary:
 
-## 1. Planning as a Visible Process
+**Preferences → Suggestions → Voting → Group Consensus → Shortlist → Validation → Sequence Preview → Itinerary**
 
-Instead of immediately producing an opaque generated itinerary, TravPlanner exposes the major decisions:
+The itinerary is an outcome of visible group decisions, not an unexplained starting point.
 
-**Preferences → Suggestions → Voting → Shortlist → Validation → Route → Itinerary**
+## Explainable Group Consensus
 
-Users can understand how the final trip developed.
-
-## 2. Group Decisions Become Planning Inputs
-
-Members do not only edit a shared document.
-
-They contribute preferences and places, then vote before the trip is finalised.
-
-TravPlanner combines those signals into an explainable fair shortlist using:
+Group Consensus is the primary differentiator. The client chooses shortlist capacity; the server derives the authoritative shortlist from trip membership, member preferences, candidate places and trip-scoped votes. Exact must-dos take priority and may expand capacity. Other candidates use:
 
 ```text
-baseScore = 2 × votes + preference matches - 2 × dislike conflicts
+base score = 2 × votes + preference matches - 2 × dislike conflicts
 ```
 
-Exact Must-do matches are selected first and can expand capacity. Remaining candidates are ranked deterministically by base score, vote support, preference matches, fewer conflicts, then stable candidate ID. A bounded fixed `+3` representation adjustment rewards an under-represented traveller only when it changes a close selection; it cannot overwhelm clear group support. The Consensus Trade-off card explains each such change. Trip Rescue reuses the same candidate evaluation semantics when it compares a prepared replacement.
+A bounded `+3` representation bonus can change close choices, and stable IDs break final ties. The UI exposes selection reasons, member representation and fairness trade-offs. The server persists the derived shortlist and advances the planning stage.
 
-## 3. Trip Rescue
+## Trip Rescue
 
-Planning does not end once an itinerary is created.
+Trip Rescue is the secondary differentiator. Accepting a replacement modifies the persisted itinerary and resolves the event in one database transaction. The current event and alternative are prepared prototype data: TravPlanner does not automatically detect live disruptions, search for live alternatives or verify live availability.
 
-Trip Rescue demonstrates how TravPlanner could respond when an activity no longer works by:
+## Continuous Planning Workspace
 
-1. identifying the affected activity,
-2. evaluating the impact,
-3. presenting an alternative,
-4. showing its travel, availability and cost implications,
-5. and updating the shared itinerary after acceptance.
-
-The current implementation is a **prototype demonstration of this workflow**, rather than a production real-time disruption-monitoring service.
+Groups can move through preferences, suggestions, votes, shortlist confirmation, itinerary, budget context, shared expense splitting and plan adjustment without rebuilding the trip in separate documents.
 
 ## Known Limitations
 
-- Saved opening hours and `isOpenNow` values are provider snapshots, not live availability.
-- Google `price_level` describes relative venue affordability, not an admission or ticket price.
-- Route is a saved sequence preview; it is not route optimisation, and travel minutes are estimates.
-- Trip Rescue uses prepared disruption and replacement data. It does not detect weather or discover live alternatives automatically.
+- The sequence preview is not route optimisation and does not call a live routing service.
+- Displayed travel minutes are estimates saved with the itinerary.
+- Place opening hours and availability are saved snapshots, not live checks.
+- Google `price_level` is relative venue affordability, not admission or booking price.
+- Budget views do not provide complete hotel, ticket or transport pricing.
+- Split Bill is a shared trip snapshot with revision protection, not a full expense history, payer or settlement ledger.
+- Google OAuth provisions a stable Member identity; account linking, management and additional providers remain future work.
 
-## 4. One Continuous Workspace
+## Existing Solution Comparison
 
-TravPlanner brings together:
+This comparison describes emphasis, not a claim that another product lacks a capability.
 
-- group preferences,
-- suggested activities,
-- voting,
-- maps,
-- itinerary,
-- budget,
-- booking awareness,
-- expense splitting,
-- and plan adjustment.
-
-The goal is to reduce the number of separate decisions and tools travellers need to coordinate manually.
+| Dimension | TravPlanner Prototype | Existing Planners such as Wanderlog |
+|---|---|---|
+| Starting point | Structured preferences, suggestions and votes | Commonly include itinerary, map and place-planning workflows |
+| Group decision process | Explicit voting followed by Group Consensus | Collaboration capabilities vary by product and plan |
+| Explainability | Shows rule-based scores, representation and trade-offs | Not evaluated here; consult each product’s current documentation |
+| Itinerary planning | Deterministic builder from a confirmed shortlist | Itinerary-planning capabilities are available |
+| Unexpected-plan adjustment | Prepared Trip Rescue demonstration | No comparative claim is made without current product verification |
 
 ---
 
@@ -313,135 +239,79 @@ The goal is to reduce the number of separate decisions and tools travellers need
 
 ## Current Prototype Stack
 
-| Layer | Technology | Why We Use It |
+| Layer | Technology | Role |
 |---|---|---|
-| Frontend | Next.js 16 + React 19 | Provides the application UI and routing in one project. |
-| Language | TypeScript | Gives consistent types across frontend and server code. |
-| Styling | Tailwind CSS 4 | Allows fast development of a consistent responsive UI. |
-| Client State | Zustand | Keeps shared prototype state simple and lightweight. |
-| Backend | Next.js Route Handlers | Allows frontend and prototype APIs to remain in one codebase. |
-| Authentication | Auth.js + Google OAuth | Maps an authenticated provider identity to one stable TravPlanner Member. |
-| ORM | Prisma | Provides structured database access and a clear domain schema. |
-| Database | SQLite locally; PostgreSQL in production | Keeps the seeded demo simple while allowing deployment on Vercel. |
-| Maps / Places | Google Maps browser UI + server Google Places | Browser search is discovery; persisted place facts are resolved server-side. |
-| Icons | Lucide React | Provides a consistent interface icon set. |
+| Frontend | Next.js 16 + React 19 | Application UI and routing |
+| Language | TypeScript | Shared strict types |
+| Styling | Tailwind CSS 4 | Responsive interface styling |
+| Client state | Zustand | Hydrated client snapshot and actions |
+| Backend | Next.js Route Handlers | Authenticated mutation and data endpoints |
+| ORM | Prisma | Server-side database access |
+| Database | SQLite locally; PostgreSQL in production | Seeded local demo and deployable persistence |
+| Maps / Places | Google Maps JavaScript API / Places | Browser-side discovery and map presentation |
+| Authentication | Auth.js + Google OAuth | Stable Member provisioning and JWT identity |
 
 ## Current Architecture
 
 ```mermaid
 flowchart TD
     U[Traveller] --> UI[Next.js / React UI]
-
-    UI --> Z[Zustand Client State]
-    Z --> API[Next.js API Routes]
-
-    UI --> AUTH[Auth.js / Google OAuth]
-    API --> P[Prisma ORM]
+    UI --> Z[Zustand hydrated snapshot]
+    Z --> API[Authenticated Route Handlers]
+    API --> AUTH[Group / trip authorization]
+    AUTH --> P[Prisma]
     P --> DB[(SQLite local/demo or PostgreSQL production)]
-
-    UI --> MAP[Google Maps UI]
-    API --> PLACE[Place Data / Google Places]
-
-    DB --> G[Groups & Members]
-    DB --> T[Trips]
-    DB --> S[Suggestions & Votes]
-    DB --> I[Itineraries & Rescue Events]
+    UI --> GM[Google Maps / Places in browser]
+    DB --> D[Groups, members, trips, places, votes, itinerary and Rescue events]
 ```
 
-The browser does not rely only on hard-coded frontend state. Mutations are sent through server API routes, authorized from the session and group membership, then persisted through Prisma.
-
-## Simplification From Original Architecture
-
-Our original technical design proposed:
-
-```text
-React/Vite
-   ↓
-Firebase Authentication
-   ↓
-Cloud Functions
-   ↓
-Firestore
-   ↓
-Validator + Planner
-   ↓
-Google Places / Routes
-   ↓
-Optional AI explanation layer
-```
-
-Firebase was considered during ideation but is not part of version1.1. The implemented architecture is:
-
-```text
-Next.js + React
-   ↓
-Auth.js + Google OAuth
-   ↓
-Next.js API routes
-   ↓
-Prisma
-   ↓
-SQLite locally / PostgreSQL in production
-```
-
-This keeps the backend command boundary in one Next.js application while making production persistence and identity explicit.
-
----
+Persisted mutations normally follow **UI → store action → authenticated API → Prisma → rehydrate**. Place facts imported from Google are resolved and saved server-side as provider snapshots. Opening hours are snapshots, `price_level` is relative affordability, and photo access is proxied through an authenticated server route.
 
 ## Prototype vs Production Scope
 
-We intentionally distinguish between what the current prototype demonstrates and what a production system would require.
-
-| Area | Prototype | Production Direction |
+| Area | Current Prototype | Production Direction |
 |---|---|---|
-| Group planning | Implemented | Real-time multi-user synchronisation |
-| Preferences | Implemented | Richer recommendation profile |
-| Place suggestions | Implemented | Larger external place-data integration |
-| Voting | Implemented | Stronger decision rules and concurrency handling |
-| Shortlist | Implemented | Automated deterministic ranking |
-| Validation | Demonstrated | Full constraint-validation engine |
-| Route planning | Demonstrated | Live route/time optimisation |
-| Itinerary | Implemented | Automated constraint-aware planner |
-| Budget | Implemented at prototype level | Full cost/booking integration |
-| Trip Rescue | Interactive prototype | Live disruption/weather detection and revalidation |
-| Split Bill | Prototype feature | Persistent expense ledger and settlement |
-| Authentication | Google OAuth with stable Member provisioning | Additional providers and account-linking UI |
-| Database | SQLite local/demo and PostgreSQL production schema/migrations | Managed PostgreSQL operations |
-| Multi-user security | Session, group membership and organizer checks | Real-time collaboration and richer audit controls |
-| AI | Deferred | Explanation and trade-off assistance only |
-
----
+| Group planning | Persisted group/trip workflow | Real-time collaboration and concurrency controls |
+| Preferences, suggestions and voting | Persisted inputs and trip-scoped votes | Richer profiles and decision policies |
+| Group Consensus | Server-authoritative deterministic shortlist with explainable trade-offs | Richer policies, concurrency and collaboration controls |
+| Shortlist | Client-selected capacity; server-derived and persisted selection | Richer policy and approval controls |
+| Validation | Deterministic saved-data checks | Richer opening-hours, cost and routing validation |
+| Sequence preview | Saved stop order, area grouping and estimated travel time | Live route optimisation and travel-time services |
+| Itinerary | Deterministic server builder and persisted itinerary | Richer constraint-aware alternatives |
+| Budget | Known estimated spend with explicit unknown activity, transport and accommodation costs | External hotel, ticket and transport pricing |
+| Planning urgency | Calendar-based urgency from days until departure | Verified provider and availability signals |
+| Trip Rescue | Prepared event and alternative update the persisted itinerary | Live detection, search and revalidation |
+| Split Bill | Shared persisted trip snapshot with revision protection | Expense history, payer tracking, settlements and ledger model |
+| Authentication | Auth.js, Google OAuth, stable Member provisioning and server-side authorization | Production account hardening, additional providers, linking and account management |
+| Database | SQLite local/demo and PostgreSQL production schema/migrations | Managed PostgreSQL operations and deployment hardening |
+| Google Places | Saved provider snapshots and authenticated photo proxy | Refresh policies and richer provider integrations |
+| AI | Deferred | Explanation-only assistance where rules remain authoritative |
 
 ## Build Plan & Scope
 
-### Version1.1 Delivery Scope
+The scope was intentionally narrowed to finish a coherent, deterministic journey.
 
-Before submission we are prioritising:
+### Core / Implemented
 
-1. Stable end-to-end group planning flow.
-2. Simple solo-travel demonstration.
-3. Reliable seeded demonstration data.
-4. Working core buttons and navigation.
-5. Reproducible PostgreSQL/Vercel deployment path.
-6. Accurate competition documentation and deterministic demo.
+- Group/trip setup, authentication and persistence
+- Preferences, suggestions and voting
+- Group Consensus and shortlist confirmation
+- Validation, sequence preview and itinerary
+- Known estimated spend summary
+- Shared persisted Split Bill with revision protection
+- Trip Rescue
+- Seeded demo and deployment path
 
-### Explicitly Deferred Features
+### Optional / Deferred
 
-We are **not** attempting to finish:
-
-- Firebase, Firestore and Cloud Functions,
-- a complete constraint optimisation engine,
-- automatic live weather monitoring,
-- automatic disruption detection,
-- flight booking,
-- hotel booking,
-- payment processing,
-- production expense settlement,
-- AI itinerary or consensus generation,
-- live route optimisation,
-- or a larger workflow/version-history system.
-
-These boundaries keep version1.1 focused on the shared, explainable planning path.
+- Live route optimisation and live transport times
+- Live booking, ticket and accommodation prices
+- Flight and hotel integrations
+- Weather monitoring and automatic disruption detection
+- AI itinerary generation or AI consensus
+- Payment processing and settlement-grade Split Bill
+- Large approval workflows and itinerary version history
+- Real-time collaborative synchronisation
 
 ---
 
@@ -449,16 +319,15 @@ These boundaries keep version1.1 focused on the shared, explainable planning pat
 
 | Requirement | TravPlanner Prototype |
 |---|---|
-| End-to-end trip planning | Guided trip flow from setup and preferences through itinerary |
-| Budgeting | Trip budget views, price awareness and Split Bill prototype |
-| Itinerary building | Day-by-day itinerary and final-plan screens |
-| Group preference synchronisation | Member preferences, place suggestions and group voting |
-| Adjustment to unexpected changes | Trip Rescue prototype |
-| Faster planning | Major planning decisions are combined into one guided workflow |
-| Less stressful planning | Visible stages reduce the need to manually coordinate information across separate tools |
-| Solo travel | Single-member trips skip group-only gates and reuse consensus, shortlist, itinerary, Final Plan and Rescue |
+| End-to-end trip planning | Guided flow from setup and preferences through itinerary |
+| Budgeting | Known estimated spend with incomplete costs identified as unknown; shared persisted Split Bill |
+| Itinerary building | Deterministic day-by-day itinerary from a confirmed shortlist |
+| Group preferences | Member preferences, suggestions, votes and explainable Group Consensus |
+| Traveller coordination | Visible stages and a shared persisted trip plan |
+| Unexpected plan changes | Prepared Trip Rescue flow that updates the itinerary |
+| Solo travel | The shared planning model can operate with one traveller; dedicated solo UX is limited |
 | Group travel | Primary prototype flow |
-| Deployable demonstration | `npm run build`, PostgreSQL migration script and `/api/health` endpoint |
+| Deployable demonstration | TODO — public UI Prototype link required |
 
 ---
 
@@ -466,81 +335,59 @@ These boundaries keep version1.1 focused on the shared, explainable planning pat
 
 ## Target Users
 
-TravPlanner primarily targets:
-
-- small groups of friends,
-- university students travelling together,
-- young travellers organising trips collaboratively,
-- and solo travellers who still want a structured planning flow.
-
-We intentionally avoid defining the target audience as simply “everyone who travels”.
+- Small friend groups
+- University and student travel groups
+- Young collaborative travellers
+- Solo travellers who want a structured planning flow
 
 ## Before TravPlanner
 
-A group may need to:
-
 ```text
-Group chat
-   +
-Maps
-   +
-Saved places
-   +
-Voting/polls
-   +
-Spreadsheet
-   +
-Itinerary tool
-   +
-Budget calculator
+Group chat + maps + saved places + polls + spreadsheet
++ itinerary tool + budget calculator
 ```
 
-Members repeatedly copy information between tools and manually reconcile different preferences.
+Ideas, preferences and decisions are spread across tools, so one person must manually reconcile them into a plan.
 
 ## With TravPlanner
 
 ```text
-Preferences
-     ↓
-Suggestions
-     ↓
-Voting
-     ↓
-Shortlist
-     ↓
-Route
-     ↓
-Itinerary
-     ↓
-Trip Rescue
-
-        TravPlanner
+Preferences → Suggestions → Voting → Group Consensus
+→ Shortlist → Itinerary → Final Plan → Trip Rescue
 ```
 
-The desired impact is not only fewer applications.
+Group Consensus makes agreement explicit before the itinerary is built, and the saved workflow keeps later changes connected to the same plan.
 
-It is **less coordination work between people**.
+## Expected Impact
+
+- Less manual negotiation over competing suggestions
+- Fewer planning decisions spread across unrelated tools
+- Clearer group agreement and visible trade-offs
+- Easier movement from ideas to a day-by-day itinerary
+- Clearer handling of prepared plan changes
+
+These are expected product outcomes; the repository does not contain completed user research or numerical impact evidence.
+
+## Scalability
+
+TravPlanner starts with small friend and student groups. A realistic path is to support larger social and family groups, managed infrastructure, real-time collaboration, more destinations, richer travel providers and additional external services after the core decision flow is validated.
 
 ---
 
 # 8. Future Development
 
-If TravPlanner were continued beyond the prototype, the next priorities would be:
-
-1. Production authentication and authorisation.
-2. Managed production database.
-3. Real-time collaborative synchronisation.
-4. Deterministic itinerary feasibility validation.
-5. Automatic route optimisation.
-6. Stronger budget constraints.
-7. Itinerary alternatives and comparison.
-8. Itinerary history/versioning.
-9. Real external disruption and weather signals.
-10. Safer automatic Trip Rescue.
-11. Explanation-only AI for trade-offs and planning decisions.
-12. Optional flight, hotel and activity-provider integrations.
-
-The original design documentation explores several of these areas in substantially more detail.
+1. Managed PostgreSQL deployment hardening
+2. Production account and identity hardening, including additional providers and account linking
+3. Real-time collaboration and concurrency controls
+4. Richer feasibility and provider-snapshot validation
+5. Live route optimisation and travel-time services
+6. External cost, ticket and booking providers
+7. Live disruption and weather signals
+8. Itinerary alternatives and comparison
+9. Itinerary history and versioning
+10. Settlement-grade Split Bill with expense history and payer tracking
+11. Explanation-only AI for trade-offs
+12. Flight and hotel integrations
 
 ---
 
@@ -548,7 +395,7 @@ The original design documentation explores several of these areas in substantial
 
 ## Requirements
 
-- Node.js
+- Node.js 22
 - npm
 
 ## Setup
@@ -560,50 +407,18 @@ git checkout version1.1
 npm install
 ```
 
-Copy `.env.example` to `.env.local` and set a local SQLite URL plus a local Auth.js secret. Set `AUTH_DEMO_ENABLED=true` for the deterministic local demo; this flag is ignored in production.
-
-```env
-DATABASE_URL=file:./prisma/dev.db
-AUTH_SECRET=local-only-secret
-AUTH_DEMO_ENABLED=true
-```
-
-Generate the Prisma client:
+Copy `.env.example` to `.env.local`, configure a local SQLite `DATABASE_URL` and `AUTH_SECRET`, and set `AUTH_DEMO_ENABLED=true` for the deterministic local demo. Then run:
 
 ```bash
 npm run db:generate
-```
-
-Prepare the database:
-
-```bash
 npm run db:push
 npm run db:seed
-```
-
-`npm run db:seed` resets the configured local database. Use it only with a disposable/local database.
-
-Start the application:
-
-```bash
 npm run dev
 ```
 
-Open:
+Open `http://localhost:3000`. Production uses the PostgreSQL schema and migrations, Google OAuth credentials, and separate browser/server Google keys.
 
-```text
-http://localhost:3000
-```
-
-For production, set `DATABASE_URL` to PostgreSQL, configure Google OAuth and both restricted browser/private server Google keys, keep `AUTH_DEMO_ENABLED=false`, then run:
-
-```bash
-npm run db:generate:production
-npm run db:migrate:production
-npm run build
-```
-
-The health check is available at `/api/health`. It verifies production configuration and database connectivity without returning secrets.
+`npm run db:seed` replaces existing domain data with deterministic demo fixtures.
 
 ---
 
@@ -611,29 +426,11 @@ The health check is available at `/api/health`. It verifies production configura
 
 ```text
 TravPlanner/
-├── app/
-│   ├── api/                 # Prototype backend API routes
-│   ├── groups/              # Group planning screens
-│   ├── trips/               # Main trip workflow
-│   └── split-bill/          # Expense-splitting prototype
-│
-├── components/
-│   ├── trip/                # Trip-specific UI components
-│   └── ui/                  # Shared interface components
-│
-├── lib/
-│   ├── server/              # Prisma/server utilities
-│   ├── store.ts             # Zustand state and API actions
-│   ├── types.ts             # Application domain types
-│   └── google-*.ts          # Google integration utilities
-│
-├── prisma/
-│   ├── schema.prisma        # PostgreSQL production schema and migration source
-│   ├── schema.sqlite.prisma # SQLite local/demo schema
-│   ├── migrations/           # PostgreSQL deployment migrations
-│   └── seed.ts              # Deterministic demo data
-│
-└── public/
+├── app/                    # Pages and authenticated API routes
+├── components/             # Trip and shared UI components
+├── lib/                    # Domain logic, client store and server services
+├── prisma/                 # PostgreSQL production schema/migrations, SQLite local schema and seed
+└── public/                 # Static assets
 ```
 
 ---
@@ -642,15 +439,15 @@ TravPlanner/
 
 The project began with a larger architecture and MVP specification covering deterministic planning, validation, voting, approvals, backup handling, versioning, security and external APIs.
 
-**Original Design Planning:**  
-[CodeNection 2026 — Google Docs](https://docs.google.com/document/d/1fiUs3ogM99BjK-oBim_cT2xnQYW83PK6e-k9U4fCZr4/edit)
+**Original Design Planning:** [CodeNection 2026 — Google Docs](https://docs.google.com/document/d/1fiUs3ogM99BjK-oBim_cT2xnQYW83PK6e-k9U4fCZr4/edit)
 
-The current repository implementation is treated as the source of truth for what is demonstrated in the submitted prototype.
+The checked `version1.1` implementation is the source of truth for current capabilities.
 
 ---
 
 # 12. Submission Links
 
 - **GitHub:** https://github.com/qianyi-11/TravPlanner
-- **Live Prototype:** Not published in this repository
-- **Video / Slides / UI:** Add links here when the final submission assets are available
+- **UI Prototype:** TODO — public link required
+- **Video Presentation:** TODO — unlisted YouTube link required
+- **Presentation Slides:** TODO — public link required
