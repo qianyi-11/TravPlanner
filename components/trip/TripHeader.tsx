@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, Receipt, Users, Wallet } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, Receipt, Settings, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useShallow } from "zustand/react/shallow";
@@ -9,11 +10,18 @@ import { usePlannerStore } from "@/lib/store";
 import { cx, formatCurrency, formatDateRange } from "@/lib/utils";
 import { MemberStack } from "@/components/ui/Avatar";
 import { ProgressStepper } from "./ProgressStepper";
+import { EditableTitle } from "@/components/ui/EditableTitle";
+import { EditTripModal } from "./EditTripModal";
 
 export function TripHeader({ trip }: { trip: Trip }) {
   const members = usePlannerStore(
     useShallow((s) => trip.memberIds.map((id) => s.members[id]).filter(Boolean))
   );
+  const group = usePlannerStore((state) => state.groups[trip.groupId]);
+  const currentUserId = usePlannerStore((state) => state.currentUserId);
+  const renameTrip = usePlannerStore((state) => state.renameTrip);
+  const [editOpen, setEditOpen] = useState(false);
+  const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
   const pathname = usePathname();
   const onSplitBill = pathname?.endsWith("/split-bill");
 
@@ -23,8 +31,17 @@ export function TripHeader({ trip }: { trip: Trip }) {
         className="relative overflow-hidden rounded-3xl p-6 sm:p-8"
         style={{ background: trip.coverColor }}
       >
+        {isOrganizer && (
+          <button type="button" onClick={() => setEditOpen(true)} title="Edit trip details" className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white/90 hover:bg-black/35">
+            <Settings size={16} />
+          </button>
+        )}
         <p className="text-sm font-medium text-white/70">{trip.destinations.join(" · ")}</p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
+        {isOrganizer ? (
+          <EditableTitle value={trip.name} onSave={(name) => renameTrip(trip.id, name)} label="Rename trip" className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl" inputClassName="font-display text-2xl font-bold text-white sm:text-3xl" />
+        ) : (
+          <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
+        )}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/85">
           <span className="flex items-center gap-1.5">
             <CalendarDays size={15} /> {formatDateRange(trip.startDate, trip.endDate)}
@@ -57,6 +74,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
           <span className="hidden sm:inline">Split Bill</span>
         </Link>
       </div>
+      {isOrganizer && editOpen && <EditTripModal trip={trip} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

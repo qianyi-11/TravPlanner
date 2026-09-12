@@ -66,6 +66,8 @@ interface PlannerState {
       transport: Trip["transport"];
     }
   ) => Promise<string>;
+  renameTrip: (tripId: string, name: string) => Promise<boolean>;
+  updateTripDetails: (tripId: string, updates: Partial<Pick<Trip, "startDate" | "endDate" | "budgetTotal" | "dailyStart" | "dailyEnd" | "transport">>) => Promise<boolean>;
   deleteTrip: (tripId: string) => Promise<void>;
 
   updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<boolean>;
@@ -274,6 +276,26 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't submit suggestions" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
+  },
+
+  renameTrip: async (tripId, name) => {
+    const result = await api(`/api/trips/${tripId}`, { method: "PATCH", body: JSON.stringify({ name }) });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't rename trip" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
+  },
+
+  updateTripDetails: async (tripId, updates) => {
+    const result = await api(`/api/trips/${tripId}`, { method: "PATCH", body: JSON.stringify(updates) });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't update trip details" });
       return false;
     }
     await get().hydrate();

@@ -8,6 +8,7 @@ import { POST as submitSuggestions } from "@/app/api/trips/[tripId]/submit-sugge
 import { POST as submitVotes } from "@/app/api/trips/[tripId]/submit-votes/route";
 import { POST as toggleVote } from "@/app/api/trips/[tripId]/votes/route";
 import { POST as createTrip } from "@/app/api/trips/route";
+import { PATCH as updateTrip } from "@/app/api/trips/[tripId]/route";
 import { POST as updatePreferences } from "@/app/api/members/[memberId]/preferences/route";
 import { POST as addGroupMember } from "@/app/api/groups/[groupId]/members/route";
 import { POST as setDemoSession } from "@/app/api/demo-session/route";
@@ -271,6 +272,47 @@ test("group deletion is organizer-only and preserves identities and unrelated da
   assert.ok(await prisma.authIdentity.findUnique({ where: { provider_providerAccountId: { provider: "google", providerAccountId: "member-a-google" } } }));
   assert.ok(await prisma.group.findUnique({ where: { id: "group-b" } }));
   assert.ok(await prisma.trip.findUnique({ where: { id: "trip-b" } }));
+});
+
+test("trip updates are organizer-only, strict, and preserve itinerary integrity", async () => {
+  setAuthenticatedMemberIdForTests("member-b");
+  assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("trip-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+  for (const invalid of [
+    { startDate: "2026-02-30" },
+    { startDate: "2026-10-03", endDate: "2026-10-02" },
+    { dailyStart: "20:00", dailyEnd: "08:00" },
+    { transport: "Teleport" },
+    { budgetTotal: -1 },
+    { name: "" },
+    { name: "Valid", groupId: "group-b" },
+  ]) assert.equal((await updateTrip(request(invalid), tripContext("trip-a"))).status, 400);
+
+  let response = await updateTrip(request({ name: "  Renamed  " }), tripContext("trip-a"));
+  assert.equal(response.status, 200);
+  let saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
+  assert.equal(saved.name, "Renamed");
+  assert.equal(saved.itineraryRevision, 1);
+
+  response = await updateTrip(request({ startDate: "2026-10-02", budgetTotal: 0, dailyStart: "09:00", transport: "Mixed" }), tripContext("trip-a"));
+  assert.equal(response.status, 200);
+  saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
+  assert.equal(saved.startDate, "2026-10-02");
+  assert.equal(saved.budgetTotal, 0);
+  assert.equal(saved.dailyStart, "09:00");
+  assert.equal(saved.transport, "Mixed");
+
+  await prisma.trip.update({ where: { id: "trip-a" }, data: { itineraryJson: JSON.stringify([{ day: 1 }]) } });
+  response = await updateTrip(request({ endDate: "2026-10-03" }), tripContext("trip-a"));
+  assert.equal(response.status, 409);
+  assert.equal((await body(response)).code, "TRIP_REPLAN_REQUIRED");
+  response = await updateTrip(request({ name: "Still Safe", budgetTotal: 500 }), tripContext("trip-a"));
+  assert.equal(response.status, 200);
+  saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
+  assert.equal(saved.name, "Still Safe");
+  assert.equal(saved.budgetTotal, 500);
+  assert.equal(saved.endDate, "2026-10-02");
+  assert.equal(saved.itineraryRevision, 1);
 });
 
 test("client memberId cannot spoof planning identity", async () => {
