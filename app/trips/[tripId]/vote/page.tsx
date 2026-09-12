@@ -29,7 +29,12 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
 
   if (!trip || !me) notFound();
 
-  const myVotes = (me.votedPlaceIds ?? []).filter((id) => trip.placeIds.includes(id));
+  // Derived from this trip's own place data (`votedBy` on the trip-scoped
+  // place), not `me.votedPlaceIds` — that list is a flat, cross-trip record of
+  // every place the member has ever voted for, so the same real-world place
+  // added to two different trips would show as "voted" here just because it
+  // was voted for somewhere else.
+  const myVotes = places.filter((p) => p.votedBy.includes(me.id)).map((p) => p.id);
   const limit = trip.votesPerMember;
 
   function handleSubmit() {

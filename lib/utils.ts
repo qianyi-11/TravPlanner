@@ -132,6 +132,38 @@ export function estimatedMealCost(priceLevel: 1 | 2 | 3 | 4): {
   return { low, high, label: `RM ${low} – ${high}` };
 }
 
+// How long people actually spend somewhere, by category — used whenever a
+// place doesn't come with its own curated duration (chiefly, anything
+// imported live from Google, which has no "typical visit length" of its own).
+// A shopping mall and a cafe are not the same time commitment; treating them
+// as if they were is exactly how a day ends up over-packed.
+const DURATION_BY_KEYWORD: [RegExp, number][] = [
+  [/theme park|amusement/, 360],
+  [/museum|gallery|art/, 120],
+  [/mall|shopping (mall|centre|center)/, 120],
+  [/zoo|aquarium|water ?park/, 180],
+  [/market/, 75],
+  [/temple|shrine|mosque|church|cathedral/, 75],
+  [/park|garden|nature|reserve/, 90],
+  [/historic|heritage|old town/, 90],
+  [/castle|palace|fort/, 90],
+  [/beach/, 120],
+  [/observation|tower|viewpoint|lookout/, 60],
+  [/landmark|monument|square|plaza/, 45],
+  [/bakery|dessert|ice cream|cafe|café|coffee/, 45],
+  [/bar|pub|lounge|nightlife|club/, 90],
+  [/ramen|fast food|street food|hawker/, 45],
+  [/restaurant|food|dining|kitchen|grill|bistro/, 60],
+];
+
+export function estimateVisitDuration(category: string): number {
+  const c = category.toLowerCase();
+  for (const [pattern, minutes] of DURATION_BY_KEYWORD) {
+    if (pattern.test(c)) return minutes;
+  }
+  return 75; // a generic "look around" default for anything unrecognized
+}
+
 export function totalItineraryCost(trip: Trip): number {
   return trip.itinerary.reduce(
     (sum, day) => sum + day.activities.reduce((s, a) => s + a.estimatedCost, 0),

@@ -1,5 +1,6 @@
 import type { ItineraryActivity, ItineraryDay, Place, TransportMode } from "./types";
 import { daysBetween, isFoodPlace } from "./utils";
+import { travelMinutes } from "./geo";
 
 /**
  * Turns a route-ordered shortlist into a real day-by-day plan.
@@ -26,15 +27,20 @@ interface TripLike {
   transport: TransportMode;
 }
 
-const SPEED_KMH: Record<TransportMode, number> = {
-  Walking: 4.5,
-  "Public Transport": 18,
-  Car: 22,
-  Taxi: 24,
-  Mixed: 16,
-};
-
 const PRICE_ESTIMATE: Record<1 | 2 | 3 | 4, number> = { 1: 10, 2: 25, 3: 50, 4: 90 };
+
+/**
+ * A hard ceiling on non-meal stops per day, independent of whether the clock
+ * technically has room for more. Real days have traffic, queueing, and people
+ * who get tired — "it fits on paper" isn't the same as "it's a good day."
+ * With 3 meals on top, that's still up to 7 stops in a day, which is already
+ * a full one.
+ */
+export const MAX_SIGHTS_PER_DAY = 4;
+
+/** Cap on travel minutes for the one bonus evening stop past that ceiling — a
+ * quick nearby stop after dinner, not a night-time trek across the city. */
+const EVENING_BONUS_MAX_TRAVEL = 30;
 
 function parseTime(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -58,23 +64,6 @@ function addDays(iso: string, n: number): string {
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
-}
-
-function haversineKm(a: Place["coordinates"], b: Place["coordinates"]): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-}
-
-function travelMinutes(a: Place, b: Place, transport: TransportMode): number {
-  const km = haversineKm(a.coordinates, b.coordinates);
-  const speed = SPEED_KMH[transport] ?? SPEED_KMH.Mixed;
-  const minutes = (km / speed) * 60;
-  return Math.min(90, Math.max(10, Math.round(minutes / 5) * 5));
 }
 
 function titleCase(s: string): string {
@@ -161,19 +150,52 @@ export function buildItinerary(trip: TripLike, orderedPlaces: Place[]): Itinerar
     const areasToday = new Set<string>();
     let cursor = dailyStart;
     let placedAny = false;
+    let sightsToday = 0;
 
     const anchors = mealAnchorsFor(dailyStart, dailyEnd);
     // Every open segment ends at the next meal's target time, or at day's end
     // once all of today's meals are placed.
     const segmentEnds = [...anchors.map((a) => a.target), dailyEnd];
 
+    // If dinner leaves a real evening window afterward, the day shouldn't stop
+    // dead the moment dinner ends just because the daytime cap is already
+    // spent — "after dinner can go to other place" is part of the shape of
+    // the day. Grant the post-dinner segment one stop on top of the normal
+    // cap instead of carving a slot out of daytime (that would risk pushing
+    // the daytime queue's last stop late enough to blow through the window
+    // that lets a real place fill dinner in the first place).
+    const dinnerAnchor = anchors.find((a) => a.type === "dinner");
+    const reserveEveningSlot = !!dinnerAnchor && dailyEnd - dinnerAnchor.target >= 60;
+
     for (let i = 0; i < segmentEnds.length; i++) {
       const windowEnd = segmentEnds[i];
+      const isFinalSegment = i === segmentEnds.length - 1;
+      const segmentCap = isFinalSegment && reserveEveningSlot ? MAX_SIGHTS_PER_DAY + 1 : MAX_SIGHTS_PER_DAY;
 
-      // Fill the open segment with sightseeing stops.
-      while (sightQueue.length > 0) {
-        const candidate = sightQueue[0];
-        const travel = lastPlace ? travelMinutes(lastPlace, candidate, trip.transport) : 20;
+      // Fill the open segment with sightseeing stops, up to the daily cap.
+      while (sightQueue.length > 0 && sightsToday < segmentCap) {
+        // The bonus stop past the normal cap only exists for something easy to
+        // reach after a full day, not whatever the route order queued up next —
+        // a night-time trek across town isn't "one more place", it's a second
+        // outing. Look a little further ahead in the (already route-ordered)
+        // queue for the nearest thing that actually fits nearby; anything found
+        // is pulled out of turn, leaving the rest of the order intact for
+        // whichever day catches up to it geographically.
+        const isBonusStop = isFinalSegment && sightsToday >= MAX_SIGHTS_PER_DAY;
+        let index = 0;
+        if (isBonusStop && lastPlace) {
+          // Only peek a few stops ahead — far enough to catch something the
+          // route happened to queue slightly out of turn, not so far that a
+          // later day gets raided for a place it was meant to anchor.
+          const lookahead = sightQueue.slice(0, 6);
+          index = lookahead.findIndex(
+            (p) => travelMinutes(lastPlace!.coordinates, p.coordinates, trip.transport) <= EVENING_BONUS_MAX_TRAVEL
+          );
+          if (index === -1) break;
+        }
+
+        const candidate = sightQueue[index];
+        const travel = lastPlace ? travelMinutes(lastPlace.coordinates, candidate.coordinates, trip.transport) : 20;
         const arrival = cursor + travel;
         const finish = arrival + candidate.estimatedDurationMinutes;
         if (finish > windowEnd) break;
@@ -193,7 +215,8 @@ export function buildItinerary(trip: TripLike, orderedPlaces: Place[]): Itinerar
         cursor = finish;
         lastPlace = candidate;
         placedAny = true;
-        sightQueue.shift();
+        sightsToday += 1;
+        sightQueue.splice(index, 1);
       }
 
       // Then handle the meal this segment led up to, if any.
@@ -201,7 +224,7 @@ export function buildItinerary(trip: TripLike, orderedPlaces: Place[]): Itinerar
       if (!anchor) continue;
 
       const candidate = foodQueue[0];
-      const travel = candidate && lastPlace ? travelMinutes(lastPlace, candidate, trip.transport) : 20;
+      const travel = candidate && lastPlace ? travelMinutes(lastPlace.coordinates, candidate.coordinates, trip.transport) : 20;
       const arrival = cursor + travel;
 
       if (candidate && arrival >= anchor.acceptableStart && arrival <= anchor.acceptableEnd) {

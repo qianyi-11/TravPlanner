@@ -4,15 +4,22 @@ import { prisma } from "@/lib/server/prisma";
 /**
  * DEMO ONLY — stands in for the missing login/multi-user flow.
  *
- * Casts plausible votes on behalf of every member who hasn't voted yet, then
- * marks the whole group as having submitted, so a presenter doesn't have to
- * switch accounts to get past the "everyone must vote" gate.
+ * Casts plausible votes on behalf of every OTHER member who hasn't voted yet,
+ * then marks them as having submitted, so a presenter doesn't have to switch
+ * accounts to get past the "everyone must vote" gate.
+ *
+ * `excludeMemberId` — the real person at the keyboard — is never simulated
+ * and never has hasSubmittedVotes forced on: this button stands in for the
+ * *other* members' missing logins, not the current user's own vote. Without
+ * that exclusion the button would cast random votes for whoever is using the
+ * app and mark them "voted" on places they never picked.
  *
  * Members who already voted keep their own choices untouched.
  * Delete this route once real auth exists.
  */
-export async function POST(_req: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params;
+  const { excludeMemberId } = await req.json().catch(() => ({ excludeMemberId: undefined }));
 
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
@@ -25,7 +32,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ tripId
   });
   if (!trip) return NextResponse.json({ error: "Trip not found" }, { status: 404 });
 
-  const memberIds = trip.group.members.map((m) => m.memberId);
+  const memberIds = trip.group.members.map((m) => m.memberId).filter((id) => id !== excludeMemberId);
   const tripPlaces = trip.tripPlaces;
 
   if (tripPlaces.length === 0) {

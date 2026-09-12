@@ -2,6 +2,7 @@
 
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
 import { gradientFor } from "@/lib/mock-data";
+import { estimateVisitDuration } from "@/lib/utils";
 
 let serviceEl: HTMLDivElement | null = null;
 function getService(): google.maps.places.PlacesService {
@@ -92,11 +93,12 @@ function toPlace(result: PlaceResultWithSummary, destinationHint?: string): Plac
     .map((p) => p.getUrl({ maxWidth: 1000, maxHeight: 700 }))
     .filter(Boolean);
   const photo = gallery[0] ?? gradientFor(id);
+  const category = prettyCategory(result.types);
 
   return {
     id,
     name: result.name ?? "Unnamed place",
-    category: prettyCategory(result.types),
+    category,
     area: guessArea(result.formatted_address, destination),
     destination,
     coordinates: {
@@ -119,7 +121,7 @@ function toPlace(result: PlaceResultWithSummary, destinationHint?: string): Plac
     }),
     isOpenNow: isOpenNow(result.opening_hours),
     closesAt: undefined,
-    estimatedDurationMinutes: 60,
+    estimatedDurationMinutes: estimateVisitDuration(category),
     reviews: (result.reviews ?? []).slice(0, 5).map(
       (r, i): PlaceReview => ({
         id: `${id}-review-${i}`,

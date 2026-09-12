@@ -1,8 +1,8 @@
 "use client";
 
-import { use } from "react";
-import { notFound } from "next/navigation";
-import { PartyPopper, Trash2, Users2 } from "lucide-react";
+import { use, useState } from "react";
+import { notFound, useRouter } from "next/navigation";
+import { Loader2, PartyPopper, Trash2, Users2, Zap } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { usePlannerStore } from "@/lib/store";
 import { TripHeader } from "@/components/trip/TripHeader";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/States";
 
 export default function MySuggestionsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
+  const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const me = usePlannerStore((s) => s.members[s.currentUserId]);
@@ -28,10 +29,23 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
   );
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
   const submit = usePlannerStore((s) => s.submitMySuggestions);
+  const completeSuggestionsForDemo = usePlannerStore((s) => s.completeSuggestionsForDemo);
+  const setStage = usePlannerStore((s) => s.setStage);
+  const [proceeding, setProceeding] = useState(false);
 
   if (!trip || !me) notFound();
 
   const submittedCount = members.filter((m) => m.hasSubmittedSuggestions).length;
+  const everyoneSubmitted = submittedCount === members.length;
+
+  async function handleProceed() {
+    setProceeding(true);
+    if (!everyoneSubmitted) {
+      await completeSuggestionsForDemo(tripId);
+    }
+    await setStage(tripId, "voting");
+    router.push(`/trips/${tripId}/vote`);
+  }
 
   return (
     <div>
@@ -90,7 +104,9 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
             <div className="text-center">
               <PartyPopper className="mx-auto text-[var(--color-primary)]" size={32} />
               <h3 className="mt-3 font-display text-lg font-bold">You&apos;re all set 🎉</h3>
-              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Waiting for the rest of your group.</p>
+              <p className="mt-1 text-sm text-[var(--color-ink-soft)]">
+                {everyoneSubmitted ? "Everyone's in — ready to vote." : "Waiting for the rest of your group."}
+              </p>
               <div className="mt-4">
                 <p className="mb-1.5 text-xs font-semibold text-[var(--color-ink-soft)]">
                   {submittedCount} / {members.length} members submitted
@@ -102,15 +118,39 @@ export default function MySuggestionsPage({ params }: { params: Promise<{ tripId
                   />
                 </div>
               </div>
-              {submittedCount === members.length ? (
-                <LinkButton href={`/trips/${tripId}/generating`} size="sm" fullWidth className="mt-5">
-                  Start Voting
-                </LinkButton>
-              ) : (
-                <LinkButton href={`/trips/${tripId}/places/all`} variant="outline" size="sm" fullWidth className="mt-5">
-                  See Everyone&apos;s Ideas
-                </LinkButton>
+
+              {!everyoneSubmitted && (
+                <div className="mt-4 rounded-xl border border-dashed border-[var(--color-violet)] bg-[var(--color-violet-soft)] p-3 text-left">
+                  <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-violet)]">
+                    <Zap size={10} /> Demo
+                  </span>
+                  <p className="mt-1 text-xs text-[var(--color-ink-soft)]">
+                    There&apos;s no login yet, so {members.length - submittedCount} member
+                    {members.length - submittedCount > 1 ? "s" : ""} can&apos;t submit as themselves. Proceeding will
+                    submit on their behalf so the group can start voting.
+                  </p>
+                </div>
               )}
+
+              <Button
+                fullWidth
+                size="sm"
+                className="mt-4"
+                disabled={proceeding}
+                onClick={handleProceed}
+                icon={proceeding ? <Loader2 size={14} className="animate-spin" /> : undefined}
+              >
+                {proceeding ? "Starting..." : everyoneSubmitted ? "Start Voting" : "Proceed to Voting"}
+              </Button>
+              <LinkButton
+                href={`/trips/${tripId}/places/all`}
+                variant="outline"
+                size="sm"
+                fullWidth
+                className="mt-2"
+              >
+                See Everyone&apos;s Ideas
+              </LinkButton>
             </div>
           ) : (
             <>

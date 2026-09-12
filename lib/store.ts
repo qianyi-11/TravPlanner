@@ -87,6 +87,8 @@ interface PlannerState {
   submitMyVotes: (tripId: string, memberId?: string) => Promise<void>;
   /** DEMO ONLY — votes for everyone who hasn't, standing in for real logins. */
   completeVotingForDemo: (tripId: string) => Promise<void>;
+  /** DEMO ONLY — marks everyone as having submitted suggestions, standing in for real logins. */
+  completeSuggestionsForDemo: (tripId: string) => Promise<boolean>;
 
   confirmShortlist: (tripId: string, placeIds: string[]) => Promise<void>;
   setStage: (tripId: string, stage: PlanningStage) => Promise<void>;
@@ -305,7 +307,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   },
 
   completeVotingForDemo: async (tripId) => {
-    const result = await api(`/api/trips/${tripId}/demo/complete-voting`, { method: "POST" });
+    const result = await api(`/api/trips/${tripId}/demo/complete-voting`, {
+      method: "POST",
+      body: JSON.stringify({ excludeMemberId: get().currentUserId }),
+    });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't simulate the votes" });
       return;
@@ -313,6 +318,16 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     await get().hydrate();
     const n = result.simulatedMembers as number;
     set({ toast: n > 0 ? `Voted for ${n} member${n > 1 ? "s" : ""}` : "Everyone had already voted" });
+  },
+
+  completeSuggestionsForDemo: async (tripId) => {
+    const result = await api(`/api/trips/${tripId}/demo/complete-suggestions`, { method: "POST" });
+    if (!result.ok) {
+      set({ toast: result.error ?? "Couldn't move everyone forward" });
+      return false;
+    }
+    await get().hydrate();
+    return true;
   },
 
   confirmShortlist: async (tripId, placeIds) => {
