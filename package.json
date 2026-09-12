@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:domain": "tsx --test lib/currency.test.ts lib/date-time.test.ts lib/google-places.test.ts lib/group-consensus.test.ts lib/itinerary-builder.test.ts lib/itinerary-validation.test.ts lib/place-facts.test.ts lib/plan-places.test.ts lib/rescue.test.ts lib/time-intervals.test.ts lib/utils.test.ts",
+    "test:domain": "tsx --test lib/currency.test.ts lib/date-time.test.ts lib/google-places.test.ts lib/group-consensus.test.ts lib/itinerary-builder.test.ts lib/itinerary-validation.test.ts lib/place-facts.test.ts lib/plan-places.test.ts lib/rescue.test.ts lib/shortlist-capacity.test.ts lib/time-intervals.test.ts lib/utils.test.ts",
     "test:consensus": "tsx --test lib/group-consensus.test.ts lib/rescue.test.ts",
     "test:integration": "tsx scripts/run-integration-tests.ts",
     "demo": "tsx scripts/run-demo.ts",

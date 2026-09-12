@@ -10,8 +10,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MemberStack } from "@/components/ui/Avatar";
 import { PlaceCover } from "@/components/trip/CategoryIcon";
-import { recommendPlaceCount } from "@/lib/utils";
 import { buildConsensus } from "@/lib/group-consensus";
+import { recommendShortlistCapacity } from "@/lib/shortlist-capacity";
 
 export default function VoteResultsPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
@@ -28,9 +28,9 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const confirmShortlist = usePlannerStore((s) => s.confirmShortlist);
   const [submitting, setSubmitting] = useState(false);
 
-  const rec = trip ? recommendPlaceCount(trip) : { count: 8, reasoning: "" };
+  const rec = trip ? recommendShortlistCapacity({ trip, candidates: places }) : null;
   const maxCount = Math.max(1, Math.min(20, places.length || 20));
-  const [count, setCount] = useState(Math.min(maxCount, trip?.recommendedPlaceCount || rec.count));
+  const [count, setCount] = useState(Math.max(1, Math.min(maxCount, rec?.recommendedCapacity ?? 8)));
   const tripMembers = trip ? trip.memberIds.map((id) => members[id]).filter(Boolean) : [];
   const consensus = buildConsensus({ members: tripMembers, candidates: places, capacity: count });
   const primaryTradeoff = [...consensus.tradeoffs].sort((a, b) =>
@@ -163,7 +163,9 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
             <Info size={16} className="text-[var(--color-primary)]" />
             <h3 className="font-display text-base font-bold">How many places?</h3>
           </div>
-          <p className="text-sm text-[var(--color-ink-soft)]">{rec.reasoning}</p>
+          <div className="space-y-1 text-sm text-[var(--color-ink-soft)]">
+            {rec?.reasoning.map((reason) => <p key={reason}>{reason}</p>)}
+          </div>
 
           <div className="mt-5">
             <div className="mb-1.5 flex items-center justify-between text-sm font-semibold">
