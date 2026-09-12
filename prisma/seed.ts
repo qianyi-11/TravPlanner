@@ -3,6 +3,34 @@ import { ALL_PLACES, GROUPS, MEMBERS, TRIPS } from "../lib/mock-data";
 
 const prisma = new PrismaClient();
 
+const JAPAN_CHECKLIST = [
+  { id: "checklist-japan-shinkansen", title: "Reserve Shinkansen seats", assignedMemberId: "you", completed: true, createdAt: new Date("2026-09-01T09:00:00Z") },
+  { id: "checklist-japan-hotel", title: "Confirm Kyoto hotel", assignedMemberId: "sarah", completed: false, createdAt: new Date("2026-09-01T09:01:00Z") },
+  { id: "checklist-japan-maps", title: "Download offline maps", assignedMemberId: "jason", completed: false, createdAt: new Date("2026-09-01T09:02:00Z") },
+  { id: "checklist-japan-transfer", title: "Check airport transfer", assignedMemberId: "daniel", completed: false, createdAt: new Date("2026-09-01T09:03:00Z") },
+];
+
+const JAPAN_SPLIT_BILL = {
+  people: [
+    { id: "you", name: "You", items: [{ id: "japan-dinner-you", name: "Izakaya dinner", price: "42", qty: "1" }] },
+    { id: "sarah", name: "Sarah", items: [{ id: "japan-dinner-sarah", name: "Izakaya dinner", price: "38", qty: "1" }] },
+    { id: "jason", name: "Jason", items: [{ id: "japan-dinner-jason", name: "Izakaya dinner", price: "46", qty: "1" }] },
+    { id: "daniel", name: "Daniel", items: [{ id: "japan-dinner-daniel", name: "Izakaya dinner", price: "35", qty: "1" }] },
+    { id: "michelle", name: "Michelle", items: [{ id: "japan-dinner-michelle", name: "Izakaya dinner", price: "40", qty: "1" }] },
+    { id: "aisyah", name: "Aisyah", items: [{ id: "japan-dinner-aisyah", name: "Izakaya dinner", price: "39", qty: "1" }] },
+  ],
+  fees: {
+    deliveryEnabled: false,
+    deliveryAmount: "0.00",
+    sstEnabled: false,
+    serviceEnabled: false,
+    discountEnabled: false,
+    discountPercent: "0",
+    roundingEnabled: false,
+    roundingAmount: "0",
+  },
+};
+
 async function main() {
   console.log("Resetting database...");
   await prisma.$transaction([
@@ -10,6 +38,7 @@ async function main() {
     prisma.suggestion.deleteMany(),
     prisma.tripPlace.deleteMany(),
     prisma.rescueEvent.deleteMany(),
+    prisma.tripChecklistItem.deleteMany(),
     prisma.trip.deleteMany(),
     prisma.groupMember.deleteMany(),
     prisma.group.deleteMany(),
@@ -103,9 +132,14 @@ async function main() {
         votesPerMember: trip.votesPerMember,
         itineraryJson: JSON.stringify(trip.itinerary),
         pricePressureJson: JSON.stringify(trip.pricePressure),
+        splitBillJson: trip.id === "trip-japan" ? JSON.stringify(JAPAN_SPLIT_BILL) : null,
         isLive: trip.isLive ?? false,
       },
     });
+
+    if (trip.id === "trip-japan") {
+      await prisma.tripChecklistItem.createMany({ data: JAPAN_CHECKLIST.map((item) => ({ ...item, tripId: trip.id })) });
+    }
 
     for (const placeId of trip.placeIds) {
       const place = ALL_PLACES[placeId];

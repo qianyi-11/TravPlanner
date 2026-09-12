@@ -109,7 +109,7 @@ export function TripChecklist({ tripId }: { tripId: string }) {
   }
 
   return (
-    <Card className="mt-6 p-5">
+    <Card data-testid="checklist-card" className="mt-6 p-5">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)]">
           <ListChecks size={18} />
@@ -156,8 +156,9 @@ export function TripChecklist({ tripId }: { tripId: string }) {
             const assigned = item.assignedMemberId ? membersMap[item.assignedMemberId] : undefined;
             const editing = editingId === item.id;
             return (
-              <div key={item.id} className="flex items-center gap-2.5 p-3">
+              <div data-testid={`checklist-item-${item.id}`} key={item.id} className="flex items-center gap-2.5 p-3">
                 <input
+                  data-testid={`checklist-toggle-${item.id}`}
                   type="checkbox"
                   checked={item.completed}
                   disabled={saving !== null}

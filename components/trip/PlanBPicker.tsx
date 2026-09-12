@@ -71,7 +71,7 @@ export function PlanBPicker({
   }
 
   return (
-    <div className="mt-2 rounded-xl border border-dashed border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-3">
+    <div data-testid={`plan-b-summary-${activity.id}`} className="mt-2 rounded-xl border border-dashed border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-3">
       <div className="flex items-start gap-2">
         <ShieldAlert size={15} className="mt-0.5 shrink-0 text-[var(--color-teal-dark)]" />
         <div className="min-w-0 flex-1">
@@ -85,7 +85,7 @@ export function PlanBPicker({
           )}
         </div>
         <div className="flex shrink-0 gap-2">
-          <Button type="button" size="sm" variant="ghost" onClick={() => { setSelected(activity.backupPlaceId ?? ""); setError(null); setOpen(true); }} disabled={!options.length}>
+          <Button data-testid={`plan-b-open-${activity.id}`} type="button" size="sm" variant="ghost" onClick={() => { setSelected(activity.backupPlaceId ?? ""); setError(null); setOpen(true); }} disabled={!options.length}>
             {backupPlace ? "Change" : "Add Plan B"}
           </Button>
           {backupPlace && <Button type="button" size="sm" variant="ghost" onClick={() => void remove()} disabled={saving}>Remove</Button>}
@@ -96,17 +96,18 @@ export function PlanBPicker({
       <Modal open={open} onClose={() => !saving && setOpen(false)} title="Choose Plan B">
         <p className="text-sm text-[var(--color-ink-soft)]">Select a saved trip place as the prepared backup for this stop.</p>
         <select
+          data-testid="plan-b-picker"
           aria-label="Plan B place"
           value={selected}
           onChange={(event) => setSelected(event.target.value)}
           className="mt-4 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--color-primary)]"
         >
           <option value="">Choose a place</option>
-          {options.map((place) => <option key={place.id} value={place.id}>{place.name} · {place.category} · {place.area}</option>)}
+          {options.map((place) => <option data-testid={`plan-b-option-${place.id}`} key={place.id} value={place.id}>{place.name} · {place.category} · {place.area}</option>)}
         </select>
         <p className="mt-3 flex items-start gap-2 text-xs text-[var(--color-ink-soft)]"><Check size={13} className="mt-0.5 shrink-0 text-[var(--color-success)]" /> Uses the place details already saved to this trip; availability is not live.</p>
         {error && <p className="mt-3 text-sm text-[var(--color-danger)]">{error}</p>}
-        <Button type="button" className="mt-5" fullWidth onClick={() => void save()} disabled={!selected || saving}>
+        <Button data-testid="plan-b-save" type="button" className="mt-5" fullWidth onClick={() => void save()} disabled={!selected || saving}>
           {saving ? "Saving…" : "Save Plan B"}
         </Button>
       </Modal>

@@ -142,7 +142,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
             )}
             {phase === "proposed" && preparedAlternative && (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
+                <p data-testid={savedBackupPlace ? "rescue-plan-b" : "rescue-replacement"} className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
                   {savedBackupPlace ? "Your saved Plan B" : "Suggested alternative"}
                 </p>
                 <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] p-3">

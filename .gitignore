@@ -52,6 +52,9 @@ next-env.d.ts
 /test-results/
 /blob-report/
 
+# deterministic demo recording output
+/demo-output/
+
 # automated demo database
 /prisma/demo.db
 /prisma/demo.db-journal

@@ -171,7 +171,7 @@ export function SplitBillCalculator({
   );
 
   return (
-    <div className="space-y-5">
+    <div data-testid="split-bill-card" className="space-y-5">
       <div className="space-y-4">
         {people.map((person) => (
           <Card key={person.id} className="p-4">
@@ -253,7 +253,7 @@ export function SplitBillCalculator({
         Add Person
       </Button>
       {tripId && saveStatus && (
-        <p aria-live="polite" className="text-right text-xs text-[var(--color-ink-soft)]">
+        <p data-testid="split-bill-save-status" aria-live="polite" className="text-right text-xs text-[var(--color-ink-soft)]">
           {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved" : saveStatus === "stale" ? "This bill changed elsewhere. Refresh before saving." : "Couldn’t save this bill."}
         </p>
       )}
@@ -356,7 +356,7 @@ export function SplitBillCalculator({
       </Button>
 
       {showBreakdown && (
-        <div className="animate-fade-in-up">
+        <div data-testid="split-bill-breakdown" className="animate-fade-in-up">
           <h3 className="mb-3 font-display text-lg font-bold">Total Amount to Pay</h3>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {perPerson.map(({ person, amount }) => (

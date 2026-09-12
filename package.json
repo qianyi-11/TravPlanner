@@ -11,6 +11,7 @@
     "test:consensus": "tsx --test lib/group-consensus.test.ts lib/rescue.test.ts",
     "test:integration": "tsx scripts/run-integration-tests.ts",
     "demo": "tsx scripts/run-demo.ts",
+    "demo:record": "tsx scripts/run-demo.ts --record",
     "demo:browser-install": "playwright install chromium",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate --schema=prisma/schema.sqlite.prisma",

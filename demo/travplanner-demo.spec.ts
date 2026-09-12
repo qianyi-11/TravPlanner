@@ -1,120 +1,135 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 const TRIP_ID = process.env.DEMO_TRIP_ID ?? "trip-japan";
-const parsedPause = Number.parseInt(process.env.DEMO_PAUSE_MS ?? "", 10);
-const DEFAULT_PAUSE_MS = Number.isFinite(parsedPause) && parsedPause > 0 ? parsedPause : 3_500;
+const configuredPause = Number.parseInt(process.env.DEMO_PAUSE_MS ?? "", 10);
+const RECORDING = process.env.DEMO_RECORD === "1";
+const startedAt = Date.now();
 
 function tripRoute(suffix = "") {
   return `/trips/${TRIP_ID}${suffix}`;
 }
 
-async function pause(page: Page, message: string, duration = DEFAULT_PAUSE_MS) {
-  console.log(`[DEMO] ${message}`);
-  await page.waitForTimeout(duration);
+function waitDuration(recordingMs: number) {
+  if (Number.isFinite(configuredPause) && configuredPause > 0) return configuredPause;
+  return RECORDING ? Math.round(recordingMs * 1.45) : 350;
 }
 
-async function pointAt(page: Page, locator: Locator, duration = 1_500) {
+async function pause(page: Page, message: string, recordingMs = 3_500) {
+  console.log(`[DEMO +${((Date.now() - startedAt) / 1000).toFixed(1)}s] ${message}`);
+  await page.waitForTimeout(waitDuration(recordingMs));
+}
+
+async function pointAt(page: Page, locator: Locator, recordingMs = 1_000) {
   await locator.scrollIntoViewIfNeeded();
   await locator.hover();
-  await page.waitForTimeout(duration);
+  await page.waitForTimeout(waitDuration(recordingMs));
 }
 
-async function openChapter(page: Page, suffix: string, title: string, duration = DEFAULT_PAUSE_MS) {
-  console.log(`\n[DEMO] ${title}`);
+async function openChapter(page: Page, suffix: string, title: string, recordingMs = 3_500) {
   const response = await page.goto(tripRoute(suffix), { waitUntil: "domcontentloaded" });
   if (response && !response.ok()) throw new Error(`${title} failed to load: HTTP ${response.status()}`);
-  const heading = page.locator("h1").first();
-  await expect(heading).toBeVisible({ timeout: 30_000 });
-  await pointAt(page, heading, 300);
-  await pause(page, title, duration);
+  await expect(page.locator("h1").first()).toBeVisible({ timeout: 30_000 });
+  await pause(page, title, recordingMs);
 }
 
-test("TravPlanner CodeNection MVP demo", async ({ page }) => {
-  await openChapter(page, "", "1. Japan Adventure — group trip overview", 4_500);
-  await expect(page.locator("body")).toContainText("Japan Adventure");
+test("TravPlanner product walkthrough", async ({ page }) => {
+  await openChapter(page, "", "Trip Setup — Japan Adventure", 3_500);
+  await expect(page.getByText("Japan Adventure", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Tokyo · Kyoto · Osaka", { exact: true })).toBeVisible();
 
-  await openChapter(page, "/preferences", "2. Individual traveller preferences", 4_500);
-  await openChapter(page, "/places", "3. Candidate places and group suggestions", 4_500);
+  await openChapter(page, "/preferences", "Preferences — every traveller has a different brief", 4_000);
+  await expect(page.getByRole("heading", { name: "Your preferences" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Group preferences" })).toBeVisible();
+  await pointAt(page, page.getByText("Personal budget", { exact: true }));
 
-  await openChapter(page, "/vote", "4. Positive group voting", 2_000);
+  await openChapter(page, "/vote", "Voting — the group narrows the options", 3_000);
   await expect(page.getByRole("heading", { name: "Where should we go?" })).toBeVisible();
-  const existingVote = page.getByRole("button", { name: "Voted", exact: true }).first();
-  if (await existingVote.isVisible()) await pointAt(page, existingVote, 2_500);
-  await pause(page, "Each member supports a limited number of candidate places", 2_500);
+  await expect(page.getByText(/votes used/)).toBeVisible();
+  await pointAt(page, page.getByRole("button", { name: "Voted", exact: true }).first());
 
-  await openChapter(page, "/vote/results", "5. Deterministic Group Consensus", 1_500);
-  const capacitySlider = page.getByTestId("shortlist-capacity");
-  const tradeoffCard = page.getByTestId("consensus-tradeoff");
-  await capacitySlider.fill("10");
-  await expect(tradeoffCard).toBeVisible();
-  await pointAt(page, tradeoffCard, 1_000);
-  await pause(page, "Capacity 10 — explain the fairness trade-off", 5_500);
-
-  await capacitySlider.fill("11");
-  await expect(tradeoffCard).toHaveCount(0);
-  await pause(page, "Capacity 11 — enough room, so no fairness trade-off is required", 4_000);
-  await capacitySlider.fill("10");
-  await expect(tradeoffCard).toBeVisible();
-  await pause(page, "Return shortlist capacity to 10", 1_500);
-
+  await openChapter(page, "/vote/results", "Group Consensus — fairness at capacity 10", 1_000);
+  const capacity = page.getByTestId("shortlist-capacity");
+  const tradeoff = page.getByTestId("consensus-tradeoff");
+  await capacity.fill("10");
+  await expect(tradeoff).toBeVisible();
+  await pointAt(page, tradeoff, 800);
+  await pause(page, "Consensus trade-off at capacity 10", 5_000);
+  await capacity.fill("11");
+  await expect(tradeoff).toHaveCount(0);
+  await pause(page, "Capacity 11 removes the trade-off", 2_500);
+  await capacity.fill("10");
+  await expect(tradeoff).toBeVisible();
   const confirmShortlist = page.getByTestId("confirm-shortlist");
-  await pointAt(page, confirmShortlist, 1_200);
+  await pointAt(page, confirmShortlist, 800);
   await confirmShortlist.click();
   await expect(page).toHaveURL(new RegExp(`/trips/${TRIP_ID}/shortlist/?$`));
-  await pause(page, "7. Confirmed fair shortlist", 3_500);
 
-  await openChapter(page, "/validate", "8. Place information review", 4_000);
-  await openChapter(page, "/route", "9. Planned route sequence and map", 4_500);
-  await openChapter(page, "/itinerary", "10. Day-by-day itinerary", 4_500);
-  await openChapter(page, "/plan", "11. Final shared trip plan", 5_000);
+  await openChapter(page, "/itinerary", "Itinerary — the day-by-day plan", 3_500);
+  await expect(page.getByRole("heading", { name: "Day-by-day itinerary" })).toBeVisible();
+  await expect(page.getByText("teamLab Borderless", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
+  await expect(page.getByText("teamLab Borderless", { exact: true })).toBeVisible();
+  await pointAt(page, page.getByText("teamLab Borderless", { exact: true }));
 
-  await openChapter(page, "/live", "12. Trip Rescue — unsuitable planned activity", 1_200);
+  await openChapter(page, "/plan", "Plan B — prepare a saved backup", 2_000);
+  await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
+  const planBOpen = page.getByTestId("plan-b-open-d3-a2");
+  await expect(planBOpen).toBeVisible();
+  await planBOpen.click();
+  const planBPicker = page.getByTestId("plan-b-picker");
+  await expect(planBPicker).toBeVisible();
+  await planBPicker.selectOption("jp-tmg-building");
+  const planBSave = page.getByTestId("plan-b-save");
+  await expect(planBSave).toBeEnabled();
+  await planBSave.click();
+  const planBSummary = page.getByTestId("plan-b-summary-d3-a2");
+  await expect(planBSummary).toContainText("Tokyo Metropolitan Government Building");
+  await pause(page, "Saved Plan B: Tokyo Metropolitan Government Building", 4_000);
+
+  const checklist = page.getByTestId("checklist-card");
+  await expect(checklist).toBeVisible();
+  const hotelTask = page.getByTestId("checklist-item-checklist-japan-hotel");
+  await pointAt(page, hotelTask, 700);
+  const hotelToggle = page.getByTestId("checklist-toggle-checklist-japan-hotel");
+  await hotelToggle.click();
+  await expect(hotelToggle).toBeChecked();
+  await pause(page, "Shared Checklist — Confirm Kyoto hotel is complete", 3_000);
+
+  await openChapter(page, "/split-bill", "Split Bill — one shared expense, clearly divided", 2_000);
+  const splitBill = page.getByTestId("split-bill-card");
+  await expect(splitBill).toBeVisible();
+  await expect(splitBill.locator('input[placeholder="Item name"]').first()).toHaveValue("Izakaya dinner");
+  await expect(splitBill).toContainText("RM 240.00");
+  await page.getByRole("button", { name: "Calculate", exact: true }).click();
+  await expect(page.getByTestId("split-bill-breakdown")).toBeVisible();
+  await expect(page.getByTestId("split-bill-save-status")).toHaveText("Saved");
+  await pointAt(page, page.getByTestId("split-bill-breakdown"));
+  await pause(page, "Split Bill breakdown and saved state", 4_000);
+
+  await openChapter(page, "/live", "Trip Rescue — use the saved Plan B", 2_000);
   await expect(page.getByText("Trip Rescue", { exact: true })).toBeVisible();
-  await expect(page.getByText("Suggested alternative", { exact: true })).toBeVisible({ timeout: 8_000 });
-  await pause(page, "Compare original and replacement Group Match", 5_000);
-
+  await expect(page.getByTestId("rescue-plan-b")).toContainText("Your saved Plan B");
+  await expect(page.getByText("Tokyo Metropolitan Government Building", { exact: true })).toBeVisible();
+  await pointAt(page, page.getByTestId("rescue-plan-b"), 1_000);
   const acceptRescue = page.getByTestId("accept-rescue");
-  await pointAt(page, acceptRescue, 2_000);
   await acceptRescue.click();
   await expect(page.getByText("You accepted the new activity. Trip itinerary updated for everyone.")).toBeVisible();
-  await pause(page, "Trip Rescue accepted", 4_000);
+  await pause(page, "Trip Rescue accepted", 3_500);
 
-  await openChapter(page, "/itinerary", "13. Verify the updated itinerary", 1_200);
-  await page.getByRole("button", { name: /Day 3/i }).click();
-  const replacement = page.getByText("Tokyo Metropolitan Government Building", { exact: true }).first();
-  const original = page.getByText("teamLab Borderless", { exact: true });
-  await expect(replacement).toBeVisible();
-  await expect(original).toHaveCount(0);
-  await pause(page, "Day 3 now contains the replacement activity", 4_500);
-
-  console.log("[DEMO] Refreshing page to prove persistence");
+  await openChapter(page, "/itinerary", "Updated Plan — replacement accepted for everyone", 1_500);
+  await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
+  await expect(page.getByText("Tokyo Metropolitan Government Building", { exact: true })).toBeVisible();
+  await expect(page.getByText("teamLab Borderless", { exact: true })).toHaveCount(0);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: /Day 3/i }).click();
-  await expect(replacement).toBeVisible();
-  await expect(original).toHaveCount(0);
-  await pause(page, "14. Rescue survives refresh", 4_500);
+  await page.getByRole("button", { name: /Day 3.*teamLab & Skytree/i }).click();
+  await expect(page.getByText("Tokyo Metropolitan Government Building", { exact: true })).toBeVisible();
+  await expect(page.getByText("teamLab Borderless", { exact: true })).toHaveCount(0);
+  await pause(page, "Replacement persists after refresh", 2_500);
 
-  await openChapter(page, "/plan", "15. TravPlanner — final active plan", 6_000);
-
-  console.log("[DEMO] Testing shared checklist persistence");
-  await page.getByLabel("Checklist task", { exact: true }).fill("Pack adapters");
-  await page.getByLabel("Assign checklist task").selectOption({ label: "Sarah" });
-  await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByText("Pack adapters", { exact: true })).toBeVisible();
-  const checklistBox = page.getByRole("checkbox", { name: "Mark Pack adapters complete" });
-  await checklistBox.click();
-  await expect(checklistBox).toBeChecked();
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("checkbox", { name: "Mark Pack adapters complete" })).toBeChecked();
-
-  console.log("[DEMO] Testing saved Plan B persistence");
-  await page.getByRole("button", { name: "Add Plan B", exact: true }).first().click();
-  await page.getByLabel("Plan B place", { exact: true }).selectOption({ index: 1 });
-  const savePlanB = page.getByRole("button", { name: "Save Plan B", exact: true });
-  await expect(savePlanB).toBeEnabled();
-  await savePlanB.click();
-  await expect(page.getByText(/^Plan B: /).first()).toBeVisible();
-  await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByText(/^Plan B: /).first()).toBeVisible();
-  console.log("[DEMO] MVP demo completed successfully");
+  await openChapter(page, "/plan", "Final Plan — ready to travel", 3_000);
+  await expect(page.getByText("Shared checklist", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("checklist-toggle-checklist-japan-hotel")).toBeChecked();
+  await pointAt(page, page.getByText("Shared checklist", { exact: true }), 1_000);
+  await pause(page, "Final active plan", 5_000);
+  console.log("[DEMO] Recording flow completed successfully");
 });
