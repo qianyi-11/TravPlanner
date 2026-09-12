@@ -58,11 +58,11 @@ test("food classification is word-aware and category-only", () => {
   }
 });
 
-test("real food venues fill breakfast, lunch, and dinner without duplicate meals or cost inference", () => {
+test("real food venues fill breakfast, lunch, and dinner with deterministic meal estimates", () => {
   const places = [
-    place("breakfast", "Cafe", { estimatedDurationMinutes: 40 }),
-    place("lunch", "Restaurant", { estimatedDurationMinutes: 60 }),
-    place("dinner", "Sushi", { estimatedDurationMinutes: 75 }),
+    place("breakfast", "Cafe", { estimatedDurationMinutes: 40, priceLevel: 1 }),
+    place("lunch", "Restaurant", { estimatedDurationMinutes: 60, priceLevel: 2 }),
+    place("dinner", "Sushi", { estimatedDurationMinutes: 75, priceLevel: 3 }),
   ];
   const result = buildItinerary({ trip: trip(), selectedPlaceIds: places.map(({ id }) => id), places });
   const activities = result.itinerary[0].activities;
@@ -71,8 +71,13 @@ test("real food venues fill breakfast, lunch, and dinner without duplicate meals
   assert.ok(minutes(activities[0].time) <= 11 * 60);
   assert.ok(minutes(activities[1].time) >= 10 * 60 + 30 && minutes(activities[1].time) <= 16 * 60);
   assert.ok(minutes(activities[2].time) >= 16 * 60 + 30);
-  assert.ok(placeActivities(result).every(({ estimatedCost }) => estimatedCost === 0));
+  assert.deepEqual(placeActivities(result).map(({ estimatedCost }) => estimatedCost), [10, 25, 53]);
   assert.deepEqual(result.unscheduledPlaceIds, []);
+});
+
+test("ordinary attractions do not infer ticket cost from price level", () => {
+  const result = buildItinerary({ trip: trip(), selectedPlaceIds: ["museum"], places: [place("museum", "Museum", { priceLevel: 4 })] });
+  assert.equal(placeActivities(result)[0].estimatedCost, 0);
 });
 
 test("generic meals fill available anchors and never cross the daily boundary", () => {

@@ -2,27 +2,37 @@ import { applyRescueReplacement } from "@/lib/rescue";
 import { buildItinerary } from "@/lib/itinerary-builder";
 import { STAGE_ORDER } from "@/lib/types";
 import type { ItineraryDay, TransportMode, TripRescueEvent } from "@/lib/types";
-import { mapCatalogPlace } from "./mappers";
+import { buildConsensus } from "@/lib/group-consensus";
+import { mapCatalogPlace, mapMember } from "./mappers";
 import { prisma } from "./prisma";
 import { ApiError } from "./api-error";
 import { requireTrip, requireTripPlaceIds } from "./authorization";
 import { validateBuiltItinerary } from "../itinerary-validation";
 
-export async function confirmTripShortlist({ tripId, placeIds }: { tripId: string; placeIds: string[] }) {
+export async function confirmTripShortlist({ tripId, capacity }: { tripId: string; capacity: number }) {
   const trip = await requireTrip(tripId);
-  await requireTripPlaceIds(tripId, placeIds);
+  const [memberships, tripPlaces] = await Promise.all([
+    prisma.groupMember.findMany({ where: { groupId: trip.groupId }, include: { member: true } }),
+    prisma.tripPlace.findMany({ where: { tripId }, include: { place: true, votes: true } }),
+  ]);
+  const members = memberships.map(({ member, role }) => mapMember(member, { suggestedPlaceIds: [], votedPlaceIds: [], role }));
+  const candidates = tripPlaces.map(({ place, votes }) => ({
+    ...mapCatalogPlace(place),
+    votedBy: Array.from(new Set(votes.map(({ memberId }) => memberId))),
+  }));
+  const shortlistPlaceIds = buildConsensus({ members, candidates, capacity }).shortlist.map(({ candidateId }) => candidateId);
 
   const validationIndex = STAGE_ORDER.indexOf("validation");
   const currentIndex = STAGE_ORDER.indexOf(trip.stage as (typeof STAGE_ORDER)[number]);
   await prisma.trip.update({
     where: { id: tripId },
     data: {
-      shortlistJson: JSON.stringify(placeIds),
+      shortlistJson: JSON.stringify(shortlistPlaceIds),
       stage: currentIndex > validationIndex ? trip.stage : "validation",
     },
   });
 
-  return { ok: true as const };
+  return { ok: true as const, shortlistPlaceIds, capacity };
 }
 
 export async function buildTripItinerary({ tripId, expectedItineraryRevision }: { tripId: string; expectedItineraryRevision: number }) {

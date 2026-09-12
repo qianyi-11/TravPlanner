@@ -5,6 +5,7 @@ import { requireTripOrganizer } from "@/lib/server/authorization";
 import { parseJsonObject, requireId } from "@/lib/server/validation";
 import { isValidDateRange, isValidDateString, isValidDayWindow, isValidTimeString } from "@/lib/date-time";
 import { TRANSPORT_MODES, type TransportMode } from "@/lib/types";
+import { computeBookingPressure } from "@/lib/booking-pressure";
 
 const ALLOWED_FIELDS = new Set(["name", "startDate", "endDate", "budgetTotal", "dailyStart", "dailyEnd", "transport"]);
 const PLANNING_FIELDS = ["startDate", "endDate", "dailyStart", "dailyEnd", "transport"] as const;
@@ -27,6 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
       dailyStart?: string;
       dailyEnd?: string;
       transport?: string;
+      pricePressureJson?: string;
     } = {};
     if (body.name !== undefined) {
       if (typeof body.name !== "string") throw new ApiError(400, "INVALID_TRIP_NAME", "name must be a string");
@@ -72,6 +74,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
     const planningChanged = PLANNING_FIELDS.some((field) => data[field] !== undefined && data[field] !== trip[field]);
     if (planningChanged && (JSON.parse(trip.itineraryJson) as unknown[]).length) {
       throw new ApiError(409, "TRIP_REPLAN_REQUIRED", "Clear or explicitly replan the itinerary before changing schedule or transport");
+    }
+    if (data.startDate !== undefined && data.startDate !== trip.startDate) {
+      data.pricePressureJson = JSON.stringify(computeBookingPressure(data.startDate));
     }
 
     const updated = await prisma.trip.update({ where: { id: tripId }, data });

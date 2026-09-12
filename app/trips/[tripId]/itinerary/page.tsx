@@ -42,7 +42,8 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
     .filter((a) => a.type === "place" && a.placeId)
     .map((a) => placesMap[a.placeId as string])
     .filter(Boolean);
-  const dayCost = day.activities.reduce((s, a) => s + a.estimatedCost, 0);
+  const dayKnownCost = day.activities.reduce((s, a) => s + (a.estimatedCost > 0 ? a.estimatedCost : 0), 0);
+  const dayUnknownCostCount = day.activities.filter((a) => a.type === "place" || a.type === "transit").filter((a) => a.estimatedCost === 0).length;
   const activityCount = trip.itinerary.reduce((sum, item) => sum + item.activities.filter((activity) => activity.type === "place").length, 0);
 
   return (
@@ -85,7 +86,10 @@ export default function ItineraryPage({ params }: { params: Promise<{ tripId: st
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-lg font-bold">{day.title}</h2>
-            <span className="text-sm font-semibold text-[var(--color-ink-soft)]">~RM {dayCost} today</span>
+            <span className="text-right text-sm font-semibold text-[var(--color-ink-soft)]">
+              {dayKnownCost ? `Known ~RM ${dayKnownCost}` : "Known spend: —"} today
+              {dayUnknownCostCount > 0 && <span className="block text-xs font-normal">Other costs unknown</span>}
+            </span>
           </div>
           <ItineraryTimeline
             activities={day.activities}

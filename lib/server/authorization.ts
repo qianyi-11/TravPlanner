@@ -75,6 +75,19 @@ export async function requireTripPlaceIds(tripId: string, placeIds: string[]) {
   return rows;
 }
 
+export async function requireAccessiblePlaceActor(placeId: string) {
+  const { memberId } = await requireAuthenticatedActor();
+  const place = await prisma.place.findUnique({ where: { id: placeId }, select: { source: true, photoRef: true } });
+  if (!place) throw new ApiError(404, "PLACE_NOT_FOUND", "Place not found");
+
+  const reachable = await prisma.tripPlace.findFirst({
+    where: { placeId, trip: { group: { members: { some: { memberId } } } } },
+    select: { id: true },
+  });
+  if (!reachable) throw new ApiError(403, "PLACE_NOT_ACCESSIBLE", "Place is not part of a reachable trip");
+  return place;
+}
+
 export async function requireRescueEventForTrip(tripId: string, eventId: string) {
   const event = await prisma.rescueEvent.findUnique({ where: { id: eventId } });
   if (!event || event.tripId !== tripId) throw new ApiError(404, "RESCUE_EVENT_NOT_FOUND", "Rescue event not found");

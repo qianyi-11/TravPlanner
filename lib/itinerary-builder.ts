@@ -2,6 +2,7 @@ import type { ItineraryActivity, ItineraryDay, Place, TransportMode } from "./ty
 import { daysBetween } from "./utils";
 import { timeToMinutes } from "./date-time";
 import { isFoodPlace } from "./place-category";
+import { estimatedMealSpendMidpoint } from "./place-cost";
 
 interface ItineraryBuildInput {
   trip: {
@@ -137,7 +138,7 @@ export function buildItinerary({ trip, selectedPlaceIds, places }: ItineraryBuil
         time: formatTime(arrival),
         durationMinutes: place.estimatedDurationMinutes,
         travelFromPrevMinutes: travel,
-        estimatedCost: 0,
+        estimatedCost: isFoodPlace(place) ? estimatedMealSpendMidpoint(place.priceLevel) : 0,
         type: "place",
       });
       areas.add(areaLabel(place));

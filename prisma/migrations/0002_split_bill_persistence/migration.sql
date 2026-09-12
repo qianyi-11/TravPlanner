@@ -1,0 +1,2 @@
+ALTER TABLE "Trip" ADD COLUMN "splitBillJson" TEXT;
+ALTER TABLE "Trip" ADD COLUMN "splitBillRevision" INTEGER NOT NULL DEFAULT 1;

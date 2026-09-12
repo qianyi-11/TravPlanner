@@ -1,37 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calculator, Plus, Trash2, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, Chip } from "@/components/ui/Card";
 import { cx } from "@/lib/utils";
-
-interface Item {
-  id: string;
-  name: string;
-  price: string;
-  qty: string;
-}
-
-interface Person {
-  id: string;
-  name: string;
-  items: Item[];
-}
-
-interface Fees {
-  deliveryEnabled: boolean;
-  deliveryAmount: string;
-  sstEnabled: boolean;
-  serviceEnabled: boolean;
-  discountEnabled: boolean;
-  discountPercent: string;
-  roundingEnabled: boolean;
-  roundingAmount: string;
-}
-
-const SST_RATE = 0.1;
-const SERVICE_RATE = 0.06;
+import {
+  calculateSplitBill,
+  DEFAULT_SPLIT_BILL_FEES,
+  splitBillItemTotal,
+  splitBillPersonSubtotal,
+  type SplitBillFees as Fees,
+  type SplitBillItem as Item,
+  type SplitBillPerson as Person,
+  validateSplitBill,
+} from "@/lib/split-bill";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -45,73 +28,110 @@ function blankPerson(name: string): Person {
   return { id: uid(), name, items: [blankItem()] };
 }
 
-function num(v: string): number {
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
 function money(n: number): string {
   return `RM ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function itemTotal(item: Item): number {
-  return num(item.price) * (parseInt(item.qty, 10) || 0);
+function defaultPeople(defaultNames: string[]): Person[] {
+  const names = defaultNames.length > 0 ? defaultNames : ["Person 1", "Person 2"];
+  return names.length > 0 ? names.map(blankPerson) : [blankPerson("Person 1")];
 }
-
-function personSubtotal(person: Person): number {
-  return person.items.reduce((s, i) => s + itemTotal(i), 0);
-}
-
-const DEFAULT_FEES: Fees = {
-  deliveryEnabled: false,
-  deliveryAmount: "0.00",
-  sstEnabled: false,
-  serviceEnabled: false,
-  discountEnabled: false,
-  discountPercent: "0",
-  roundingEnabled: false,
-  roundingAmount: "0",
-};
 
 export function SplitBillCalculator({
   storageKey,
   defaultNames = [],
+  tripId,
 }: {
   storageKey: string;
   defaultNames?: string[];
+  tripId?: string;
 }) {
-  const [people, setPeople] = useState<Person[]>(() => {
-    const names = defaultNames.length > 0 ? defaultNames.slice(0, 2) : ["Person 1", "Person 2"];
-    return names.length > 0 ? names.map(blankPerson) : [blankPerson("Person 1")];
-  });
-  const [fees, setFees] = useState<Fees>(DEFAULT_FEES);
+  const [people, setPeople] = useState<Person[]>(() => defaultPeople(defaultNames));
+  const [fees, setFees] = useState<Fees>(() => ({ ...DEFAULT_SPLIT_BILL_FEES }));
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error" | "stale" | null>(null);
+  const revision = useRef<number | null>(tripId ? null : 0);
+  const saveQueue = useRef(Promise.resolve());
 
-  // Restore + persist a work-in-progress split per trip so it isn't lost on navigation.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as { people: Person[]; fees: Fees };
-        if (parsed.people?.length) setPeople(parsed.people);
-        if (parsed.fees) setFees(parsed.fees);
-      }
-    } catch {
-      // ignore malformed/unavailable storage
+    if (tripId) {
+      let active = true;
+      fetch(`/api/trips/${tripId}/split-bill`, { cache: "no-store" })
+        .then(async (response) => {
+          const data = (await response.json().catch(() => ({}))) as { state?: unknown; revision?: unknown };
+          if (!response.ok || typeof data.revision !== "number") throw new Error("Couldn't load split bill");
+          const saved = data.state === null || data.state === undefined ? null : validateSplitBill(data.state);
+          if (data.state !== null && data.state !== undefined && !saved) throw new Error("Saved split bill is invalid");
+          if (!active) return;
+          if (saved) {
+            setPeople(saved.people);
+            setFees(saved.fees);
+          }
+          revision.current = data.revision;
+          setSaveStatus("saved");
+          setHydrated(true);
+        })
+        .catch(() => {
+          if (active) {
+            setSaveStatus("error");
+            setHydrated(true);
+          }
+        });
+      return () => {
+        active = false;
+      };
     }
-    setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timer = window.setTimeout(() => {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = validateSplitBill(JSON.parse(saved));
+          if (parsed) {
+            setPeople(parsed.people);
+            setFees(parsed.fees);
+          }
+        }
+      } catch {
+        // ignore malformed/unavailable storage
+      }
+      setHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [storageKey, tripId]);
 
   useEffect(() => {
     if (!hydrated) return;
+    const state = { people, fees };
+    if (tripId) {
+      if (revision.current === null) return;
+      const timer = window.setTimeout(() => {
+        saveQueue.current = saveQueue.current.then(async () => {
+          setSaveStatus("saving");
+          const response = await fetch(`/api/trips/${tripId}/split-bill`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state, expectedRevision: revision.current }),
+          });
+          if (response.status === 409) {
+            setSaveStatus("stale");
+            return;
+          }
+          if (!response.ok) throw new Error("Couldn't save split bill");
+          const data = (await response.json()) as { revision?: number };
+          if (typeof data.revision !== "number") throw new Error("Invalid split bill response");
+          revision.current = data.revision;
+          setSaveStatus("saved");
+        }).catch(() => setSaveStatus("error"));
+      }, 400);
+      return () => window.clearTimeout(timer);
+    }
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ people, fees }));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
       // ignore quota/private-mode errors
     }
-  }, [people, fees, storageKey, hydrated]);
+  }, [people, fees, storageKey, hydrated, tripId]);
 
   function addPerson() {
     setPeople((p) => [...p, blankPerson(`Person ${p.length + 1}`)]);
@@ -145,20 +165,10 @@ export function SplitBillCalculator({
     setShowBreakdown(false);
   }
 
-  const subtotal = useMemo(() => people.reduce((s, p) => s + personSubtotal(p), 0), [people]);
-  const discountAmount = fees.discountEnabled ? subtotal * (num(fees.discountPercent) / 100) : 0;
-  const taxable = Math.max(0, subtotal - discountAmount);
-  const sstAmount = fees.sstEnabled ? taxable * SST_RATE : 0;
-  const serviceAmount = fees.serviceEnabled ? taxable * SERVICE_RATE : 0;
-  const deliveryAmount = fees.deliveryEnabled ? num(fees.deliveryAmount) : 0;
-  const roundingAmount = fees.roundingEnabled ? num(fees.roundingAmount) : 0;
-  const totalPaid = taxable + sstAmount + serviceAmount + deliveryAmount + roundingAmount;
-
-  const perPerson = people.map((p) => {
-    const sub = personSubtotal(p);
-    const share = subtotal > 0 ? sub / subtotal : 1 / people.length;
-    return { person: p, subtotal: sub, amount: totalPaid * share };
-  });
+  const { subtotal, discountAmount, sstAmount, serviceAmount, deliveryAmount, roundingAmount, totalPaid, perPerson } = useMemo(
+    () => calculateSplitBill({ people, fees }),
+    [people, fees]
+  );
 
   return (
     <div className="space-y-5">
@@ -213,7 +223,7 @@ export function SplitBillCalculator({
                     inputMode="numeric"
                     className="rounded-lg border border-[var(--color-border)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-primary)]"
                   />
-                  <span className="text-right text-sm font-semibold">{money(itemTotal(item))}</span>
+                  <span className="text-right text-sm font-semibold">{money(splitBillItemTotal(item))}</span>
                   <button
                     onClick={() => removeItem(person.id, item.id)}
                     className="flex h-7 w-7 items-center justify-self-end rounded-full text-[var(--color-ink-soft)] hover:bg-[var(--color-danger-bg)] hover:text-[var(--color-danger)] sm:justify-self-center"
@@ -232,7 +242,7 @@ export function SplitBillCalculator({
                 <Plus size={14} /> Add Item
               </button>
               <span className="text-sm text-[var(--color-ink-soft)]">
-                Total <span className="ml-1.5 font-display font-bold text-[var(--color-ink)]">{money(personSubtotal(person))}</span>
+                Total <span className="ml-1.5 font-display font-bold text-[var(--color-ink)]">{money(splitBillPersonSubtotal(person))}</span>
               </span>
             </div>
           </Card>
@@ -242,6 +252,11 @@ export function SplitBillCalculator({
       <Button variant="outline" fullWidth icon={<UserPlus size={15} />} onClick={addPerson}>
         Add Person
       </Button>
+      {tripId && saveStatus && (
+        <p aria-live="polite" className="text-right text-xs text-[var(--color-ink-soft)]">
+          {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved" : saveStatus === "stale" ? "This bill changed elsewhere. Refresh before saving." : "Couldn’t save this bill."}
+        </p>
+      )}
 
       <div className="flex items-center justify-end gap-3 text-sm">
         <span className="text-[var(--color-ink-soft)]">Subtotal:</span>

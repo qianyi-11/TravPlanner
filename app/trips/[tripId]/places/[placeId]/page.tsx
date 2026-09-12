@@ -60,12 +60,8 @@ export default function PlaceDetailsPage({
         <ArrowLeft size={15} /> Back
       </Link>
 
-      <div className="grid gap-3 sm:grid-cols-4 sm:grid-rows-2">
-        <PlaceCover photo={place.photo} category={place.category} className="col-span-4 h-56 rounded-3xl sm:col-span-2 sm:row-span-2 sm:h-full" iconSize={44} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-80 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-60 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-80 sm:block" iconSize={26} />
-        <PlaceCover photo={place.photo} category={place.category} className="hidden h-full rounded-2xl opacity-60 sm:block" iconSize={26} />
+      <div className="grid gap-3">
+        <PlaceCover photo={place.photo} category={place.category} className="h-64 rounded-3xl sm:h-80" iconSize={44} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">

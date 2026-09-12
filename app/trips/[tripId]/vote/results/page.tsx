@@ -57,10 +57,9 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
 
   async function handleConfirm() {
     if (submitting) return;
-    const topIds = consensus.shortlist.map((item) => item.candidateId);
     setSubmitting(true);
     try {
-      if (await confirmShortlist(tripId, topIds)) router.push(`/trips/${tripId}/shortlist`);
+      if (await confirmShortlist(tripId, count)) router.push(`/trips/${tripId}/shortlist`);
     } finally {
       setSubmitting(false);
     }

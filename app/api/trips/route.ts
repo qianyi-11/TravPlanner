@@ -5,6 +5,7 @@ import { recommendPlaceCount } from "@/lib/utils";
 import { apiErrorResponse } from "@/lib/server/api-error";
 import { parseCreateTripInput, parseJsonObject } from "@/lib/server/validation";
 import { requireGroupActor } from "@/lib/server/authorization";
+import { computeBookingPressure } from "@/lib/booking-pressure";
 
 export async function POST(req: Request) {
   try {
@@ -29,11 +30,7 @@ export async function POST(req: Request) {
         stage: "ideas",
         recommendedPlaceCount: count,
         votesPerMember: 10,
-        pricePressureJson: JSON.stringify({
-          level: "LOW",
-          reasons: ["Visit date is well in advance"],
-          recommendation: "No rush yet",
-        }),
+        pricePressureJson: JSON.stringify(computeBookingPressure(input.startDate)),
       },
     });
     return NextResponse.json({ id });

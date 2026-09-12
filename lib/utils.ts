@@ -106,27 +106,32 @@ export function totalItineraryCost(trip: Trip): number {
 }
 
 export interface BudgetBreakdown {
-  transport: number;
-  food: number;
-  activities: number;
-  accommodation: number;
-  total: number;
-  perPerson: number;
+  foodEstimate: number;
+  transportEstimate: number | null;
+  activityEstimate: number | null;
+  knownEstimatedSpend: number;
+  remainingBudget: number;
+  perPersonKnownSpend: number;
+  unknownCostActivityCount: number;
 }
 
 export function computeBudgetBreakdown(trip: Trip): BudgetBreakdown {
-  let transport = 0;
-  let food = 0;
-  let activities = 0;
+  let foodEstimate = 0;
+  let unknownCostActivityCount = 0;
   for (const day of trip.itinerary) {
     for (const a of day.activities) {
-      if (a.type === "transit") transport += a.estimatedCost;
-      else if (a.type === "meal") food += a.estimatedCost;
-      else activities += a.estimatedCost;
+      if (a.type === "meal" || (a.type === "place" && a.estimatedCost > 0)) foodEstimate += a.estimatedCost;
+      else if (a.type === "place" || a.type === "transit") unknownCostActivityCount += 1;
     }
   }
-  const accommodation = Math.round(trip.budgetTotal * 0.35);
-  const total = transport + food + activities + accommodation;
-  const perPerson = Math.round(total / Math.max(1, trip.memberIds.length));
-  return { transport, food, activities, accommodation, total, perPerson };
+  const knownEstimatedSpend = foodEstimate;
+  return {
+    foodEstimate,
+    transportEstimate: null,
+    activityEstimate: unknownCostActivityCount ? null : 0,
+    knownEstimatedSpend,
+    remainingBudget: trip.budgetTotal - knownEstimatedSpend,
+    perPersonKnownSpend: Math.round(knownEstimatedSpend / Math.max(1, trip.memberIds.length)),
+    unknownCostActivityCount,
+  };
 }

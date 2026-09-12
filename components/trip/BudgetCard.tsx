@@ -4,10 +4,9 @@ import { Card } from "@/components/ui/Card";
 import { computeBudgetBreakdown, formatCurrency } from "@/lib/utils";
 
 const CATS = [
-  { key: "transport" as const, label: "Transport", icon: Car, color: "var(--color-teal)" },
-  { key: "food" as const, label: "Food", icon: UtensilsCrossed, color: "var(--color-primary)" },
-  { key: "activities" as const, label: "Activities", icon: Ticket, color: "var(--color-violet)" },
-  { key: "accommodation" as const, label: "Accommodation", icon: Bed, color: "var(--color-warning)" },
+  { key: "transportEstimate" as const, label: "Transport", icon: Car, color: "var(--color-teal)" },
+  { key: "foodEstimate" as const, label: "Food", icon: UtensilsCrossed, color: "var(--color-primary)" },
+  { key: "activityEstimate" as const, label: "Activities", icon: Ticket, color: "var(--color-violet)" },
 ];
 
 export function BudgetCard({ trip }: { trip: Trip }) {
@@ -17,19 +16,13 @@ export function BudgetCard({ trip }: { trip: Trip }) {
     <Card className="p-5">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Estimated total</p>
-          <p className="font-display text-3xl font-bold">{formatCurrency(b.total)}</p>
+          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Known estimated spend</p>
+          <p className="font-display text-3xl font-bold">{formatCurrency(b.knownEstimatedSpend)}</p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Per person</p>
-          <p className="font-display text-lg font-bold text-[var(--color-primary)]">{formatCurrency(b.perPerson)}</p>
+          <p className="text-xs font-semibold text-[var(--color-ink-soft)]">Known per person</p>
+          <p className="font-display text-lg font-bold text-[var(--color-primary)]">{formatCurrency(b.perPersonKnownSpend)}</p>
         </div>
-      </div>
-
-      <div className="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--color-sand)]">
-        {CATS.map((c) => (
-          <div key={c.key} style={{ width: `${(b[c.key] / b.total) * 100}%`, backgroundColor: c.color }} />
-        ))}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -40,10 +33,24 @@ export function BudgetCard({ trip }: { trip: Trip }) {
             </div>
             <div className="min-w-0">
               <p className="text-xs text-[var(--color-ink-soft)]">{c.label}</p>
-              <p className="text-sm font-bold">{formatCurrency(b[c.key])}</p>
+              <p className="text-sm font-bold">{b[c.key] === null ? "Unknown" : formatCurrency(b[c.key] as number)}</p>
             </div>
           </div>
         ))}
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-warning-bg)]">
+            <Bed size={14} className="text-[var(--color-warning)]" />
+          </div>
+          <div>
+            <p className="text-xs text-[var(--color-ink-soft)]">Accommodation</p>
+            <p className="text-sm font-bold">Unknown</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-xl bg-[var(--color-sand)] px-3.5 py-2.5 text-sm">
+        <span className="font-semibold">Remaining trip budget: </span>{formatCurrency(b.remainingBudget)}
+        {b.unknownCostActivityCount > 0 && <span className="text-[var(--color-ink-soft)]"> · Some activity and transport costs are unknown.</span>}
       </div>
     </Card>
   );

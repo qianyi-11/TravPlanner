@@ -65,7 +65,7 @@ function basePlaceFields(row: PPlace) {
     destination: row.destination,
     coordinates: { lat: row.lat, lng: row.lng },
     address: row.address,
-    photo: row.photo,
+    photo: row.source === "google" && row.photoRef ? `/api/places/${encodeURIComponent(row.id)}/photo` : row.photo,
     rating: row.rating,
     reviewCount: row.reviewCount,
     priceLevel: row.priceLevel as Place["priceLevel"],

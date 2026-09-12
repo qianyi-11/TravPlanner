@@ -80,7 +80,7 @@ interface PlannerState {
   setVote: (tripId: string, placeId: string, voted: boolean) => Promise<boolean>;
   submitMyVotes: (tripId: string) => Promise<boolean>;
 
-  confirmShortlist: (tripId: string, placeIds: string[]) => Promise<boolean>;
+  confirmShortlist: (tripId: string, capacity: number) => Promise<boolean>;
   buildItinerary: (tripId: string) => Promise<boolean>;
   setStage: (tripId: string, stage: PlanningStage) => Promise<void>;
   advanceStage: (tripId: string) => Promise<void>;
@@ -328,10 +328,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     return true;
   },
 
-  confirmShortlist: async (tripId, placeIds) => {
+  confirmShortlist: async (tripId, capacity) => {
     const result = await api(`/api/trips/${tripId}/shortlist`, {
       method: "POST",
-      body: JSON.stringify({ placeIds }),
+      body: JSON.stringify({ capacity }),
     });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't confirm shortlist" });

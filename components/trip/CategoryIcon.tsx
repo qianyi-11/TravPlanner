@@ -47,7 +47,7 @@ export function getCategoryIcon(category: string): LucideIcon {
 }
 
 function isRealPhotoUrl(photo: string): boolean {
-  return photo.startsWith("http://") || photo.startsWith("https://");
+  return photo.startsWith("http://") || photo.startsWith("https://") || photo.startsWith("/api/");
 }
 
 export function PlaceCover({

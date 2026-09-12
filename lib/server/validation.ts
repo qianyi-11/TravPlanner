@@ -60,6 +60,13 @@ export function requireUniqueIdArray(
   return ids;
 }
 
+export function requireShortlistCapacity(value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 20) {
+    throw new ApiError(400, "INVALID_SHORTLIST_CAPACITY", "capacity must be an integer from 1 to 20");
+  }
+  return value;
+}
+
 export function parseCreateTripInput(body: Record<string, unknown>): {
   groupId: string;
   name: string;

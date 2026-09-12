@@ -89,6 +89,8 @@ model Trip {
   itineraryJson         String   @default("[]")
   itineraryRevision     Int      @default(1)
   pricePressureJson     String
+  splitBillJson         String?
+  splitBillRevision     Int      @default(1)
   isLive                Boolean  @default(false)
   createdAt             DateTime @default(now())
 

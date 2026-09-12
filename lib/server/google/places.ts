@@ -117,3 +117,23 @@ export async function fetchGooglePlace(googlePlaceId: string, destination: strin
   }
   return normalizeGooglePlace(payload.result, destination);
 }
+
+export async function fetchGooglePlacePhoto(photoRef: string) {
+  const apiKey = getServerEnv().googlePlacesServerApiKey;
+  if (!apiKey) throw new ApiError(503, "GOOGLE_PLACES_NOT_CONFIGURED", "Google Places server access is not configured");
+
+  const url = new URL("https://maps.googleapis.com/maps/api/place/photo");
+  url.searchParams.set("maxwidth", "1200");
+  url.searchParams.set("photo_reference", photoRef);
+  url.searchParams.set("key", apiKey);
+  let response: Response;
+  try {
+    response = await fetch(url, { cache: "no-store", redirect: "follow" });
+  } catch {
+    throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places photo could not be reached");
+  }
+  if (!response.ok) throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places photo returned an error");
+  const contentType = response.headers.get("content-type");
+  if (!contentType?.startsWith("image/")) throw new ApiError(503, "GOOGLE_PLACES_UNAVAILABLE", "Google Places returned an invalid photo");
+  return { body: response.body, contentType };
+}

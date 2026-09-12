@@ -13,6 +13,8 @@ import { POST as updatePreferences } from "@/app/api/members/[memberId]/preferen
 import { POST as addGroupMember } from "@/app/api/groups/[groupId]/members/route";
 import { POST as setDemoSession } from "@/app/api/demo-session/route";
 import { GET as bootstrap } from "@/app/api/bootstrap/route";
+import { GET as getPlacePhoto } from "@/app/api/places/[placeId]/photo/route";
+import { GET as getSplitBill, PUT as saveSplitBill } from "@/app/api/trips/[tripId]/split-bill/route";
 import { POST as createInvite } from "@/app/api/groups/[groupId]/invite/route";
 import { POST as joinInvite } from "@/app/api/invites/[token]/join/route";
 import { DELETE as deleteGroup, PATCH as renameGroup } from "@/app/api/groups/[groupId]/route";
@@ -22,12 +24,15 @@ import { requireTripActor, requireTripOrganizer } from "@/lib/server/authorizati
 import { setAuthenticatedMemberIdForTests } from "@/lib/server/auth";
 import { isDemoAuthEnabled } from "@/lib/server/demo-auth";
 import { buildConsensus } from "@/lib/group-consensus";
+import { computeBookingPressure } from "@/lib/booking-pressure";
 import type { Member, Place, Trip } from "@/lib/types";
 
 const tripContext = (tripId: string) => ({ params: Promise.resolve({ tripId }) });
 const rescueContext = (tripId: string, eventId: string) => ({ params: Promise.resolve({ tripId, eventId }) });
 const memberContext = (memberId: string) => ({ params: Promise.resolve({ memberId }) });
 const groupContext = (groupId: string) => ({ params: Promise.resolve({ groupId }) });
+const photoContext = (placeId: string) => ({ params: Promise.resolve({ placeId }) });
+const splitBillContext = (tripId: string) => ({ params: Promise.resolve({ tripId }) });
 
 function request(body: unknown, raw = false) {
   return new Request("http://localhost", {
@@ -371,6 +376,14 @@ test("trip creation validates and persists normalized input", async () => {
   assert.equal(saved.name, "Tokyo Escape");
   assert.deepEqual(JSON.parse(saved.destinationsJson), ["Tokyo"]);
   assert.equal(saved.stage, "ideas");
+  assert.deepEqual(JSON.parse(saved.pricePressureJson), computeBookingPressure(validTripInput.startDate));
+});
+
+test("changing a trip start date recalculates planning urgency", async () => {
+  const response = await updateTrip(request({ startDate: "2026-12-25", endDate: "2026-12-26" }), tripContext("trip-a"));
+  assert.equal(response.status, 200);
+  const saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
+  assert.deepEqual(JSON.parse(saved.pricePressureJson), computeBookingPressure("2026-12-25"));
 });
 
 test("trip creation rejects invalid input without writing", async () => {
@@ -449,15 +462,15 @@ test("selected routes reject malformed and invalid shortlist input with structur
   assert.equal(malformed.status, 400);
   assert.equal((await body(malformed)).code, "INVALID_REQUEST");
 
-  for (const placeIds of ["place-a", ["place-a", 1], ["place-a", "place-a"], []]) {
-    const response = await confirmShortlist(request({ placeIds }), tripContext("trip-a"));
+  for (const capacity of ["1", 0, 21, 1.5, null]) {
+    const response = await confirmShortlist(request({ capacity }), tripContext("trip-a"));
     assert.equal(response.status, 400);
   }
 });
 
 test("membership guards block outsiders on planning mutations", async () => {
   setAuthenticatedMemberIdForTests("outsider");
-  const shortlist = await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-a"] }), tripContext("trip-a"));
+  const shortlist = await confirmShortlist(request({ memberId: "member-a", capacity: 1 }), tripContext("trip-a"));
   const add = await addSuggestion(request({ memberId: "member-a", placeId: "place-a" }), tripContext("trip-a"));
   const remove = await removeSuggestion(deleteRequest({ memberId: "member-a", placeId: "place-a" }), tripContext("trip-a"));
   const vote = await toggleVote(request({ memberId: "member-a", placeId: "place-a", voted: true }), tripContext("trip-a"));
@@ -514,6 +527,7 @@ test("Google place imports use server facts and fail without partial persistence
       user_ratings_total: 99,
       price_level: 2,
       opening_hours: { weekday_text: ["Monday: 9:00 AM – 5:00 PM"] },
+      photos: [{ photo_reference: "photo-ref" }],
     },
   }), { status: 200, headers: { "Content-Type": "application/json" } })) as typeof fetch;
 
@@ -523,6 +537,9 @@ test("Google place imports use server facts and fail without partial persistence
     const saved = await prisma.place.findUniqueOrThrow({ where: { id: "g-provider-place" } });
     assert.equal(saved.rating, 4.9);
     assert.equal(saved.googlePlaceId, "provider-place");
+    const snapshot = await body(await bootstrap()) as unknown as { places: Record<string, Place>; tripPlaces: Record<string, Record<string, Place>> };
+    assert.equal(snapshot.places["g-provider-place"].photo, "/api/places/g-provider-place/photo");
+    assert.equal(snapshot.tripPlaces["trip-a"]["g-provider-place"].photo, "/api/places/g-provider-place/photo");
     assert.equal((await prisma.tripPlace.findUnique({ where: { tripId_placeId: { tripId: "trip-a", placeId: "g-provider-place" } } })) !== null, true);
 
     setAuthenticatedMemberIdForTests("member-b");
@@ -543,6 +560,82 @@ test("Google place imports use server facts and fail without partial persistence
     globalThis.fetch = originalFetch;
     delete process.env.GOOGLE_PLACES_SERVER_API_KEY;
   }
+});
+
+test("Google place photos are authorized, proxied, and safely unavailable", async () => {
+  await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "catalog-photo" } });
+  const originalFetch = globalThis.fetch;
+  let fetchCount = 0;
+  process.env.GOOGLE_PLACES_SERVER_API_KEY = "test-server-key";
+  globalThis.fetch = (async () => {
+    fetchCount += 1;
+    return new Response(new Uint8Array([1, 2, 3]), { status: 200, headers: { "Content-Type": "image/jpeg" } });
+  }) as typeof fetch;
+
+  try {
+    const response = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("Content-Type"), "image/jpeg");
+    assert.equal(response.headers.get("Cache-Control"), "private, max-age=3600");
+    assert.deepEqual([...new Uint8Array(await response.arrayBuffer())], [1, 2, 3]);
+
+    setAuthenticatedMemberIdForTests("outsider");
+    const forbidden = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
+    assert.equal(forbidden.status, 403);
+    assert.equal(fetchCount, 1);
+
+    setAuthenticatedMemberIdForTests("member-a");
+    await prisma.place.update({ where: { id: "place-a" }, data: { source: "catalog", photoRef: null } });
+    const missing = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
+    assert.equal(missing.status, 404);
+
+    await prisma.place.update({ where: { id: "place-a" }, data: { source: "google", photoRef: "broken-photo" } });
+    globalThis.fetch = (async () => new Response("not an image", { status: 200, headers: { "Content-Type": "text/plain" } })) as typeof fetch;
+    const broken = await getPlacePhoto(new Request("http://localhost"), photoContext("place-a"));
+    assert.equal(broken.status, 503);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete process.env.GOOGLE_PLACES_SERVER_API_KEY;
+  }
+});
+
+test("trip split bills are shared, validated, and revision-protected", async () => {
+  const empty = await getSplitBill(new Request("http://localhost"), splitBillContext("trip-a"));
+  assert.equal(empty.status, 200);
+  assert.deepEqual(await body(empty), { ok: true, state: null, revision: 1 });
+
+  const state = {
+    people: [{ id: "member-a", name: "Member A", items: [{ id: "item-a", name: "Dinner", price: "40", qty: "1" }] }],
+    fees: {
+      deliveryEnabled: false,
+      deliveryAmount: "0",
+      sstEnabled: true,
+      serviceEnabled: false,
+      discountEnabled: false,
+      discountPercent: "0",
+      roundingEnabled: false,
+      roundingAmount: "0",
+    },
+  };
+  const saved = await saveSplitBill(request({ state, expectedRevision: 1 }), splitBillContext("trip-a"));
+  assert.equal(saved.status, 200);
+  assert.equal((await body(saved)).revision, 2);
+
+  setAuthenticatedMemberIdForTests("member-b");
+  const shared = await getSplitBill(new Request("http://localhost"), splitBillContext("trip-a"));
+  assert.equal(shared.status, 200);
+  assert.deepEqual((await body(shared)).state, state);
+
+  const stale = await saveSplitBill(request({ state, expectedRevision: 1 }), splitBillContext("trip-a"));
+  assert.equal(stale.status, 409);
+  assert.equal((await body(stale)).code, "STALE_SPLIT_BILL");
+
+  const malformed = await saveSplitBill(request({ state: { ...state, people: [] }, expectedRevision: 2 }), splitBillContext("trip-a"));
+  assert.equal(malformed.status, 400);
+
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await getSplitBill(new Request("http://localhost"), splitBillContext("trip-a"))).status, 403);
+  assert.equal((await saveSplitBill(request({ state, expectedRevision: 2 }), splitBillContext("trip-a"))).status, 403);
 });
 
 test("secure group invites join idempotently and rotate old tokens", async () => {
@@ -611,7 +704,9 @@ test("single-member planning reuses consensus, itinerary, Rescue, and refreshed 
   });
   assert.equal(consensus.shortlist[0].candidateId, "solo-place-a");
   const shortlist = consensus.shortlist.map(({ candidateId }) => candidateId);
-  assert.equal((await confirmShortlist(request({ placeIds: shortlist }), tripContext("solo-trip"))).status, 200);
+  const confirmed = await confirmShortlist(request({ capacity: 2, placeIds: ["not-authoritative"] }), tripContext("solo-trip"));
+  assert.equal(confirmed.status, 200);
+  assert.deepEqual((await body(confirmed)).shortlistPlaceIds, shortlist);
   assert.equal((await buildItinerary(request({ expectedItineraryRevision: 1 }), tripContext("solo-trip"))).status, 200);
 
   const built = (await body(await bootstrap())).trips as Record<string, Trip>;
@@ -662,27 +757,51 @@ test("vote limit returns a structured error without persisting a rejected vote",
   assert.equal(voteCount, 1);
 });
 
-test("shortlist persists exact order, preserves later stages, and rejects cross-trip places", async () => {
-  const invalid = await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-b"] }), tripContext("trip-a"));
+test("shortlist is server-derived, trip-scoped, and preserves later stages", async () => {
+  const invalid = await confirmShortlist(request({ memberId: "member-a", capacity: 0 }), tripContext("trip-a"));
   assert.equal(invalid.status, 400);
   assert.deepEqual(JSON.parse((await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } })).shortlistJson), []);
 
-  const confirmed = await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-a2", "place-a"] }), tripContext("trip-a"));
+  await updatePreferences(
+    request({ preferences: { ...validPreferences, mustDo: ["place-a2"] } }),
+    memberContext("member-a")
+  );
+  await toggleVote(request({ placeId: "place-a", voted: true }), tripContext("trip-a"));
+  const snapshot = await body(await bootstrap()) as unknown as {
+    members: Record<string, Member>;
+    tripPlaces: Record<string, Record<string, Place>>;
+  };
+  const expected = buildConsensus({
+    members: [snapshot.members["member-a"], snapshot.members["member-b"]],
+    candidates: Object.values(snapshot.tripPlaces["trip-a"]),
+    capacity: 1,
+  }).shortlist.map(({ candidateId }) => candidateId);
+  const confirmed = await confirmShortlist(request({ memberId: "member-a", capacity: 1, placeIds: ["place-b"] }), tripContext("trip-a"));
   assert.equal(confirmed.status, 200);
+  assert.deepEqual((await body(confirmed)).shortlistPlaceIds, expected);
   let saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
-  assert.deepEqual(JSON.parse(saved.shortlistJson), ["place-a2", "place-a"]);
+  assert.deepEqual(JSON.parse(saved.shortlistJson), expected);
   assert.equal(saved.stage, "validation");
 
   await prisma.trip.update({ where: { id: "trip-a" }, data: { stage: "itinerary" } });
-  const reconfirmed = await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-a"] }), tripContext("trip-a"));
+  const reconfirmed = await confirmShortlist(request({ memberId: "member-a", capacity: 1 }), tripContext("trip-a"));
   assert.equal(reconfirmed.status, 200);
   saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
-  assert.deepEqual(JSON.parse(saved.shortlistJson), ["place-a"]);
+  assert.deepEqual(JSON.parse(saved.shortlistJson), expected);
   assert.equal(saved.stage, "itinerary");
+
+  await prisma.vote.create({
+    data: {
+      tripPlaceId: (await prisma.tripPlace.findUniqueOrThrow({ where: { tripId_placeId: { tripId: "trip-b", placeId: "place-b" } } })).id,
+      memberId: "outsider",
+    },
+  });
+  const refreshed = await body(await bootstrap()) as unknown as { trips: Record<string, Trip> };
+  assert.deepEqual(refreshed.trips["trip-a"].shortlistPlaceIds, expected);
 });
 
 test("itinerary build persists, is membership-scoped, and blocks rebuild", async () => {
-  await confirmShortlist(request({ memberId: "member-a", placeIds: ["place-a"] }), tripContext("trip-a"));
+  await confirmShortlist(request({ memberId: "member-a", capacity: 1 }), tripContext("trip-a"));
   const built = await buildItinerary(request({ memberId: "member-a", expectedItineraryRevision: 1 }), tripContext("trip-a"));
   assert.equal(built.status, 200);
   const result = await body(built);

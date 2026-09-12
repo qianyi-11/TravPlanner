@@ -31,6 +31,7 @@ export default function SplitBillPage({ params }: { params: Promise<{ tripId: st
         <SplitBillCalculator
           storageKey={`trippy-split-${tripId}`}
           defaultNames={members.map((m) => m.name)}
+          tripId={tripId}
         />
       </div>
     </div>

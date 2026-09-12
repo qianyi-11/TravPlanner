@@ -12,7 +12,7 @@ export function PressureRadar({ pressure }: { pressure: PricePressure }) {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-base font-bold">Booking Pressure</h3>
+        <h3 className="font-display text-base font-bold">Planning urgency</h3>
         <span className="rounded-full px-3 py-1 text-xs font-bold" style={{ backgroundColor: tone.bg, color: tone.fg }}>
           {pressure.level}
         </span>
@@ -32,7 +32,7 @@ export function PressureRadar({ pressure }: { pressure: PricePressure }) {
       </div>
 
       <p className="mt-3 text-xs font-medium text-[var(--color-ink-soft)]">
-        We estimate booking and price pressure using known demand signals — not a guaranteed forecast.
+        This is a planning heuristic based only on calendar days until departure.
       </p>
 
       <div className="mt-4 space-y-2">

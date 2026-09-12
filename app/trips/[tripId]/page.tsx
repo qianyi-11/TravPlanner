@@ -148,7 +148,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
 
           <Card className="p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="font-display text-base font-bold">Booking pressure</h3>
+              <h3 className="font-display text-base font-bold">Planning urgency</h3>
               <LinkButton href={`/trips/${trip.id}/plan`} variant="ghost" size="sm">
                 View plan
               </LinkButton>
