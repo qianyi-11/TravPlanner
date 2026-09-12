@@ -83,7 +83,9 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
             </div>
             <div>
               {isOrganizer ? (
-                <EditableTitle value={group.name} onSave={(name) => renameGroup(groupId, name)} className="font-display text-2xl font-bold text-white sm:text-3xl" />
+                <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
+                  <EditableTitle value={group.name} onSave={(name) => renameGroup(groupId, name)} />
+                </h1>
               ) : (
                 <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">{group.name}</h1>
               )}

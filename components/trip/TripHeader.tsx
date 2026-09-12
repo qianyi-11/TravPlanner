@@ -38,7 +38,9 @@ export function TripHeader({ trip }: { trip: Trip }) {
         )}
         <p className="text-sm font-medium text-white/70">{trip.destinations.join(" · ")}</p>
         {isOrganizer ? (
-          <EditableTitle value={trip.name} onSave={(name) => renameTrip(trip.id, name)} label="Rename trip" className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl" inputClassName="font-display text-2xl font-bold text-white sm:text-3xl" />
+          <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">
+            <EditableTitle value={trip.name} onSave={(name) => renameTrip(trip.id, name)} label="Rename trip" inputClassName="font-display text-2xl font-bold text-white sm:text-3xl" />
+          </h1>
         ) : (
           <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
         )}

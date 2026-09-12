@@ -214,6 +214,8 @@ test("bootstrap isolates shared place activity by trip", async () => {
   assert.deepEqual(snapshot.places["place-a"].suggestedBy, []);
   assert.deepEqual(snapshot.places["place-a"].votedBy, []);
   assert.equal(snapshot.places["place-a"].voteCount, 0);
+  assert.deepEqual(snapshot.members["member-a"].suggestedPlaceIds, []);
+  assert.deepEqual(snapshot.members["member-a"].votedPlaceIds, []);
   assert.deepEqual(snapshot.tripPlaces["trip-a"]["place-a"].suggestedBy, ["member-a"]);
   assert.deepEqual(snapshot.tripPlaces["trip-a"]["place-a"].votedBy, ["member-a"]);
   assert.equal(snapshot.tripPlaces["trip-a"]["place-a"].voteCount, 1);

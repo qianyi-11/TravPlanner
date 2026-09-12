@@ -30,7 +30,7 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
 
   if (!trip || !me) notFound();
 
-  const myVotes = (me.votedPlaceIds ?? []).filter((id) => trip.placeIds.includes(id));
+  const myVotes = places.filter((place) => place.votedBy.includes(me.id)).map((place) => place.id);
   const limit = trip.votesPerMember;
 
   async function handleVote(placeId: string, voted: boolean) {

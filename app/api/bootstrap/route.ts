@@ -55,23 +55,11 @@ export async function GET() {
         })
       : [];
 
-    const memberActivity = new Map<string, { suggested: string[]; voted: string[] }>();
-    function activityFor(memberId: string) {
-      let entry = memberActivity.get(memberId);
-      if (!entry) {
-        entry = { suggested: [], voted: [] };
-        memberActivity.set(memberId, entry);
-      }
-      return entry;
-    }
-
     const places: Record<string, Place> = {};
     const tripPlaces: Record<string, Record<string, Place>> = {};
     for (const row of placeRows) {
       for (const tripPlace of row.tripPlaces) {
         (tripPlaces[tripPlace.tripId] ??= {})[row.id] = mapPlaceForTrip(row, tripPlace);
-        for (const suggestion of tripPlace.suggestions) activityFor(suggestion.memberId).suggested.push(row.id);
-        for (const vote of tripPlace.votes) activityFor(vote.memberId).voted.push(row.id);
       }
       places[row.id] = mapCatalogPlace(row);
     }
@@ -84,10 +72,9 @@ export async function GET() {
 
     const members: Record<string, Member> = {};
     for (const row of memberRows) {
-      const activity = memberActivity.get(row.id);
       members[row.id] = mapMember(row, {
-        suggestedPlaceIds: activity ? Array.from(new Set(activity.suggested)) : [],
-        votedPlaceIds: activity ? Array.from(new Set(activity.voted)) : [],
+        suggestedPlaceIds: [],
+        votedPlaceIds: [],
         role: roleByMember.get(row.id),
       });
     }
