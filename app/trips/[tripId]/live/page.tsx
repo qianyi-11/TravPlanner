@@ -101,8 +101,8 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
     <div>
       <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8" style={{ background: trip.coverColor }}>
         <div className="flex items-center gap-2">
-          <span className="flex h-2 w-2 animate-pulse rounded-full bg-red-400" />
-          <span className="text-xs font-bold uppercase tracking-wide text-white/80">Trip Mode · Live</span>
+          <span className="flex h-2 w-2 rounded-full bg-white/80" />
+          <span className="text-xs font-bold uppercase tracking-wide text-white/80">Trip Mode</span>
         </div>
         <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
         {day && (

@@ -237,7 +237,7 @@ Group Consensus is the primary differentiator. The client chooses shortlist capa
 base score = 2 × votes + preference matches - 2 × dislike conflicts
 ```
 
-A bounded `+3` representation bonus can change close choices, and stable IDs break final ties. The UI exposes selection reasons, member representation and fairness trade-offs. The server persists the derived shortlist and advances the planning stage.
+A bounded `+3` representation bonus can change close choices, and stable IDs break final ties. The UI exposes base and fair scores, selection reasons, member representation and fairness trade-offs. The server persists the derived shortlist and advances the planning stage.
 
 ## Trip Rescue
 

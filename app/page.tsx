@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Plus, Users2, Vote, Route as RouteIcon } from "lucide-react";
+import { ArrowRight, CalendarDays, Plus, Scale, Users2, Vote } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { LinkButton } from "@/components/ui/Button";
 import { TripCard } from "@/components/trip/TripCard";
@@ -25,11 +25,11 @@ export default function HomePage() {
             Plan together, not alone
           </span>
           <h1 className="mt-5 font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[var(--color-ink)] sm:text-5xl">
-            Plan your next trip together.
+            Turn different travel wishes into one shared plan.
           </h1>
           <p className="mt-4 max-w-lg text-base text-[var(--color-ink-soft)] sm:text-lg">
-            Bring everyone&apos;s ideas together, vote on what matters most, and build a
-            smarter itinerary.
+            Trippy turns different preferences, suggestions and votes into an explainable Group Consensus, then a
+            shared itinerary everyone can use.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton href="/groups" size="lg" icon={<Plus size={18} />}>
@@ -41,9 +41,10 @@ export default function HomePage() {
           </div>
 
           <div className="mt-10 flex flex-wrap gap-6 text-sm text-[var(--color-ink-soft)]">
-            <Step icon={Users2} label="Everyone suggests" />
-            <Step icon={Vote} label="The group votes" />
-            <Step icon={RouteIcon} label="We build the route" />
+            <Step icon={Users2} label="Different preferences" />
+            <Step icon={Vote} label="Suggestions + votes" />
+            <Step icon={Scale} label="Consensus explains why" />
+            <Step icon={CalendarDays} label="Shared itinerary" />
           </div>
         </div>
       </section>

@@ -42,6 +42,7 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
   const fairPlace = primaryTradeoff && places.find((place) => place.id === primaryTradeoff.selectedCandidateId);
   const baselinePlace = primaryTradeoff && places.find((place) => place.id === primaryTradeoff.baselineCandidateId);
   const selectedById = new Map(consensus.shortlist.map((item) => [item.candidateId, item]));
+  const fairSelection = fairPlace ? selectedById.get(fairPlace.id) : undefined;
   const selectedIds = new Set(selectedById.keys());
   const orderedPlaces = [
     ...consensus.shortlist
@@ -103,7 +104,18 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                 </span>
                 <span>Support {consensus.candidates[fairPlace.id].voteCount} votes vs {consensus.candidates[baselinePlace.id].voteCount} votes</span>
               </div>
+              {fairSelection && (
+                <div className="mt-3 grid gap-2 rounded-xl bg-[var(--color-sand)] p-3 text-xs text-[var(--color-ink-soft)] sm:grid-cols-2">
+                  <span>Selected base score: <strong className="text-[var(--color-ink)]">{fairSelection.baseScore}</strong></span>
+                  <span>Baseline base score: <strong className="text-[var(--color-ink)]">{consensus.candidates[baselinePlace.id].baseScore}</strong></span>
+                  <span>Representation adjustment: <strong className="text-[var(--color-ink)]">+{fairSelection.representationBonus}</strong></span>
+                  <span>Selected fair score: <strong className="text-[var(--color-ink)]">{fairSelection.fairScore}</strong></span>
+                </div>
+              )}
               <p className="mt-3 text-sm text-[var(--color-ink)]">{primaryTradeoff.explanation}</p>
+              <p className="mt-2 text-xs text-[var(--color-ink-soft)]">
+                Base score = 2 × votes + preference matches − 2 × dislike conflicts. Group Match is a separate preference signal.
+              </p>
             </Card>
           )}
 
@@ -132,7 +144,9 @@ export default function VoteResultsPage({ params }: { params: Promise<{ tripId: 
                     {place.category} · {place.area}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-x-2 text-xs text-[var(--color-ink-soft)]">
-                    <span className="font-semibold text-[var(--color-primary-dark)]">Group Match {result.groupMatchPercent}%</span>
+                    <span className="font-semibold text-[var(--color-primary-dark)]">Preference signal {result.groupMatchPercent}%</span>
+                    <span>Base score {result.baseScore}</span>
+                    {selected && <span>Fair score {selected.fairScore}</span>}
                     <span>{result.preferenceMatchCount}/{tripMembers.length} preference coverage</span>
                     <span>{result.dislikeConflictCount ? `${result.dislikeConflictCount} preference conflict${result.dislikeConflictCount === 1 ? "" : "s"}` : "No conflicts"}</span>
                   </div>
