@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
-import { mapCatalogPlace, mapGroup, mapMember, mapTrip } from "@/lib/server/mappers";
+import { mapCatalogPlace, mapGroup, mapMember, mapPlaceForTrip, mapTrip } from "@/lib/server/mappers";
 import type { Group, Member, Place, Trip } from "@/lib/types";
 import { apiErrorResponse } from "@/lib/server/api-error";
 import { requireAuthenticatedActor } from "@/lib/server/auth";
@@ -66,8 +66,10 @@ export async function GET() {
     }
 
     const places: Record<string, Place> = {};
+    const tripPlaces: Record<string, Record<string, Place>> = {};
     for (const row of placeRows) {
       for (const tripPlace of row.tripPlaces) {
+        (tripPlaces[tripPlace.tripId] ??= {})[row.id] = mapPlaceForTrip(row, tripPlace);
         for (const suggestion of tripPlace.suggestions) activityFor(suggestion.memberId).suggested.push(row.id);
         for (const vote of tripPlace.votes) activityFor(vote.memberId).voted.push(row.id);
       }
@@ -98,7 +100,7 @@ export async function GET() {
       trips[row.id] = mapTrip(row, row.group.members.map((member) => member.memberId));
     }
 
-    return NextResponse.json({ groups, members, trips, places, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
+    return NextResponse.json({ groups, members, trips, places, tripPlaces, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
   } catch (error) {
     return apiErrorResponse(error);
   }

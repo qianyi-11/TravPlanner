@@ -198,6 +198,33 @@ test("bootstrap only returns groups, trips, members, and places reachable by the
   assert.deepEqual(Object.keys(result.members as object).sort(), ["member-a", "member-b"]);
 });
 
+test("bootstrap isolates shared place activity by trip", async () => {
+  await prisma.trip.create({ data: trip("trip-a2", "group-a") });
+  await prisma.tripPlace.create({ data: { tripId: "trip-a2", placeId: "place-a" } });
+  assert.equal((await addSuggestion(request({ placeId: "place-a" }), tripContext("trip-a"))).status, 200);
+  assert.equal((await toggleVote(request({ placeId: "place-a", voted: true }), tripContext("trip-a"))).status, 200);
+
+  const snapshot = await body(await bootstrap()) as unknown as {
+    places: Record<string, Place>;
+    tripPlaces: Record<string, Record<string, Place>>;
+    members: Record<string, Member>;
+  };
+  assert.deepEqual(snapshot.places["place-a"].suggestedBy, []);
+  assert.deepEqual(snapshot.places["place-a"].votedBy, []);
+  assert.equal(snapshot.places["place-a"].voteCount, 0);
+  assert.deepEqual(snapshot.tripPlaces["trip-a"]["place-a"].suggestedBy, ["member-a"]);
+  assert.deepEqual(snapshot.tripPlaces["trip-a"]["place-a"].votedBy, ["member-a"]);
+  assert.equal(snapshot.tripPlaces["trip-a"]["place-a"].voteCount, 1);
+  assert.deepEqual(snapshot.tripPlaces["trip-a2"]["place-a"].suggestedBy, []);
+  assert.deepEqual(snapshot.tripPlaces["trip-a2"]["place-a"].votedBy, []);
+  assert.equal(snapshot.tripPlaces["trip-a2"]["place-a"].voteCount, 0);
+  assert.equal(buildConsensus({
+    members: [snapshot.members["member-a"], snapshot.members["member-b"]],
+    candidates: [snapshot.tripPlaces["trip-a2"]["place-a"]],
+    capacity: 1,
+  }).candidates["place-a"].voteCount, 0);
+});
+
 test("unauthenticated bootstrap is rejected", async () => {
   setAuthenticatedMemberIdForTests(null);
   const response = await bootstrap();
@@ -489,11 +516,12 @@ test("single-member planning reuses consensus, itinerary, Rescue, and refreshed 
   const snapshot = await body(await bootstrap()) as unknown as {
     members: Record<string, Member>;
     places: Record<string, Place>;
+    tripPlaces: Record<string, Record<string, Place>>;
     trips: Record<string, Trip>;
   };
   const consensus = buildConsensus({
     members: [snapshot.members["solo-member"]],
-    candidates: Object.values(snapshot.places).filter((candidate) => candidate.destination === "Tokyo"),
+    candidates: Object.values(snapshot.tripPlaces["solo-trip"]),
     capacity: 2,
   });
   assert.equal(consensus.shortlist[0].candidateId, "solo-place-a");

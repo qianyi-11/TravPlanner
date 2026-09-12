@@ -39,13 +39,14 @@ export default function FinalPlanPage({ params }: { params: Promise<{ tripId: st
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const placesMap = usePlannerStore((s) => s.places);
+  const tripPlacesMap = usePlannerStore((s) => s.tripPlaces[tripId]);
   const membersMap = usePlannerStore((s) => s.members);
   const [tab, setTab] = useState<TabKey>("itinerary");
   const [openDay, setOpenDay] = useState(0);
 
   const activePlanPlaces = useMemo(() => {
-    return trip ? getActivePlanPlaceIds(trip).map((id) => placesMap[id]).filter(Boolean) : [];
-  }, [trip, placesMap]);
+    return trip ? getActivePlanPlaceIds(trip).map((id) => tripPlacesMap?.[id] ?? placesMap[id]).filter(Boolean) : [];
+  }, [trip, tripPlacesMap, placesMap]);
 
   if (!trip) notFound();
 

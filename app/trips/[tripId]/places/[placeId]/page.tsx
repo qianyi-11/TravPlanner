@@ -35,7 +35,7 @@ export default function PlaceDetailsPage({
 }) {
   const { tripId, placeId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
-  const place = usePlannerStore((s) => s.places[placeId]);
+  const place = usePlannerStore((s) => s.tripPlaces[tripId]?.[placeId] ?? s.places[placeId]);
   const members = usePlannerStore((s) => s.members);
 
   if (!trip || !place) notFound();

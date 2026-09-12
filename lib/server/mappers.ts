@@ -81,14 +81,20 @@ function basePlaceFields(row: PPlace) {
 
 type TripPlaceWithJoins = PTripPlace & { suggestions: PSuggestion[]; votes: PVote[] };
 
-/** Aggregates a place's suggestions/votes across every trip it currently appears in. */
-export function mapCatalogPlace(row: PPlace & { tripPlaces: TripPlaceWithJoins[] }): Place {
-  const allSuggestions = row.tripPlaces.flatMap((tp) => tp.suggestions);
-  const allVotes = row.tripPlaces.flatMap((tp) => tp.votes);
-  const votedBy = Array.from(new Set(allVotes.map((v) => v.memberId)));
+export function mapCatalogPlace(row: PPlace): Place {
   return {
     ...basePlaceFields(row),
-    suggestedBy: Array.from(new Set(allSuggestions.map((s) => s.memberId))),
+    suggestedBy: [],
+    voteCount: 0,
+    votedBy: [],
+  };
+}
+
+export function mapPlaceForTrip(row: PPlace, tripPlace: TripPlaceWithJoins): Place {
+  const votedBy = Array.from(new Set(tripPlace.votes.map((vote) => vote.memberId)));
+  return {
+    ...basePlaceFields(row),
+    suggestedBy: Array.from(new Set(tripPlace.suggestions.map((suggestion) => suggestion.memberId))),
     voteCount: votedBy.length,
     votedBy,
   };

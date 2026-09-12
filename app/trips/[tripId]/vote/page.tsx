@@ -19,7 +19,7 @@ export default function VotePage({ params }: { params: Promise<{ tripId: string 
   const places = usePlannerStore(
     useShallow((s) =>
       trip
-        ? [...trip.placeIds.map((id) => s.places[id]).filter(Boolean)].sort((a, b) => b.voteCount - a.voteCount)
+        ? [...trip.placeIds.map((id) => s.tripPlaces[tripId]?.[id] ?? s.places[id]).filter(Boolean)].sort((a, b) => b.voteCount - a.voteCount)
         : []
     )
   );

@@ -8,6 +8,7 @@ interface BootstrapPayload {
   trips: Record<string, Trip>;
   members: Record<string, Member>;
   places: Record<string, Place>;
+  tripPlaces: Record<string, Record<string, Place>>;
   currentUserId: string;
   demoAuthEnabled: boolean;
 }
@@ -31,6 +32,7 @@ interface PlannerState {
   trips: Record<string, Trip>;
   members: Record<string, Member>;
   places: Record<string, Place>;
+  tripPlaces: Record<string, Record<string, Place>>;
   currentUserId: string;
   toast: string | null;
   initialized: boolean;
@@ -87,6 +89,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   trips: {},
   members: {},
   places: {},
+  tripPlaces: {},
   currentUserId: "",
   toast: null,
   initialized: false,

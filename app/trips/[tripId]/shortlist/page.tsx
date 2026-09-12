@@ -18,7 +18,7 @@ export default function ShortlistPage({ params }: { params: Promise<{ tripId: st
   const members = usePlannerStore((s) => s.members);
   const places = usePlannerStore(
     useShallow((s) =>
-      trip ? trip.shortlistPlaceIds.map((id) => s.places[id]).filter(Boolean) : []
+      trip ? trip.shortlistPlaceIds.map((id) => s.tripPlaces[tripId]?.[id] ?? s.places[id]).filter(Boolean) : []
     )
   );
 

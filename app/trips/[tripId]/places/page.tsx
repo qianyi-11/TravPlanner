@@ -14,12 +14,14 @@ import { loadGoogleMaps } from "@/lib/google-maps-loader";
 import { searchGooglePlaces } from "@/lib/google-places-client";
 import type { Place } from "@/lib/types";
 
+const EMPTY_TRIP_PLACES: Record<string, Place> = {};
+
 export default function AddPlacesPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = use(params);
   const trip = usePlannerStore((s) => s.trips[tripId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
   const allPlaces = usePlannerStore(useShallow((s) => Object.values(s.places)));
-  const allPlacesById = usePlannerStore((s) => s.places);
+  const tripPlacesById = usePlannerStore((s) => s.tripPlaces[tripId] ?? EMPTY_TRIP_PLACES);
   const addSuggestion = usePlannerStore((s) => s.addPlaceSuggestion);
   const importAndSuggest = usePlannerStore((s) => s.importAndSuggestPlace);
   const removeSuggestion = usePlannerStore((s) => s.removePlaceSuggestion);
@@ -84,13 +86,11 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
     ? liveResults.filter((p) => !catalogIds.has(p.id))
     : [];
 
-  const myCount = allPlaces.filter(
-    (p) => trip.placeIds.includes(p.id) && p.suggestedBy.includes(currentUserId)
-  ).length;
+  const myCount = Object.values(tripPlacesById).filter((p) => p.suggestedBy.includes(currentUserId)).length;
   const solo = trip.memberIds.length === 1;
 
   async function handleAdd(place: Place) {
-    const alreadyImported = Boolean(allPlacesById[place.id]);
+    const alreadyImported = allPlaces.some((candidate) => candidate.id === place.id);
     if (alreadyImported) {
       await addSuggestion(tripId, place.id);
       showToast(`${place.name} added to your suggestions`);
@@ -103,14 +103,13 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   }
 
   function renderCard(place: Place) {
-    const added = allPlacesById[place.id]
-      ? place.suggestedBy.includes(currentUserId) || allPlacesById[place.id].suggestedBy.includes(currentUserId)
-      : false;
+    const tripPlace = tripPlacesById[place.id];
+    const added = tripPlace?.suggestedBy.includes(currentUserId) ?? false;
     const isAdding = addingId === place.id;
     return (
       <PlaceCard
         key={place.id}
-        place={allPlacesById[place.id] ?? place}
+        place={tripPlace ?? place}
         footer={
           <Button
             size="sm"
