@@ -322,6 +322,16 @@ flowchart TD
 
 Trippy deliberately uses one Next.js application with route handlers and Prisma rather than introducing unnecessary microservices. This keeps deployment and debugging manageable for a small team while preserving a clear path for future external APIs and collaborative services.
 
+## Hosting & Deployment Plan
+
+| Layer | Deployment plan | Status |
+|---|---|---|
+| Web application | Node-compatible hosting platform | TBD before submission |
+| PostgreSQL database | Managed PostgreSQL provider | TBD before submission |
+| Google Maps / Places | Browser API key restricted to the deployed production origin | Required before submission |
+
+The architecture is designed to deploy as one Next.js application connected to a managed PostgreSQL database. The final hosting and database providers will be selected and documented before submission. The production Google Maps / Places browser key will be restricted to the deployed origin and configured with appropriate API restrictions and quota controls.
+
 ## Prototype Scope & Boundaries
 
 | Capability | Current status |
@@ -442,14 +452,16 @@ Trippy does not need to become a booking platform. Its core role is the decision
 |---|---|---|
 | Budgeting | Trip budget estimates plus browser-local Split Bill calculator | Prototype |
 | Itinerary building | Persisted day-by-day itinerary from the confirmed shortlist | Prototype |
-| Combining group preferences | Preference profiles, suggestions and votes; preferences do not currently alter ranking | Partial |
+| Combining group preferences | Preference profiles, shared suggestions and positive voting capture group input; preference profiles do not currently weight shortlist ranking. | Prototype / partial |
 | Coordinating travellers | Shared stages, participation and one trip workspace | Prototype |
-| Adjusting plans when something unexpected happens | Prepared Trip Rescue event and prepared replacement; live detection and dynamic replanning are build-phase work | Prototype / partial |
+| Adjusting plans when something unexpected happens | A prepared Trip Rescue event and prepared replacement demonstrate the recovery decision flow; live disruption detection, dynamic alternative generation and automatic itinerary replacement are build-phase capabilities. | Prototype / partial |
 | Faster, easier and less stressful planning | One visible flow reduces manual hand-offs; validation is still needed | Expected, not measured |
-| Solo and group travel | Group flow works with one member; dedicated solo UX is limited | Partial |
+| Solo and group travel | The same structured trip flow works with one member or multiple members; the prototype does not yet provide a dedicated solo-specific UX. | Prototype / partial |
 | Deployable solution | Node/PostgreSQL architecture is deployable; public URL is missing | Evidence needed |
 | Responsive web experience | Responsive styles are present; final device QA is pending | Verify |
 | Accessibility | Semantic foundation exists; formal audit is pending | Verify |
+
+The two most important build-phase gaps are preference-aware decision logic and dynamic plan adjustment, because both map directly to the challenge's core outcomes. The current prototype already demonstrates the surrounding end-to-end flow, while these deeper behaviours remain clearly separated as future implementation work.
 
 ---
 
@@ -545,6 +557,7 @@ The current `main` implementation is the source of truth for prototype claims. F
 
 - [ ] Add and incognito-test the public UI prototype link.
 - [ ] Finalize public deployment and verify the hosted core flow.
+- [ ] Finalize and document the web hosting and managed PostgreSQL providers.
 - [ ] Add 4-8 current screenshots with captions.
 - [ ] Record target-user validation and resulting refinements.
 - [ ] Add and incognito-test the public slides link.
