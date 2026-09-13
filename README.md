@@ -328,7 +328,7 @@ Trippy deliberately uses one Next.js application with route handlers and Prisma 
 | Layer | Deployment plan | Status |
 |---|---|---|
 | Web application | Vercel | Deployed |
-| PostgreSQL database | Managed PostgreSQL provider | TBD before submission |
+| PostgreSQL database | Vercel Postgres | Deployed |
 | Google Maps / Places | Browser API key restricted to the deployed production origin | Configured |
 
 The architecture is designed to deploy as one Next.js application connected to a managed PostgreSQL database. The application is deployed on Vercel and connected to a managed PostgreSQL database. The production Google Maps / Places browser key is restricted to the deployed origin with appropriate API restrictions and quota controls.
@@ -376,7 +376,6 @@ Supporting prototype utilities include budget estimates, booking-pressure indica
 
 ### Build-Phase Priority
 
-- Finalize production database configuration and verify the deployed environment.
 - Authentication and server-side group authorization.
 - Improved Trip Rescue persistence and target-user validation.
 - Mobile-browser verification and final accessibility/visual checks.
