@@ -33,6 +33,7 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   const [query, setQuery] = useState("");
   const [destFilter, setDestFilter] = useState<string>("All");
   const [mapsReady, setMapsReady] = useState(false);
+  const [mapsError, setMapsError] = useState<string | null>(null);
   const [liveResults, setLiveResults] = useState<Place[]>([]);
   const [searching, setSearching] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
@@ -40,7 +41,9 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
   useEffect(() => {
     loadGoogleMaps()
       .then(() => setMapsReady(true))
-      .catch(() => {});
+      .catch((error: unknown) => {
+        setMapsError(error instanceof Error ? error.message : "Google Maps could not load");
+      });
   }, []);
 
   const searchDestination = destFilter !== "All" ? destFilter : trip?.destinations[0] ?? "";
@@ -53,12 +56,20 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
     let cancelled = false;
     setSearching(true);
     const timer = setTimeout(() => {
-      searchGooglePlaces(query, searchDestination || undefined).then((results) => {
-        if (!cancelled) {
-          setLiveResults(results);
-          setSearching(false);
-        }
-      });
+      searchGooglePlaces(query, searchDestination || undefined)
+        .then((results) => {
+          if (!cancelled) {
+            setLiveResults(results);
+            setSearching(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setLiveResults([]);
+            setSearching(false);
+            setMapsError("Google Places search failed. Check the API key and enabled APIs.");
+          }
+        });
     }, 450);
     return () => {
       cancelled = true;
@@ -178,6 +189,11 @@ export default function AddPlacesPage({ params }: { params: Promise<{ tripId: st
               ))}
             </div>
           )}
+            {mapsError && (
+              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                {mapsError}
+              </p>
+            )}
         </div>
 
         <div className={`mt-5 space-y-3 ${myCount > 0 ? "pb-24 sm:pb-20" : ""}`}>
