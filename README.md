@@ -208,7 +208,7 @@ mindmap
 
 ## Public Prototype
 
-**Public UI prototype:** https://trippy-travplanner.vercel.app/
+**Public UI prototype:** https://trippytravplanner.vercel.app/
 
 ## Key Screens
 
