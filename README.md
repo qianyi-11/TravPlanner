@@ -11,7 +11,7 @@
 | Problem statement | Planning an Escape - Travel Planner |
 | Public UI prototype | TODO - required before submission |
 | Video presentation | TODO - add a 3-5 minute unlisted YouTube link |
-| Presentation slides | TODO - add a public link |
+| Presentation slides | https://drive.google.com/file/d/1zQixdFhoHTfHurOJh041N6BdoZBI2fXb/view?usp=drive_link |
 | Repository | [github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner) |
 | Public deployment | To be finalized before submission |
 
@@ -208,8 +208,6 @@ mindmap
 ## Public Prototype
 
 **Public UI prototype:** TODO - add a URL that opens without a personal account.
-
-The current `main` branch contains the screen flow, but a public deployment and final screenshot set are still submission work.
 
 ## Key Screens
 
@@ -465,31 +463,7 @@ The two most important build-phase gaps are preference-aware decision logic and 
 
 ---
 
-# 8. Presentation Plan
-
-The presentation follows the same product story as the prototype:
-
-```text
-Problem -> Preferences -> Shared Suggestions -> Voting
--> Capacity-aware Shortlist -> Itinerary
--> Trip Rescue prototype -> Build plan -> Impact
-```
-
-Target **4 minutes 30 seconds** and do not exceed **5 minutes**. Upload the video as **Unlisted** and title it with the team name only.
-
-| Time | Content | Evidence to show |
-|---:|---|---|
-| 0:00-0:35 | Problem and target user | Fragmented tools and group coordination cost |
-| 0:35-1:05 | Solution and differentiator | Visible decision flow and capacity-aware shortlist |
-| 1:05-3:10 | Prototype demo | Preferences -> suggestions -> votes -> shortlist -> itinerary -> rescue |
-| 3:10-3:50 | Tech and feasibility | Next.js, Prisma, PostgreSQL, Google services and narrow scope |
-| 3:50-4:30 | Impact and close | Before/after and measurable validation hypotheses |
-
-**Trip Rescue presenter guardrail:** Describe it as a prepared disruption scenario and prepared replacement. Do not claim live disruption detection, live alternative search or real-time availability verification.
-
----
-
-# 9. Local Development
+# 8. Local Development
 
 ## Requirements
 
@@ -545,33 +519,4 @@ TravPlanner/
 └── public/
 ```
 
-## Design Reference
-
-**Original Design Planning:** [CodeNection 2026 - Google Docs](https://docs.google.com/document/d/1fiUs3ogM99BjK-oBim_cT2xnQYW83PK6e-k9U4fCZr4/edit)
-
-The current `main` implementation is the source of truth for prototype claims. Future designs and other branches are not described as implemented here.
-
 ---
-
-# 10. Final Submission Checklist
-
-- [ ] Add and incognito-test the public UI prototype link.
-- [ ] Finalize public deployment and verify the hosted core flow.
-- [ ] Finalize and document the web hosting and managed PostgreSQL providers.
-- [ ] Add 4-8 current screenshots with captions.
-- [ ] Record target-user validation and resulting refinements.
-- [ ] Add and incognito-test the public slides link.
-- [ ] Add and incognito-test the 3-5 minute unlisted YouTube link.
-- [ ] Confirm the video title is the team name only.
-- [ ] Verify the deployed flow on desktop and mobile browsers.
-- [ ] Verify Google API restrictions, quota and demo data.
-- [ ] Run accessibility and visual-consistency checks.
-
-## Submission Links
-
-- **GitHub:** [https://github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner)
-- **Live Prototype:** TODO - required before submission
-- **Video Presentation:** TODO - required before submission
-- **Presentation Slides:** TODO - required before submission
-- **UI / Design:** TODO - add only if a separate public design link is required
-
