@@ -45,7 +45,7 @@ Trippy does not claim that maps, voting or itinerary creation are individually n
 ## Our Solution
 
 Trippy is an explainable group travel planner that turns individual preferences and group votes into a realistic shared itinerary while making the decision process visible rather than hiding it behind a black box.
-setting a remover and twenty miss communication
+
 ```text
 Individual preferences
         |
