@@ -63,7 +63,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
     if (!openEvent) return;
     resolveRescue(tripId, openEvent.id);
     setPhase("resolved");
-    showToast("Trip itinerary updated for everyone.");
+    showToast("Prepared replacement accepted for this prototype scenario.");
   }
 
   return (
@@ -71,7 +71,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
       <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8" style={{ background: trip.coverColor }}>
         <div className="flex items-center gap-2">
           <span className="flex h-2 w-2 animate-pulse rounded-full bg-red-400" />
-          <span className="text-xs font-bold uppercase tracking-wide text-white/80">Trip Mode · Live</span>
+          <span className="text-xs font-bold uppercase tracking-wide text-white/80">Trip Mode · Prototype</span>
         </div>
         <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">{trip.name}</h1>
         {day && (
@@ -86,7 +86,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
           <div className="flex items-start gap-3 bg-[var(--color-danger-bg)] p-4">
             <AlertTriangle size={18} className="mt-0.5 shrink-0 text-[var(--color-danger)]" />
             <div>
-              <p className="text-sm font-bold text-[var(--color-danger)]">Trip Rescue</p>
+              <p className="text-sm font-bold text-[var(--color-danger)]">Trip Rescue prototype</p>
               <p className="mt-0.5 text-sm text-[var(--color-ink)]">{openEvent.message}</p>
             </div>
           </div>
@@ -100,19 +100,18 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
             {phase === "searching" && (
               <div className="space-y-2 text-sm text-[var(--color-ink-soft)]">
                 <p className="flex items-center gap-2 font-medium text-[var(--color-ink)]">
-                  <Loader2 size={14} className="animate-spin text-[var(--color-primary)]" /> Finding alternatives…
+                  <Loader2 size={14} className="animate-spin text-[var(--color-primary)]" /> Reviewing prepared alternative…
                 </p>
                 <ul className="ml-6 list-disc space-y-1 text-xs">
-                  <li>Revalidating route</li>
-                  <li>Checking price &amp; availability</li>
-                  <li>Rechecking opening hours</li>
+                  <li>Comparing the affected activity</li>
+                  <li>Reviewing saved travel and cost details</li>
                 </ul>
               </div>
             )}
             {phase === "proposed" && openEvent.alternative && (
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-soft)]">
-                  Recommended Alternative
+                  Prepared Replacement
                 </p>
                 <div className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] p-3">
                   <PlaceCover
@@ -126,7 +125,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-ink-soft)]">
                       <span>+{openEvent.alternative.extraTravelMinutes} min travel</span>
                       <span className="text-[var(--color-success)]">
-                        {openEvent.alternative.available ? "Available" : "Unavailable"}
+                        Saved status: {openEvent.alternative.available ? "Available" : "Unavailable"}
                       </span>
                       <span>RM {openEvent.alternative.cost}</span>
                     </div>
@@ -139,9 +138,6 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
                   <Button size="sm" onClick={handleAccept} icon={<CheckCircle2 size={14} />}>
                     Accept Change
                   </Button>
-                  <Button size="sm" variant="outline">
-                    View Alternatives
-                  </Button>
                 </div>
               </div>
             )}
@@ -153,7 +149,7 @@ export default function TripModePage({ params }: { params: Promise<{ tripId: str
         <div className="mt-6 flex items-center gap-2.5 rounded-2xl border border-[var(--color-teal)] bg-[var(--color-teal-soft)] p-4">
           <CheckCircle2 size={16} className="text-[var(--color-teal-dark)]" />
           <p className="text-sm font-medium text-[var(--color-teal-dark)]">
-            You accepted the new activity. Trip itinerary updated for everyone.
+            Prepared replacement accepted for this prototype scenario.
           </p>
         </div>
       )}
