@@ -9,11 +9,11 @@
 | Team | OpenCrab |
 | Team members | Lee Qian Yi, Cha Zi Yu |
 | Problem statement | Planning an Escape - Travel Planner |
-| Public UI prototype | TODO - required before submission |
+| Public UI prototype | https://trippy-travplanner.vercel.app/ |
 | Video presentation | TODO - add a 3-5 minute unlisted YouTube link |
 | Presentation slides | https://drive.google.com/file/d/1zQixdFhoHTfHurOJh041N6BdoZBI2fXb/view?usp=drive_link |
 | Repository | [github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner) |
-| Public deployment | To be finalized before submission |
+| Public deployment | https://trippy-travplanner.vercel.app/ |
 
 ---
 
@@ -216,12 +216,14 @@ Capture 4-8 screenshots from the deployed `main` build. The recommended final se
 
 | Screen | Purpose | Evidence status |
 |---|---|---|
-| Traveller Preferences | Each traveller records interests, pace, budget and other planning signals before shared decisions begin. | TODO: Insert screenshot before final submission. |
-| Shared Suggestions / Places | The group turns discussion into shared candidate places. | TODO: Insert screenshot before final submission. |
-| Voting Results / Capacity-aware Planning | Positive votes are shown alongside the practical capacity of the trip. | TODO: Insert screenshot before final submission. |
-| Shortlist Review | The group reviews selected places before itinerary creation. | TODO: Insert screenshot before final submission. |
-| Day-by-day Itinerary / Final Plan | Confirmed places become a schedule with timing, travel and estimates. | TODO: Insert screenshot before final submission. |
-| Trip Rescue Prepared Replacement | A prepared disruption and replacement demonstrate the intended recovery workflow without claiming live monitoring. | TODO: Insert screenshot before final submission. |
+| Traveller Preferences | Each traveller records interests, pace, budget and other planning signals before shared decisions begin. | [Open screenshot](screenshots/01-traveller-preferences.jpeg) |
+| Shared Suggestions / Places | The group turns discussion into shared candidate places. | [Open screenshot](screenshots/02-shared-suggestions.jpeg) |
+| Voting / Group Participation | Travellers cast positive votes on shared candidate places. | [Open screenshot](screenshots/03-voting.jpeg) |
+| Voting Results / Capacity-aware Planning | Positive votes are shown alongside the practical capacity of the trip. | [Open screenshot](screenshots/04-voting-results.jpeg) |
+| Shortlist Review / Validation | The group reviews selected places before itinerary creation. | [Open screenshot](screenshots/05-shortlist-validation.jpeg) |
+| Route / Geographic Grouping | Nearby places are grouped into an understandable route before itinerary creation. | [Open screenshot](screenshots/06-route.jpeg) |
+| Day-by-day Itinerary / Final Plan | Confirmed places become a schedule with timing, travel and estimates. | [Open screenshot](screenshots/07-day-by-day-itinerary.jpeg) |
+
 
 ### UX Principles
 
