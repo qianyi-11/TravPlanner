@@ -2,117 +2,115 @@
 
 > Plan your trip together.
 
-**Team:** OpenCrab
+## Submission Information
 
-**Team Members:** Lee Qian Yi, Cha Zi Yu
-
-**Problem Statement:** Planning an Escape — Travel Planner
-
-**Video Presentation:** TODO — add a 3–5 minute unlisted YouTube link
-
-**Presentation Slides:** TODO — add a public link
-
-**UI Prototype:** TODO — add a public link that opens without a personal account
-
-**Repository:** https://github.com/qianyi-11/TravPlanner
+| Item | Details |
+|---|---|
+| Team | OpenCrab |
+| Team members | Lee Qian Yi, Cha Zi Yu |
+| Problem statement | Planning an Escape - Travel Planner |
+| Public UI prototype | TODO - required before submission |
+| Video presentation | TODO - add a 3-5 minute unlisted YouTube link |
+| Presentation slides | TODO - add a public link |
+| Repository | [github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner) |
+| Public deployment | To be finalized before submission |
 
 ---
 
 # 1. Project Overview
 
-## The Problem
+## Problem
 
-Trip information is fragmented across group chats, maps, polls, itineraries, budgets and expense tools. For small groups of friends and university students, the harder problem is coordination: travellers have different interests, budgets, priorities and schedules, but still need one practical plan. Organisers repeatedly copy information between tools, chase responses and resolve disagreements manually; unexpected changes add more coordination during the trip.
+Group travel planning is difficult because the group must make one practical decision from many personal preferences.
 
-The people affected are the organiser, every traveller whose preferences must be represented, and activity or transport providers whose constraints shape the plan. Existing planners such as Wanderlog show the value of combining itineraries, maps, budgeting and collaboration. Trippy focuses on the decision process before the itinerary: **turning individual preferences, suggestions and votes into one visible shared plan**.
+- **Preference loss:** travellers have different interests, budgets, priorities, dislikes, must-do activities and preferred pace. Informal discussion can make some of those preferences invisible.
+- **Decision overload:** votes show what is popular, but popularity alone does not answer what can realistically fit into the available trip.
+- **Planning fragmentation:** suggestions, polling, itinerary building, budgeting and changes are often spread across chats and separate tools. One organiser must manually turn the discussion into the final plan.
+
+This affects the organiser, every traveller whose preferences should be represented, and the providers whose opening hours, travel time and cost shape the plan. Established collaborative planners such as Wanderlog show the value of shared itineraries, maps and planning tools. Trippy focuses on the decision process that connects group input to a practical itinerary.
+
+## Stakeholders
+
+- University students and small friend groups planning leisure trips.
+- The organiser, who currently carries most of the coordination work.
+- Travellers who need to contribute preferences and understand how the final plan was formed.
+- Solo travellers as a secondary audience using the same structured flow with one member.
+
+## Existing Solution
+
+Groups commonly combine chat, saved places, maps, polls, calendars, itinerary tools and expense calculators. This can collect information without making the reasoning from group choices to a feasible schedule visible.
+
+Trippy does not claim that maps, voting or itinerary creation are individually new. Its product emphasis is the visible transition from individual input to a realistic shared plan.
 
 ## Our Solution
 
-Trippy is a collaborative web travel planner for solo travellers and small groups. Travellers create a trip, record preferences, suggest places and vote before the app creates a capacity-aware shortlist. The shortlist is reviewed, sequenced with a deterministic proximity heuristic and converted into a persisted day-by-day itinerary. A prepared Trip Rescue event demonstrates the decision flow for responding when a plan changes.
-
-### Current `main` Prototype Features
-
-- Group and trip creation, editing and deletion
-- Member preference profiles
-- Collaborative place suggestions and trip-scoped voting
-- Google Places search and Google Maps display when a browser API key is configured
-- Vote-ranked, capacity-aware shortlist based on trip length, daily hours, meals, visit duration and estimated travel time
-- Shortlist review and validation stage
-- Deterministic nearest-neighbour place sequencing using saved coordinates; this is a heuristic, not globally optimal routing
-- Persisted day-by-day itinerary and final-plan views
-- Prototype budget estimates and stored booking-pressure indicators; neither is live pricing
-- Split Bill and currency-conversion calculators stored in the current browser, not a shared expense ledger
-- Trip Rescue using prepared events and alternatives, with the event's resolved status persisted
-- Prisma persistence backed by PostgreSQL
-
-### Current Limitations
-
-- No sign-in or server-side user/group authorization on `main`
-- No Fair Group Consensus scoring, representation bonus or preference-weighted ranking; shortlist order is vote-based
-- No saved Plan B per stop or shared checklist
-- No real-time collaboration, live availability, live pricing, disruption monitoring or automatic rescue detection
-- Resolving a Trip Rescue event does not replace the affected itinerary activity on `main`
-- Google Places depends on a configured client-side key and service quota
-- Split Bill data is local to one browser and is not persisted to the trip database
-- No public deployment, public prototype link or current screenshot set has been supplied
-- The dedicated multi-user flow is the product focus; solo travel uses the same flow with one member
-
-### Core User Flow
+Trippy is an explainable group travel planner that turns individual preferences and group votes into a realistic shared itinerary while making the decision process visible rather than hiding it behind a black box.
 
 ```text
-Create Group → Create Trip → Set Preferences → Suggest Places → Vote
-→ Capacity-aware Shortlist → Validate → Sequence Preview
-→ Build Itinerary → Final Plan → Review and Resolve Trip Rescue Event
+Individual preferences
+        |
+Shared suggestions
+        |
+Positive voting
+        |
+Capacity-aware shortlist
+        |
+Review and sequencing
+        |
+Shared itinerary
+        |
+Prepared Trip Rescue scenario
 ```
 
-### Submission Blockers
+Travellers create a trip, record preferences, suggest places and positively vote on shared options. Trippy then converts those decisions into a capacity-aware shortlist using practical constraints such as trip duration, usable hours, meal periods, visit duration and estimated travel time. The selected places can be reviewed, sequenced and converted into a persisted day-by-day itinerary.
 
-| Blocker | Evidence needed before submission |
-|---|---|
-| Team identity | Team name and member names in the header |
-| Public prototype | Hosted URL that opens in an incognito window without a personal account |
-| Prototype evidence | 4–8 current `main` screenshots with short captions |
-| Impact validation | Short user sessions with target travellers; record task completion, understanding, friction and resulting changes |
-| Presentation | Public slides and a 3–5 minute unlisted YouTube video titled with the team name |
-| Link verification | Prototype, slides and video opened successfully in an incognito window |
+Trip Rescue is separate from the core planning calculation. It uses a prepared disruption event and prepared replacement to prototype how the same planning experience could continue when an activity becomes unsuitable during a trip. It does not claim live disruption detection.
+
+## Main Prototype Features
+
+- Persistent group and trip creation, editing and deletion.
+- Traveller preference profiles for interests, food preferences, pace, must-do entries, dislikes and personal budget.
+- Shared place suggestions and trip-scoped positive voting.
+- Google Places search and Google Maps display when a browser API key is configured.
+- Vote-ranked, capacity-aware shortlisting based on trip length, daily planning hours, meal slots, average visit duration and estimated geographic travel time.
+- Shortlist review and validation before itinerary creation.
+- Deterministic nearest-neighbour sequencing using saved coordinates; this is an understandable heuristic, not globally optimized routing.
+- Persisted day-by-day itinerary and final-plan views.
+- Prototype budget estimates and stored booking-pressure indicators; neither is live pricing.
+- Split Bill and currency-conversion calculators stored in the current browser, not a shared expense ledger.
+- Trip Rescue prototype using a prepared disruption event and prepared replacement, with the event's resolved status persisted.
+- Prisma persistence backed by PostgreSQL.
+
+## Core User Flow
+
+```text
+Preferences -> Suggestions -> Positive votes -> Capacity-aware shortlist
+-> Review -> Deterministic sequencing -> Day-by-day itinerary
+-> Prepared Trip Rescue prototype
+```
 
 ---
 
-# 2. Ideation & Process
+# 2. Ideation & Iteration
 
-## 2.1 Ideas We Considered
-
-Chosen ideas are listed first, followed by simplified, deferred or replaced directions.
+## Ideas Considered
 
 | Idea | Decision | Why |
 |---|---|---|
 | Collaborative group planner | **Kept** | Directly addresses fragmented planning and group coordination. |
-| Preferences, suggestions and voting | **Kept** | Gives every traveller structured input before itinerary building. |
+| Preferences, suggestions and voting | **Kept** | Gives each traveller structured input before itinerary building. |
 | Capacity-aware shortlist | **Kept** | Connects votes to the time, meal and travel capacity of the trip. |
 | Deterministic itinerary builder | **Kept** | Produces an understandable schedule without an opaque AI dependency. |
-| Trip Rescue | **Kept in simplified form** | A prepared event and alternative demonstrate the response decision without pretending to detect or apply itinerary changes automatically. |
+| Trip Rescue prototype | **Kept in simplified form** | A prepared event and prepared replacement validate the response interaction before external integrations. |
 | Budget and Split Bill | **Simplified** | The prototype estimates costs and calculates settlements without claiming live prices or a production ledger. |
-| Fair Group Consensus | **Deferred on `main`** | Preference-weighted scoring and representation trade-offs are not implemented on this branch. |
+| Fair Group Consensus | **Deferred on `main`** | Preference-weighted scoring and traveller-representation trade-offs are not implemented. |
 | Group Availability Poll | **Deferred** | Useful for schedule overlap, but outside the core planning flow. |
 | Meeting Point Recommendation | **Deferred** | Requires additional origin and travel-time data. |
-| Saved Plan B per stop | **Deferred on `main`** | Prepared rescue alternatives cover the prototype story with less state. |
-| Shared Checklist | **Deferred on `main`** | Helpful for preparation, but not required to prove group decision-making. |
-| Flight and hotel integration | **Deferred** | Provider and operational complexity would distract from the core prototype. |
-| URL-to-travel-data extraction | **Deferred** | Convenient input, but it does not strengthen the central concept enough. |
+| Flight, hotel and booking integrations | **Deferred** | Provider and operational complexity would distract from the core prototype. |
 | AI-generated itinerary | **Deferred** | Deterministic behaviour is easier to explain, test and demonstrate reliably. |
 | Large production platform | **Replaced** | A narrower end-to-end prototype is more achievable and persuasive. |
 
-### Technical and Scope Decisions
-
-| Direction | Decision | Reason |
-|---|---|---|
-| Firebase-oriented architecture | **Replaced by Next.js + Prisma** | One application keeps the prototype small and deployable. |
-| PostgreSQL | **Kept on `main`** | Matches the current Prisma schema and a deployable server database. |
-| Authentication and role workflow | **Deferred on `main`** | It needs a complete identity and authorization design, not a visual-only shortcut. |
-| Itinerary history/versioning | **Deferred** | One persisted itinerary is enough for the core journey. |
-| Live disruption monitoring | **Deferred** | Trip Rescue demonstrates response, not detection. |
-
-## 2.2 Ideation Boards
+## Ideation Boards
 
 ### Problem Tree
 
@@ -129,8 +127,6 @@ flowchart TD
     P --> E4[Changes create more group confusion]
 ```
 
-This problem tree separates the causes of coordination overhead from its effects on organisers and travellers.
-
 ### Idea Map
 
 ```mermaid
@@ -139,7 +135,7 @@ mindmap
     Gather input
       Preferences
       Place suggestions
-      Votes
+      Positive votes
     Reach a decision
       Ranked choices
       Capacity-aware shortlist
@@ -150,9 +146,9 @@ mindmap
       Day-by-day itinerary
       Budget estimate
     Handle change
-      Prepared event
-      Alternative
-      Resolve prepared event
+      Prepared disruption event
+      Prepared replacement
+      Prototype simulation
     Deferred
       Availability poll
       Meeting point
@@ -160,106 +156,73 @@ mindmap
       Live disruption signals
 ```
 
-The map shows both the selected concept and alternative directions that were intentionally left outside the prototype.
+## Key Iterations
 
-### Idea Evolution, Pivots and Dead Ends
+**Initial direction:** A broad production travel platform with booking integrations, approvals and itinerary history.
 
-```mermaid
-flowchart TD
-    A[Version 1: broad production travel platform]
-    A --> A1[Firebase architecture]
-    A --> A2[Flight and hotel integration]
-    A --> A3[Approval and itinerary history]
-    A1 -->|Dead end: too much infrastructure| B
-    A2 -->|Dead end: provider complexity| B
-    A3 -->|Dead end: outside core journey| B
+**Problem discovered:** The infrastructure and provider scope was too large for a short prototype.
 
-    B[Version 2: suggestions and group voting]
-    M[Mentor feedback: voting alone is common] --> B
-    B -->|Pivot: make the decision process visible| C[Version 3: preferences → votes → shortlist]
+**Decision:** Prove one end-to-end group-planning journey first.
 
-    C --> C1[Availability poll]
-    C --> C2[Meeting-point recommendation]
-    C1 -->|Deferred: schedule logic outside MVP| D
-    C2 -->|Deferred: needs member-origin data| D
+**Result:** The current prototype uses one Next.js application and focuses on preferences, votes, capacity reasoning and an actionable itinerary.
 
-    C --> D[Version 4: capacity-aware shortlist]
-    D --> E[Deterministic itinerary]
-    E --> F[Current main: complete planning flow + prepared Trip Rescue]
-```
+**Initial direction:** Voting determines which destinations win.
 
-This diagram shows the discarded technical and product branches, the feedback that triggered the main pivot, and what survived into the current prototype. On `main`, voting remains the ranking input; richer fairness scoring is a later direction, not a current claim.
+**Feedback:** Voting alone is common and still leaves the organiser to decide what fits.
 
-### Final User Flow
+**Decision:** Connect votes to a capacity-aware shortlist.
 
-```mermaid
-flowchart LR
-    A[Create group and trip] --> B[Set preferences]
-    B --> C[Suggest places]
-    C --> D[Vote]
-    D --> E[Review capacity-aware shortlist]
-    E --> F[Validate selected places]
-    F --> G[Preview proximity sequence]
-    G --> H[Build day-by-day itinerary]
-    H --> I[Review final plan and budget]
-    I --> J[Review prepared Trip Rescue event]
-```
+**Result:** Popular choices flow into a planning stage that determines how many activities realistically fit.
 
-The final flow shows how individual input becomes one actionable group plan. Each step corresponds to a screen in the current prototype.
+**Initial direction:** A fixed shortlist size and a generated schedule.
 
-## 2.3 Iteration and Idea Evolution
+**Problem discovered:** A fixed number can ignore trip length, meal periods and travel between places.
 
-| Iteration | Trigger / problem discovered | What changed | Direction dropped or deferred | Result |
-|---|---|---|---|---|
-| Version 1 — broad platform | Authentication, integrations, approvals and versioning made the scope too large. | Reduced the concept to one demonstrable group-planning journey. | Firebase-oriented architecture, booking integrations, approval workflow and itinerary history. | A smaller prototype that could be completed end to end. |
-| Version 2 — collaborative voting | Voting collected opinions but still left the organiser to turn winners into a practical schedule. | Connected suggestions and votes directly to shortlist creation. | Voting as a standalone feature. | Group input became a planning input rather than an isolated poll. |
-| Version 3 — visible group decisions | Mentor feedback said voting alone was common and insufficiently distinctive. | Made every transition from preferences to itinerary visible. | An opaque or instantly generated itinerary. | Reviewers can follow how the plan was formed. |
-| Version 4 — realistic shortlist | A simple top-vote list could select more places than the trip could hold. | Added deterministic capacity reasoning using days, daily hours, meals, visit duration and estimated travel. | A fixed shortlist size and AI-generated ranking. | The chosen places fit the shape of the trip and the reasoning is shown. |
-| Version 5 — focused supporting features | Availability polling and meeting-point logic required more schedule and origin data than the MVP contained. | Deferred both and kept the itinerary journey primary. | Availability poll and meeting-point recommendation. | Scope remained achievable without hiding unfinished systems. |
-| Current `main` — complete prototype | The agreed plan still needed a way to demonstrate response when circumstances change. | Added a prepared Trip Rescue event after the final plan. | Live disruption detection and automatic itinerary replacement. | Preferences → votes → capacity-aware shortlist → itinerary → prepared rescue decision. |
+**Decision:** Use deterministic capacity reasoning and show the reasons beside the vote results.
 
-### What the Dead Ends Taught Us
+**Result:** The group can review what fits before building the day-by-day plan.
 
-| Dead end | Lesson carried into the final concept |
-|---|---|
-| Large production architecture | Prove the user journey before adding infrastructure. |
-| Voting as the differentiator | A vote matters only when it changes the resulting plan. |
-| Fixed shortlist size | Capacity should reflect the real trip window, not an arbitrary number. |
-| AI-generated itinerary | Deterministic rules are easier to explain and demonstrate reliably. |
-| Live disruption monitoring | Demonstrate the response decision honestly before adding external signals. |
+**Initial direction:** A live rescue engine that detects changes and replaces activities.
 
-## 2.4 Mentor Consultation
+**Problem discovered:** Live disruption, availability, routing and collaboration services are outside the prototype boundary.
 
-| Date | Mentor | Feedback received | Team decision / change |
+**Decision:** Validate the interaction with a prepared disruption event and prepared replacement.
+
+**Result:** Trip Rescue is demonstrated honestly as a prototype simulation, with dynamic replanning left to the build phase.
+
+### Mentor Consultation
+
+| Date | Mentor | Feedback received | Team decision |
 |---|---|---|---|
-| 09/09/2026 | Kueh Pang Teng | Consider a calendar or availability input for groups with different schedules. | Considered a Group Availability Poll; deferred it to protect the core planning scope. |
-| 09/09/2026 | Kueh Pang Teng | Consider travel time when members need a practical meeting point. | Considered a Meeting Point Recommendation; deferred it because member-origin data is outside the MVP. |
-| 09/09/2026 | Kueh Pang Teng | Study existing travel planners such as Wanderlog and clarify why travellers would choose Trippy. | Focused Trippy on the visible group decision process before the itinerary. |
-| 09/09/2026 | Kueh Pang Teng | Voting needed stronger differentiation and deeper problem analysis. | Connected voting to a capacity-aware shortlist and deterministic planning flow; richer fairness scoring remains deferred on `main`. |
-| 09/09/2026 | Kueh Pang Teng | Compare the market and explain what makes Trippy stand out. | Added a conservative comparison centred on Trippy's product emphasis. |
-| 09/09/2026 | Kueh Pang Teng | Explore flight-ticket features and automatic travel-data extraction from URLs. | Recorded both ideas and deferred them because they do not strengthen the core MVP enough. |
-| 09/09/2026 | Jarod Tan | Research previous hackathon travel and group-planning projects. | Recorded this as a research action; no completed findings are claimed. |
-| 09/09/2026 | Jarod Tan | Group voting alone is common and not sufficiently distinctive. | Made voting an input to a visible shortlist-and-planning workflow rather than the innovation itself. |
-| 09/09/2026 | Jarod Tan | Find a more memorable or ambitious product direction. | Kept the core realistic and added Trip Rescue as a focused secondary story. |
+| 09/09/2026 | Kueh Pang Teng | Consider calendar or availability input. | Considered a Group Availability Poll and deferred it to protect the core scope. |
+| 09/09/2026 | Kueh Pang Teng | Consider travel time for practical meeting points. | Considered a Meeting Point Recommendation and deferred it because member-origin data is outside the MVP. |
+| 09/09/2026 | Kueh Pang Teng | Study existing travel planners and clarify differentiation. | Focused Trippy on the visible group decision process before the itinerary. |
+| 09/09/2026 | Kueh Pang Teng | Voting needed stronger differentiation. | Connected voting to capacity-aware shortlisting and deterministic planning. |
+| 09/09/2026 | Jarod Tan | Group voting alone is common. | Made voting an input to a visible shortlist-and-planning workflow rather than the innovation itself. |
+| 09/09/2026 | Jarod Tan | Explore a more memorable direction. | Kept the core realistic and added Trip Rescue as a focused prototype story. |
 
 ---
 
-# 3. Design & Prototype
+# 3. UI Prototype
 
-**UI Prototype:** TODO — use the public link from the submission header.
+## Public Prototype
 
-Trippy uses a responsive, stage-based interface so travellers can see what is complete and what happens next. The current `main` branch contains the full screen flow but does not contain submission screenshots. Capture the following 4–8 screens from the deployed `main` build before submission.
+**Public UI prototype:** TODO - add a URL that opens without a personal account.
 
-| Screen | Interaction to show | Why it matters | Evidence status |
-|---|---|---|---|
-| Group and trip dashboard | Create or open a group and trip | Gives the group one shared starting point | ⚠️ Capture needed |
-| Preferences | Enter one member's interests, food preferences, pace, dislikes and budget | Shows how individual needs enter the plan | ⚠️ Capture needed |
-| Suggestions | Search or select places and submit suggestions | Turns discussion into shared candidates | ⚠️ Capture needed |
-| Voting results | Show votes, participation and shortlist reasoning | Makes the group decision visible | ⚠️ Capture needed |
-| Validation and sequence preview | Review selected places and map order | Creates a checkpoint before scheduling | ⚠️ Capture needed |
-| Itinerary and final plan | Show day-by-day timing, travel and estimates | Converts choices into an actionable plan | ⚠️ Capture needed |
-| Split Bill | Enter a shared expense and show settlement | Supports coordination during the trip | ⚠️ Capture needed |
-| Trip Rescue | Review a prepared alternative and resolve the event | Demonstrates the response decision when plans change | ⚠️ Capture needed |
+The current `main` branch contains the screen flow, but a public deployment and final screenshot set are still submission work.
+
+## Key Screens
+
+Capture 4-8 screenshots from the deployed `main` build. The recommended final set is:
+
+| Screen | Purpose | Evidence status |
+|---|---|---|
+| Traveller Preferences | Each traveller records interests, pace, budget and other planning signals before shared decisions begin. | TODO: Insert screenshot before final submission. |
+| Shared Suggestions / Places | The group turns discussion into shared candidate places. | TODO: Insert screenshot before final submission. |
+| Voting Results / Capacity-aware Planning | Positive votes are shown alongside the practical capacity of the trip. | TODO: Insert screenshot before final submission. |
+| Shortlist Review | The group reviews selected places before itinerary creation. | TODO: Insert screenshot before final submission. |
+| Day-by-day Itinerary / Final Plan | Confirmed places become a schedule with timing, travel and estimates. | TODO: Insert screenshot before final submission. |
+| Trip Rescue Prepared Replacement | A prepared disruption and replacement demonstrate the intended recovery workflow without claiming live monitoring. | TODO: Insert screenshot before final submission. |
 
 ### UX Principles
 
@@ -267,45 +230,69 @@ Trippy uses a responsive, stage-based interface so travellers can see what is co
 - Progress and participation remain visible.
 - Explanations sit beside the decision they describe.
 - Responsive layouts support desktop and mobile browsers.
-- Standard headings, labels and buttons provide a basic semantic foundation; a formal accessibility audit is still required.
+- Semantic headings, labels and buttons provide a basic accessibility foundation; a formal audit is still required.
 
 ---
 
-# 4. What Makes It Different
+# 4. What Makes Trippy Different
 
-## A Visible Decision Process
+## Votes Are Not the End of Planning
 
-Trippy does not begin with an unexplained generated itinerary. It exposes the path:
+Voting indicates preference, but popularity alone does not determine what can realistically fit into the trip.
 
-**Preferences → Suggestions → Voting → Capacity-aware Shortlist → Validation → Sequence Preview → Itinerary**
+```text
+Preferences -> Suggestions -> Votes -> Capacity reasoning
+-> Shortlist -> Validation -> Sequence -> Itinerary
+```
 
-The twist is not voting by itself; it is connecting a visible group decision to a practical schedule.
+Trippy makes the transition from group choices to the final plan visible. The product does not present voting itself as novel; it presents voting as one understandable input to planning.
 
-## Capacity-aware Shortlisting
+## Capacity-Aware Planning
 
-Candidates are ranked by group votes, then the shortlist estimates how many meal and sightseeing stops fit. It uses trip dates, daily planning hours, typical visit duration and estimated travel time, and explains the resulting capacity. This is deterministic and auditable; it is not AI consensus or fairness scoring.
+The implemented shortlist asks not only “What does the group want?” but also “What can the trip realistically hold?” It uses:
 
-## Prepared Trip Rescue
+- trip length;
+- daily usable planning time;
+- meal slots that fit the daily window;
+- average visit duration from the candidates; and
+- estimated geographic travel time between candidates.
 
-Trip Rescue demonstrates the response decision after planning: a prepared event identifies an affected activity, presents a prepared alternative and can be marked resolved. On `main`, it does not persist the proposed replacement into the itinerary, monitor disruptions or detect them automatically.
+The shortlist explains its reasoning, keeps candidates in vote order, and separates meal capacity from sightseeing capacity. It is deterministic and auditable, not AI consensus or fairness scoring.
 
-## Existing Solution Comparison
+## Trip Rescue as a Continuation of the Planning Experience
 
-| Capability | Common standalone approach | Trippy `main` prototype |
+Trip Rescue keeps the response decision inside the trip flow:
+
+```text
+Prepared disruption -> affected activity -> prepared replacement
+-> traveller review -> prototype resolution
+```
+
+The current prototype validates the Rescue interaction before introducing external disruption, availability and collaboration services. Live disruption detection, live alternative search, live availability verification, automatic itinerary replacement and real-time group synchronization are build-phase or future capabilities.
+
+## Market Comparison
+
+Wanderlog is retained as a named similar application because it is part of the team's existing market context. The table describes product emphasis, not exclusive capabilities.
+
+| Dimension | Established collaborative planner, such as Wanderlog | Trippy emphasis |
 |---|---|---|
-| Collecting opinions | Group chat or a separate poll | Preferences, suggestions and trip-scoped votes in the planning flow |
-| Turning votes into a plan | Organiser manually copies winners | Capacity-aware shortlist feeds the itinerary builder |
-| Explaining the result | Final list with limited context | Visible votes and shortlist-capacity reasoning |
-| Sequencing stops | Manual ordering or a routing product | Transparent nearest-neighbour heuristic using saved coordinates |
-| Handling a change | Return to chat and edit several tools | Prepared rescue event keeps the response decision in the trip flow; itinerary replacement remains deferred |
+| Shared itinerary | Strong | Strong |
+| Collaborative planning | Strong | Strong |
+| Group suggestions | Common | Integrated into the decision pipeline |
+| Voting | Available in some planners | Feeds planning rather than ending it |
+| Capacity reasoning | Usually not the main decision UX | Core planning step |
+| Decision visibility | Often secondary | Core UX emphasis |
+| Unexpected changes | Product-dependent | Prepared Trip Rescue prototype |
 
-This comparison describes Trippy's emphasis; it does not claim that every competing product lacks these capabilities.
+This comparison describes product emphasis rather than claiming that competing products lack every listed capability.
+
+Trippy does not claim that voting, maps or itinerary creation are individually new. Its novelty is the combination of visible group decision-making, capacity-aware planning and a continuous planning-to-rescue experience. The prototype focuses on making the reasoning between group preferences and the final itinerary understandable to travellers.
 
 ---
 
 # 5. Technical Architecture & Feasibility
 
-## 5.1 Tech Stack
+## Technology Stack
 
 | Layer | Technology | Role and reason | Current constraint |
 |---|---|---|---|
@@ -317,9 +304,9 @@ This comparison describes Trippy's emphasis; it does not claim that every compet
 | ORM | Prisma 5.22 | Structured access to the domain model | Schema migrations and connection limits must be managed in hosting |
 | Database | PostgreSQL | Persistent, deployable relational storage | Requires a hosted database and `DATABASE_URL` |
 | Maps and places | Google Maps JavaScript / Places | Search, place details and map presentation | API key restrictions, quota and billing configuration are required |
-| Icons | Lucide React | Consistent accessible icon components | Icons still need accompanying text where meaning is not obvious |
+| Icons | Lucide React | Consistent interface icons | Icons still need text where meaning is not obvious |
 
-## 5.2 System Architecture
+## Architecture
 
 ```mermaid
 flowchart TD
@@ -333,110 +320,164 @@ flowchart TD
     DB --> DATA[Groups, members, trips, places, votes, itinerary and rescue events]
 ```
 
-Prototype mutations use API routes and Prisma rather than relying only on hard-coded front-end state. Authentication and authorization are still missing on `main`, so the hosted prototype must be treated as demonstration data, not a private production service.
+Trippy deliberately uses one Next.js application with route handlers and Prisma rather than introducing unnecessary microservices. This keeps deployment and debugging manageable for a small team while preserving a clear path for future external APIs and collaborative services.
 
-## 5.3 Three-Week Build Plan and Scope
+## Prototype Scope & Boundaries
 
-### Core / Implemented on `main`
+| Capability | Current status |
+|---|---|
+| Group and trip management | Implemented |
+| Traveller preference profiles | Implemented; captured preferences do not currently weight shortlist ranking |
+| Shared place suggestions | Implemented |
+| Positive voting | Implemented |
+| Capacity-aware shortlist | Implemented |
+| Shortlist review | Implemented |
+| Deterministic sequencing | Implemented; proximity heuristic, not globally optimized routing |
+| Day-by-day itinerary | Implemented and persisted |
+| Budget estimates | Implemented as prototype estimates |
+| Split Bill calculator | Implemented, browser-local |
+| Trip Rescue interaction | Prototype simulation with prepared event, prepared replacement and persisted resolution status |
+| Live disruption detection | Build phase |
+| Live availability and pricing | Build phase |
+| Automatic itinerary replacement | Build phase |
+| Authentication | Build phase |
+| Real-time collaboration | Stretch |
+| Preference-weighted fairness | Future enhancement |
 
-1. Group and trip setup with persistent data.
-2. Preferences, collaborative suggestions and voting.
-3. Capacity-aware shortlist and review stage.
-4. Deterministic proximity sequencing and day-by-day itinerary.
-5. Final-plan, budget and map views.
-6. Prepared Trip Rescue with persisted event status.
-7. Split Bill and currency-conversion calculators.
-
-### Must Finish for Submission
-
-1. Configure and verify a hosted PostgreSQL database and public deployment.
-2. Protect and quota the Google API key for the deployed origin.
-3. Complete the core journey on desktop and mobile-browser sizes.
-4. Capture 4–8 current screenshots and add the public prototype link.
-5. Run short target-user tests and document evidence-backed refinements.
-6. Add team details, slides and the unlisted video link; verify every link in incognito mode.
-
-### Optional / Stretch
-
-- Authentication and server-side group authorization
-- Fair Group Consensus with preference and representation scoring
-- Saved Plan B choices and a shared checklist
-- Shared, persisted Split Bill records
-- Availability polling and meeting-point recommendations
-- Live provider pricing, availability and disruption signals
-- Route-provider optimisation, itinerary history and real-time collaboration
-
-## 5.4 Resource, Cost and Risk Awareness
+## Constraints
 
 | Constraint | Current response | Upgrade trigger |
 |---|---|---|
-| Three-week build window | Keep one end-to-end journey and defer provider-heavy features | Add stretch work only after the core demo is stable |
-| Small team | One Next.js/TypeScript codebase for UI and API | Split services only when scale or ownership requires it |
-| Google API quota/cost | Use restricted keys and monitor usage | Add caching or a paid quota only after measured demand |
-| Database hosting | Use one managed PostgreSQL instance | Add pooling/replicas when connection or traffic data requires it |
-| Routing accuracy | Use a deterministic proximity heuristic | Add a routes provider when real travel-time optimisation is required |
-| Trust and privacy | Use fictional demo data until authentication exists | Accept personal trip data only after authorization and privacy controls |
+| Three-week build window | Keep one end-to-end journey and defer provider-heavy features. | Add stretch work only after the core demo is stable. |
+| Small team | One Next.js/TypeScript codebase for UI and API. | Split services only when scale or ownership requires it. |
+| Google API quota and cost | Use restricted keys and monitor usage. | Add caching or paid quota after measured demand. |
+| Database hosting | Use one managed PostgreSQL instance. | Add pooling or replicas when traffic data requires it. |
+| Routing accuracy | Use a deterministic proximity heuristic. | Add a route provider when accurate travel-time optimization is required. |
+| Trust and privacy | Use fictional demo data until authentication exists. | Accept personal trip data after authorization and privacy controls. |
+
+## Build Scope
+
+### Prototype Demonstrated Now
+
+Preferences -> suggestions -> positive voting -> capacity-aware shortlist -> review -> deterministic sequencing -> persisted itinerary -> prepared Trip Rescue prototype.
+
+Supporting prototype utilities include budget estimates, booking-pressure indicators, map/place display and a browser-local Split Bill calculator.
+
+### Build-Phase Priority
+
+- Public deployment and production database configuration.
+- Authentication and server-side group authorization.
+- Improved Trip Rescue persistence and target-user validation.
+- Mobile-browser verification and final accessibility/visual checks.
+- Production API configuration, key restrictions and quota checks.
+
+### Stretch / Future
+
+- Live disruption monitoring and live availability/pricing.
+- Dynamic alternative generation and itinerary replacement.
+- External routing provider integration and itinerary history.
+- Real-time collaboration, invitations and notifications.
+- Preference-weighted fair consensus, saved Plan B choices and a shared checklist.
+
+### Future Enhancement - Explainable Fair Consensus
+
+A future version could incorporate preference fit and bounded traveller representation into ranking while keeping the scoring deterministic, reproducible and explainable. This is a proposed extension, not current `main` functionality. No fairness formula or Group Match score is presented as implemented.
 
 ---
 
-# 6. Competition Requirement Coverage
+# 6. Impact
 
-| Challenge requirement | Current evidence on `main` | Status |
-|---|---|---|
-| Budgeting | Trip budget estimates plus Split Bill calculator | ✅ Prototype |
-| Itinerary building | Persisted day-by-day itinerary from confirmed shortlist | ✅ Prototype |
-| Combining group preferences | Preferences, suggestions and voting; preferences do not yet affect ranking | ⚠️ Partial |
-| Coordinating travellers | Shared stages, participation and one trip workspace | ✅ Prototype |
-| Adjusting unexpected plans | Prepared Trip Rescue decision flow; itinerary replacement is not implemented | ⚠️ Partial |
-| Faster/easier/less stressful | One visible flow reduces manual hand-offs; user validation is still needed | ⚠️ Expected, not measured |
-| Solo and group travel | Group flow works with one member; dedicated solo UX is limited | ⚠️ Partial |
-| Deployable solution | Node/PostgreSQL architecture is deployable; public URL is missing | ⚠️ Evidence needed |
-| Responsive web experience | Responsive styles are present; final device QA is pending | ⚠️ Verify |
-| Accessibility | Semantic foundation exists; formal audit is pending | ⚠️ Verify |
+## Target Users
 
----
+The primary users are university students, small friend groups and group organisers planning leisure trips. Solo travellers are a secondary audience using the same structured flow with one member.
 
-# 7. Impact
-
-## Target Users and Stakeholders
-
-The primary users are university students and small friend groups organising leisure trips together. The organiser needs less coordination work; group members need a clear way to contribute and see how the plan was formed. Solo travellers are a secondary audience using the same structured flow with one member.
-
-## Before and After
+## Before vs After
 
 | Before Trippy | With Trippy |
 |---|---|
 | Ideas scattered across chat and saved-place lists | Suggestions collected inside one trip |
-| Preferences are informal and easy to overlook | Each member records structured preferences |
+| Preferences are informal and easy to overlook | Each traveller records structured preferences |
 | Poll results still require manual planning | Votes feed a capacity-aware shortlist |
 | Winners are copied into a separate itinerary | Confirmed places feed a persisted itinerary builder |
-| A change restarts discussion across tools | Prepared Trip Rescue keeps the response decision in the trip flow |
+| A change restarts discussion across tools | The Trip Rescue prototype keeps the prepared response decision in the trip flow |
 
-The expected outcome is less manual coordination, clearer participation and a faster path from opinions to an actionable plan. These are product hypotheses until the target-user sessions listed in the submission blockers are completed.
+The expected outcome is less manual coordination, clearer participation and a faster path from opinions to an actionable plan. These are hypotheses until target-user testing is completed.
 
-## Reach and Scalability
+## Validation Hypotheses
 
-The same workflow can extend from student trips to families, clubs and small tour groups. A credible growth path is: secure accounts and invitations → managed deployment → richer preference-aware consensus → live route/provider integrations → reusable templates for larger communities. Each step builds on the current data model without requiring the prototype to pretend those capabilities already exist.
+| Hypothesis | Future validation metric |
+|---|---|
+| Faster planning decisions | Time from suggestions to confirmed shortlist |
+| Lower organiser workload | Manual coordination steps outside Trippy |
+| Better preference visibility | Traveller preferences represented in selected activities |
+| Easier disruption response | Steps and time needed to agree on a replacement |
+
+These are validation hypotheses until target-user testing is completed. No user-test results are claimed here.
+
+## Scalability
+
+```text
+Current prototype
+        |
+Public deployment
+        |
+Accounts and invitations
+        |
+Persistent collaborative trips
+        |
+External availability and routing services
+        |
+Dynamic Trip Rescue
+        |
+Reusable trip patterns and broader group use
+```
+
+Trippy does not need to become a booking platform. Its core role is the decision layer connecting traveller preferences, practical constraints and an actionable itinerary.
+
+---
+
+# 7. Competition Requirement Coverage
+
+| Challenge requirement | Current evidence on `main` | Status |
+|---|---|---|
+| Budgeting | Trip budget estimates plus browser-local Split Bill calculator | Prototype |
+| Itinerary building | Persisted day-by-day itinerary from the confirmed shortlist | Prototype |
+| Combining group preferences | Preference profiles, suggestions and votes; preferences do not currently alter ranking | Partial |
+| Coordinating travellers | Shared stages, participation and one trip workspace | Prototype |
+| Adjusting plans when something unexpected happens | Prepared Trip Rescue event and prepared replacement; live detection and dynamic replanning are build-phase work | Prototype / partial |
+| Faster, easier and less stressful planning | One visible flow reduces manual hand-offs; validation is still needed | Expected, not measured |
+| Solo and group travel | Group flow works with one member; dedicated solo UX is limited | Partial |
+| Deployable solution | Node/PostgreSQL architecture is deployable; public URL is missing | Evidence needed |
+| Responsive web experience | Responsive styles are present; final device QA is pending | Verify |
+| Accessibility | Semantic foundation exists; formal audit is pending | Verify |
 
 ---
 
 # 8. Presentation Plan
 
-Target **4 minutes 30 seconds**; do not exceed **5 minutes**. Upload to YouTube as **Unlisted** and title it with the team name only.
+The presentation follows the same product story as the prototype:
+
+```text
+Problem -> Preferences -> Shared Suggestions -> Voting
+-> Capacity-aware Shortlist -> Itinerary
+-> Trip Rescue prototype -> Build plan -> Impact
+```
+
+Target **4 minutes 30 seconds** and do not exceed **5 minutes**. Upload the video as **Unlisted** and title it with the team name only.
 
 | Time | Content | Evidence to show |
 |---:|---|---|
-| 0:00–0:35 | Problem and target user | Fragmented tools and group coordination cost |
-| 0:35–1:05 | Solution and differentiator | Visible decision flow and capacity-aware shortlist |
-| 1:05–3:10 | Prototype demo | Preferences → suggestions → votes → shortlist → itinerary → rescue |
-| 3:10–3:50 | Tech and feasibility | Next.js, Prisma, PostgreSQL, Google services and narrow scope |
-| 3:50–4:30 | Impact and close | Concrete before/after and why the product is worth building |
+| 0:00-0:35 | Problem and target user | Fragmented tools and group coordination cost |
+| 0:35-1:05 | Solution and differentiator | Visible decision flow and capacity-aware shortlist |
+| 1:05-3:10 | Prototype demo | Preferences -> suggestions -> votes -> shortlist -> itinerary -> rescue |
+| 3:10-3:50 | Tech and feasibility | Next.js, Prisma, PostgreSQL, Google services and narrow scope |
+| 3:50-4:30 | Impact and close | Before/after and measurable validation hypotheses |
 
-Keep detailed ideation and mentor history in this README so the video can focus on the product, demo and impact.
+**Trip Rescue presenter guardrail:** Describe it as a prepared disruption scenario and prepared replacement. Do not claim live disruption detection, live alternative search or real-time availability verification.
 
 ---
 
-# 9. Running the Prototype Locally
+# 9. Local Development
 
 ## Requirements
 
@@ -471,9 +512,7 @@ npm run dev
 
 Open `http://localhost:3000`.
 
----
-
-# 10. Repository Structure
+## Repository Structure
 
 ```text
 TravPlanner/
@@ -483,7 +522,7 @@ TravPlanner/
 │   └── trips/        # Planning stages, itinerary and rescue
 ├── components/
 │   ├── trip/         # Trip UI and calculators
-│   └── ui/           # Shared interface components
+│   └── ui/            # Shared interface components
 ├── lib/
 │   ├── server/       # Prisma mapping and server utilities
 │   ├── store.ts      # Client state and API actions
@@ -494,35 +533,32 @@ TravPlanner/
 └── public/
 ```
 
----
+## Design Reference
 
-# 11. Design Reference
-
-**Original Design Planning:** [CodeNection 2026 — Google Docs](https://docs.google.com/document/d/1fiUs3ogM99BjK-oBim_cT2xnQYW83PK6e-k9U4fCZr4/edit)
+**Original Design Planning:** [CodeNection 2026 - Google Docs](https://docs.google.com/document/d/1fiUs3ogM99BjK-oBim_cT2xnQYW83PK6e-k9U4fCZr4/edit)
 
 The current `main` implementation is the source of truth for prototype claims. Future designs and other branches are not described as implemented here.
 
 ---
 
-# 12. Final Submission Checklist
+# 10. Final Submission Checklist
 
-- [ ] Replace team and member TODOs
-- [ ] Add and incognito-test the public prototype link
-- [ ] Add 4–8 current screenshots with captions
-- [ ] Record target-user validation and resulting refinements
-- [ ] Add and incognito-test the public slides link
-- [ ] Add and incognito-test the 3–5 minute unlisted YouTube link
-- [ ] Confirm the video title is the team name only
-- [ ] Verify the deployed core flow on desktop and mobile browsers
-- [ ] Verify Google API restrictions, quota and demo data
-- [ ] Run accessibility and visual-consistency checks
+- [ ] Add and incognito-test the public UI prototype link.
+- [ ] Finalize public deployment and verify the hosted core flow.
+- [ ] Add 4-8 current screenshots with captions.
+- [ ] Record target-user validation and resulting refinements.
+- [ ] Add and incognito-test the public slides link.
+- [ ] Add and incognito-test the 3-5 minute unlisted YouTube link.
+- [ ] Confirm the video title is the team name only.
+- [ ] Verify the deployed flow on desktop and mobile browsers.
+- [ ] Verify Google API restrictions, quota and demo data.
+- [ ] Run accessibility and visual-consistency checks.
 
----
+## Submission Links
 
-# 13. Submission Links
+- **GitHub:** [https://github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner)
+- **Live Prototype:** TODO - required before submission
+- **Video Presentation:** TODO - required before submission
+- **Presentation Slides:** TODO - required before submission
+- **UI / Design:** TODO - add only if a separate public design link is required
 
-- **GitHub:** https://github.com/qianyi-11/TravPlanner
-- **Live Prototype:** TODO
-- **Video Presentation:** TODO
-- **Presentation Slides:** TODO
-- **UI / Design:** TODO
