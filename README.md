@@ -9,11 +9,11 @@
 | Team | OpenCrab |
 | Team members | Lee Qian Yi, Cha Zi Yu |
 | Problem statement | Planning an Escape - Travel Planner |
-| Public UI prototype | https://trippy-travplanner.vercel.app/ |
+| Public UI prototype | https://trippytravplanner.vercel.app/ |
 | Video presentation | https://youtu.be/0Cv7W5zTxaw |
 | Presentation slides | https://drive.google.com/file/d/1zQixdFhoHTfHurOJh041N6BdoZBI2fXb/view?usp=drive_link |
 | Repository | [github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner) |
-| Public deployment | https://trippy-travplanner.vercel.app/ |
+| Public deployment | https://trippytravplanner.vercel.app/ |
 
 ---
 
@@ -45,7 +45,7 @@ Trippy does not claim that maps, voting or itinerary creation are individually n
 ## Our Solution
 
 Trippy is an explainable group travel planner that turns individual preferences and group votes into a realistic shared itinerary while making the decision process visible rather than hiding it behind a black box.
-
+setting a remover and twenty miss communication
 ```text
 Individual preferences
         |
