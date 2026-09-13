@@ -232,12 +232,12 @@ The final flow shows how individual input becomes one actionable group plan. Eac
 
 | Date | Mentor | Feedback received | Team decision / change |
 |---|---|---|---|
-| 09/09/2026 | Mentor 1 | Consider a calendar or availability input for groups with different schedules. | Considered a Group Availability Poll; deferred it to protect the core planning scope. |
-| 09/09/2026 | Mentor 1 | Consider travel time when members need a practical meeting point. | Considered a Meeting Point Recommendation; deferred it because member-origin data is outside the MVP. |
-| 09/09/2026 | Mentor 1 | Study existing travel planners such as Wanderlog and clarify why travellers would choose Trippy. | Focused Trippy on the visible group decision process before the itinerary. |
-| 09/09/2026 | Mentor 1 | Voting needed stronger differentiation and deeper problem analysis. | Connected voting to a capacity-aware shortlist and deterministic planning flow; richer fairness scoring remains deferred on `main`. |
-| 09/09/2026 | Mentor 1 | Compare the market and explain what makes Trippy stand out. | Added a conservative comparison centred on Trippy's product emphasis. |
-| 09/09/2026 | Mentor 1 | Explore flight-ticket features and automatic travel-data extraction from URLs. | Recorded both ideas and deferred them because they do not strengthen the core MVP enough. |
+| 09/09/2026 | Kueh Pang Teng | Consider a calendar or availability input for groups with different schedules. | Considered a Group Availability Poll; deferred it to protect the core planning scope. |
+| 09/09/2026 | Kueh Pang Teng | Consider travel time when members need a practical meeting point. | Considered a Meeting Point Recommendation; deferred it because member-origin data is outside the MVP. |
+| 09/09/2026 | Kueh Pang Teng | Study existing travel planners such as Wanderlog and clarify why travellers would choose Trippy. | Focused Trippy on the visible group decision process before the itinerary. |
+| 09/09/2026 | Kueh Pang Teng | Voting needed stronger differentiation and deeper problem analysis. | Connected voting to a capacity-aware shortlist and deterministic planning flow; richer fairness scoring remains deferred on `main`. |
+| 09/09/2026 | Kueh Pang Teng | Compare the market and explain what makes Trippy stand out. | Added a conservative comparison centred on Trippy's product emphasis. |
+| 09/09/2026 | Kueh Pang Teng | Explore flight-ticket features and automatic travel-data extraction from URLs. | Recorded both ideas and deferred them because they do not strengthen the core MVP enough. |
 | 09/09/2026 | Jarod Tan | Research previous hackathon travel and group-planning projects. | Recorded this as a research action; no completed findings are claimed. |
 | 09/09/2026 | Jarod Tan | Group voting alone is common and not sufficiently distinctive. | Made voting an input to a visible shortlist-and-planning workflow rather than the innovation itself. |
 | 09/09/2026 | Jarod Tan | Find a more memorable or ambitious product direction. | Kept the core realistic and added Trip Rescue as a focused secondary story. |
