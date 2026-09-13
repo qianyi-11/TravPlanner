@@ -77,7 +77,7 @@ Trip Rescue is separate from the core planning calculation. It uses a prepared d
 - Deterministic nearest-neighbour sequencing using saved coordinates; this is an understandable heuristic, not globally optimized routing.
 - Persisted day-by-day itinerary and final-plan views.
 - Prototype budget estimates and stored booking-pressure indicators; neither is live pricing.
-- Split Bill and currency-conversion calculators stored in the current browser, not a shared expense ledger.
+- Split Bill data is stored in the current browser, not a shared expense ledger; the currency converter uses fixed reference rates rather than a live market feed.
 - Each Split Bill expense is split equally across the listed members; the recorded payer determines who owes whom, with uneven cents distributed so totals remain exact.
 - Trip Rescue prototype using a prepared disruption event and prepared replacement, with the event's resolved status persisted.
 - Prisma persistence backed by PostgreSQL.
@@ -465,6 +465,7 @@ Create `.env`:
 
 ```dotenv
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/DATABASE"
+DATABASE_URL_UNPOOLED="postgresql://USER:PASSWORD@HOST:5432/DATABASE"
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="OPTIONAL_BROWSER_KEY"
 ```
 
