@@ -10,7 +10,7 @@
 | Team members | Lee Qian Yi, Cha Zi Yu |
 | Problem statement | Planning an Escape - Travel Planner |
 | Public UI prototype | https://trippy-travplanner.vercel.app/ |
-| Video presentation | TODO - add a 3-5 minute unlisted YouTube link |
+| Video presentation | https://youtu.be/0Cv7W5zTxaw |
 | Presentation slides | https://drive.google.com/file/d/1zQixdFhoHTfHurOJh041N6BdoZBI2fXb/view?usp=drive_link |
 | Repository | [github.com/qianyi-11/TravPlanner](https://github.com/qianyi-11/TravPlanner) |
 | Public deployment | https://trippy-travplanner.vercel.app/ |
