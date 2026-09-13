@@ -3,6 +3,7 @@ import { daysBetween } from "./utils";
 import { timeToMinutes } from "./date-time";
 import { isFoodPlace } from "./place-category";
 import { estimatedMealSpendMidpoint } from "./place-cost";
+import { FALLBACK_TRAVEL_MINUTES, estimateTravelMinutes, haversineKm, isValidCoordinates } from "./geo";
 
 interface ItineraryBuildInput {
   trip: {
@@ -21,15 +22,6 @@ export interface ItineraryBuildResult {
   unscheduledPlaceIds: string[];
 }
 
-const FALLBACK_TRAVEL_MINUTES = 20;
-const SPEED_KMH: Record<TransportMode, number> = {
-  Walking: 4.5,
-  "Public Transport": 18,
-  Car: 22,
-  Taxi: 24,
-  Mixed: 16,
-};
-
 function formatTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
@@ -38,22 +30,6 @@ function addDays(iso: string, offset: number): string {
   const [year, month, day] = iso.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + offset));
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
-}
-
-function validCoordinates({ lat, lng }: Place["coordinates"]): boolean {
-  return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
-}
-
-function travelMinutes(from: Place, to: Place, transport: TransportMode): number {
-  if (!validCoordinates(from.coordinates) || !validCoordinates(to.coordinates)) return FALLBACK_TRAVEL_MINUTES;
-  const radians = Math.PI / 180;
-  const dLat = (to.coordinates.lat - from.coordinates.lat) * radians;
-  const dLng = (to.coordinates.lng - from.coordinates.lng) * radians;
-  const lat1 = from.coordinates.lat * radians;
-  const lat2 = to.coordinates.lat * radians;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  const distanceKm = 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-  return Math.min(90, Math.max(10, Math.round(((distanceKm / SPEED_KMH[transport]) * 60) / 5) * 5));
 }
 
 function titleCase(value: string): string {
@@ -65,6 +41,38 @@ function areaLabel(place: Place): string {
   return titleCase(!area || /\d/.test(area) || area.length > 22 ? place.destination : area);
 }
 
+function orderByProximity(places: Place[]): Place[] {
+  if (places.length <= 1) return places;
+  const remaining = [...places];
+  const ordered: Place[] = [remaining.shift()!];
+
+  while (remaining.length) {
+    const last = ordered[ordered.length - 1];
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < remaining.length; index += 1) {
+      const candidate = remaining[index];
+      const rawDistance = isValidCoordinates(last.coordinates) && isValidCoordinates(candidate.coordinates)
+        ? haversineKm(last.coordinates, candidate.coordinates)
+        : Number.POSITIVE_INFINITY;
+      if (
+        rawDistance < nearestDistance ||
+        (rawDistance === nearestDistance && candidate.id < remaining[nearestIndex].id)
+      ) {
+        nearestIndex = index;
+        nearestDistance = rawDistance;
+      }
+    }
+    ordered.push(remaining.splice(nearestIndex, 1)[0]);
+  }
+
+  return ordered;
+}
+
+function travelBetween(from: Place | null, to: Place, transport: TransportMode): number {
+  return from ? estimateTravelMinutes(from.coordinates, to.coordinates, transport) : FALLBACK_TRAVEL_MINUTES;
+}
+
 function groupedPlaces(selectedPlaceIds: string[], places: Place[]): { ordered: Place[]; selectedIds: string[] } {
   const selectedIds = [...new Set(selectedPlaceIds)];
   const placesById = new Map(places.map((place) => [place.id, place]));
@@ -72,12 +80,17 @@ function groupedPlaces(selectedPlaceIds: string[], places: Place[]): { ordered: 
   for (const id of selectedIds) {
     const place = placesById.get(id);
     if (!place) continue;
-    const key = `${place.destination}\u0000${place.area}`;
+    const key = place.destination;
     const group = groups.get(key) ?? [];
     group.push(place);
     groups.set(key, group);
   }
-  return { ordered: [...groups.values()].flat(), selectedIds };
+  // Keep shortlist destination order; only sightseeing sequence changes within each destination.
+  const ordered = [...groups.values()].flatMap((destinationPlaces) => [
+    ...orderByProximity(destinationPlaces.filter((place) => !isFoodPlace(place))),
+    ...destinationPlaces.filter(isFoodPlace),
+  ]);
+  return { ordered, selectedIds };
 }
 
 interface MealAnchor {
@@ -150,8 +163,8 @@ export function buildItinerary({ trip, selectedPlaceIds, places }: ItineraryBuil
     for (let index = 0; index < segmentEnds.length; index += 1) {
       const windowEnd = segmentEnds[index];
       while (sightQueue.length) {
-        const place = sightQueue[0];
-        const travel = previousPlace ? travelMinutes(previousPlace, place, trip.transport) : FALLBACK_TRAVEL_MINUTES;
+        const place = sightQueue[0]!;
+        const travel = travelBetween(previousPlace, place, trip.transport);
         const arrival = cursor + travel;
         if (arrival + place.estimatedDurationMinutes > windowEnd) break;
         addPlace(place, arrival, travel);
@@ -161,7 +174,7 @@ export function buildItinerary({ trip, selectedPlaceIds, places }: ItineraryBuil
       const anchor = anchors[index];
       if (!anchor) continue;
       const place = foodQueue[0];
-      const travel = place ? (previousPlace ? travelMinutes(previousPlace, place, trip.transport) : FALLBACK_TRAVEL_MINUTES) : 0;
+      const travel = place ? travelBetween(previousPlace, place, trip.transport) : 0;
       const arrival = Math.max(cursor + travel, anchor.target);
 
       if (

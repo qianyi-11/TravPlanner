@@ -2,6 +2,7 @@
 
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
 import { gradientFor } from "@/lib/utils";
+import { estimateVisitDuration } from "@/lib/place-duration";
 
 const SKIP_TYPES = new Set([
   "point_of_interest",
@@ -71,7 +72,7 @@ function toPlace(result: google.maps.places.Place, destination: string): Place {
     // Legacy import snapshot only; UI uses the saved weekly schedule.
     isOpenNow: false,
     closesAt: undefined,
-    estimatedDurationMinutes: 60,
+    estimatedDurationMinutes: estimateVisitDuration(prettyCategory(result.types)),
     reviews: (result.reviews ?? []).slice(0, 5).map((review, i): PlaceReview => ({
       id: `${id}-review-${i}`,
       author: review.authorAttribution?.displayName ?? "Google user",

@@ -99,20 +99,67 @@ test("invalid persisted daily windows fail deterministically", () => {
   }
 });
 
-test("sightseeing respects duration, area grouping, selected order, and database order", () => {
+test("sightseeing respects duration, destination grouping, proximity, and database order", () => {
   const places = [
-    place("b", "Park", { area: "West", estimatedDurationMinutes: 45 }),
-    place("a", "Museum", { area: "East", estimatedDurationMinutes: 90 }),
+    place("b", "Park", { area: "West", estimatedDurationMinutes: 30 }),
+    place("a", "Museum", { area: "East", estimatedDurationMinutes: 30 }),
     place("c", "Shrine", { area: "East", estimatedDurationMinutes: 30 }),
   ];
   const selectedPlaceIds = ["a", "b", "c"];
   const first = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "18:00" }), selectedPlaceIds, places });
   const shuffled = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "18:00" }), selectedPlaceIds, places: [...places].reverse() });
   assert.deepEqual(first, shuffled);
-  assert.deepEqual(placeActivities(first).map(({ placeId }) => placeId), ["a", "c", "b"]);
-  const [a, c] = placeActivities(first);
-  assert.equal(minutes(c.time), minutes(a.time) + a.durationMinutes + c.travelFromPrevMinutes);
+  assert.deepEqual(placeActivities(first).map(({ placeId }) => placeId), ["a", "b", "c"]);
+  const [a, b] = placeActivities(first);
+  assert.equal(minutes(b.time), minutes(a.time) + a.durationMinutes + b.travelFromPrevMinutes);
   assert.deepEqual(first.unscheduledPlaceIds, []);
+});
+
+test("proximity ordering keeps nearby clusters together", () => {
+  const places = [
+    place("start", "Museum", { coordinates: { lat: 35, lng: 139 }, estimatedDurationMinutes: 30 }),
+    place("far", "Museum", { coordinates: { lat: 35.1, lng: 139.1 }, estimatedDurationMinutes: 30 }),
+    place("near-a", "Museum", { coordinates: { lat: 35.001, lng: 139.001 }, estimatedDurationMinutes: 30 }),
+    place("near-b", "Museum", { coordinates: { lat: 35.002, lng: 139.002 }, estimatedDurationMinutes: 30 }),
+  ];
+  const result = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "18:00" }), selectedPlaceIds: ["start", "far", "near-a", "near-b"], places });
+  assert.deepEqual(placeActivities(result).map(({ placeId }) => placeId), ["start", "near-a", "near-b", "far"]);
+});
+
+test("same-distance proximity ties use stable place IDs", () => {
+  const places = [
+    place("start", "Museum", { coordinates: { lat: 35, lng: 139 }, estimatedDurationMinutes: 20 }),
+    place("b-right", "Museum", { coordinates: { lat: 35, lng: 139.01 }, estimatedDurationMinutes: 20 }),
+    place("a-left", "Museum", { coordinates: { lat: 35, lng: 138.99 }, estimatedDurationMinutes: 20 }),
+  ];
+  const result = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "16:00" }), selectedPlaceIds: ["start", "b-right", "a-left"], places });
+  assert.deepEqual(placeActivities(result).map(({ placeId }) => placeId), ["start", "a-left", "b-right"]);
+});
+
+test("invalid coordinates remain deterministic and do not drop places", () => {
+  const places = [
+    place("start", "Museum", { coordinates: { lat: 35, lng: 139 }, estimatedDurationMinutes: 20 }),
+    place("invalid-b", "Museum", { coordinates: { lat: 0, lng: 0 }, estimatedDurationMinutes: 20 }),
+    place("invalid-a", "Museum", { coordinates: { lat: Number.NaN, lng: 139 }, estimatedDurationMinutes: 20 }),
+    place("near", "Museum", { coordinates: { lat: 35.001, lng: 139.001 }, estimatedDurationMinutes: 20 }),
+  ];
+  const result = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "18:00" }), selectedPlaceIds: ["start", "invalid-b", "invalid-a", "near"], places });
+  assert.deepEqual(placeActivities(result).map(({ placeId }) => placeId), ["start", "near", "invalid-a", "invalid-b"]);
+  assert.deepEqual(result.unscheduledPlaceIds, []);
+});
+
+test("proximity ordering preserves destination boundaries and selected place membership", () => {
+  const places = [
+    place("tokyo-start", "Museum", { destination: "Tokyo", coordinates: { lat: 35, lng: 139 }, estimatedDurationMinutes: 20 }),
+    place("kyoto", "Museum", { destination: "Kyoto", coordinates: { lat: 35.01, lng: 139.01 }, estimatedDurationMinutes: 20 }),
+    place("tokyo-near", "Museum", { destination: "Tokyo", coordinates: { lat: 35.001, lng: 139.001 }, estimatedDurationMinutes: 20 }),
+    place("osaka", "Museum", { destination: "Osaka", coordinates: { lat: 35.02, lng: 139.02 }, estimatedDurationMinutes: 20 }),
+  ];
+  const result = buildItinerary({ trip: trip({ dailyStart: "10:00", dailyEnd: "18:00" }), selectedPlaceIds: ["tokyo-start", "kyoto", "tokyo-near", "osaka", "tokyo-near", "missing"], places });
+  const activities = placeActivities(result);
+  assert.deepEqual(activities.map(({ placeId }) => placeId), ["tokyo-start", "tokyo-near", "kyoto", "osaka"]);
+  assert.equal(new Set(activities.map(({ placeId }) => placeId)).size, 4);
+  assert.deepEqual(result.unscheduledPlaceIds, ["missing"]);
 });
 
 test("multi-day builds are deterministic, use stable IDs, and reset travel context", () => {

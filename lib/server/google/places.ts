@@ -1,4 +1,5 @@
 import { gradientFor } from "@/lib/utils";
+import { estimateVisitDuration } from "@/lib/place-duration";
 import type { Place, PlaceOpeningHours, PlaceReview } from "@/lib/types";
 import { ApiError } from "../api-error";
 import { getServerEnv } from "../env";
@@ -86,7 +87,7 @@ export function normalizeGooglePlace(result: GooglePlaceResult, destination: str
     description: result.editorialSummary?.text ?? "",
     openingHours: hours(result.regularOpeningHours?.weekdayDescriptions),
     isOpenNow: result.currentOpeningHours?.openNow === true,
-    estimatedDurationMinutes: 60,
+    estimatedDurationMinutes: estimateVisitDuration(category(result.types)),
     reviews: (result.reviews ?? []).slice(0, 5).map(
       (review, index): PlaceReview => ({
         id: `${id}-review-${index}`,

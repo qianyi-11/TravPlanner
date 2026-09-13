@@ -31,13 +31,14 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 ### Current Prototype Features
 
 - Group and trip setup
+- Organizer-only group/trip rename and deletion, with schedule edits locked after itinerary generation
 - Member preference profiles
 - Collaborative place suggestions and trip-scoped voting
 - Google Places discovery with saved provider snapshots
 - Server-authoritative deterministic Fair Group Consensus with explainable representation trade-offs
 - Persisted consensus shortlist
 - Validation and deterministic itinerary building from a confirmed shortlist
-- Sequence preview and map visualisation without route optimisation
+- Deterministic proximity-based sequencing using saved coordinates and estimated travel time; no route optimisation
 - Day-by-day itinerary and final plan
 - Known estimated itinerary spend with incomplete costs kept in scope as unknown
 - Calendar-based planning urgency computed from days until departure, not price or demand prediction
@@ -50,14 +51,15 @@ Trippy is a collaborative travel planner for solo travellers and small groups. I
 
 ### Latest Competition-Readiness Status
 
-The `version1.1` branch was verified locally after the fixed competition demo entry was implemented:
+The `version1.1` working tree was verified locally after the fixed competition demo entry and Stage 2 CRUD safety were implemented:
 
 - The landing page communicates different preferences → suggestions/votes → Fair Group Consensus → shared itinerary.
 - Consensus results show the existing base score, fair score and representation adjustment; the deterministic algorithm is unchanged.
-- `npm run test:domain`: 45/45 passed; `npm run test:integration`: 39/39 passed.
+- `npm run test:domain`: 56/56 passed; `npm run test:integration`: 42/42 passed, including organizer authorization, dependent-data cascades, bootstrap refresh and protected demo mutations.
 - `npx next typegen`, `npx tsc --noEmit`, full `npm run lint`, and `npm run build` passed.
 - `npm run demo` and `npm run demo:record` passed the full seeded flow, including the Try Competition Demo entry, Plan B, checklist, Split Bill, Trip Rescue and reload persistence.
 - Demo auth was tested with the fixed seeded identity, arbitrary member input was ignored, missing demo data failed safely, and production cookie security was verified.
+- Competition demo group/trip rename, structural edit and deletion controls are hidden for the fixed actor and rejected server-side; normal Google-authenticated organizer controls remain available.
 - The build still reports two generated Prisma tracing warnings from dynamic filesystem access; no runtime failure was observed.
 - The demo uses isolated `prisma/demo.db`; recording output is written locally to `demo-output/travplanner-demo.webm`.
 
@@ -269,7 +271,7 @@ The following screenshots were captured from the current deterministic demo at 8
 
 ### 6. Sequence Preview / Map
 
-**Does:** Displays the saved stop order and geographic grouping. **Interaction:** Inspect stops and continue to itinerary building. **Matters:** Makes the proposed sequence understandable without claiming route optimisation.
+**Does:** Displays deterministic proximity-based sequencing using saved coordinates and estimated travel time. **Interaction:** Inspect stops and continue to itinerary building. **Matters:** Makes the proposed sequence understandable without claiming route optimisation.
 
 ### 7. Itinerary and Final Plan
 
@@ -369,12 +371,12 @@ Persisted mutations normally follow **UI → store action → authenticated API 
 
 | Area | Current Prototype | Production Direction |
 |---|---|---|
-| Group planning | Persisted group/trip workflow | Real-time collaboration and concurrency controls |
+| Group planning | Persisted group/trip workflow with organizer-only CRUD and protected demo fixture | Real-time collaboration and concurrency controls |
 | Preferences, suggestions and voting | Persisted inputs and trip-scoped votes | Richer profiles and decision policies |
 | Fair Group Consensus | Server-authoritative deterministic shortlist with explainable representation trade-offs | Richer policies, concurrency and collaboration controls |
 | Shortlist | Client-selected capacity; server-derived and persisted selection | Richer policy and approval controls |
 | Validation | Deterministic saved-data checks | Richer opening-hours, cost and routing validation |
-| Sequence preview | Saved stop order, area grouping and estimated travel time | Live route optimisation and travel-time services |
+| Sequence preview | Deterministic proximity-based sequencing using saved coordinates and estimated travel time; no route optimisation | Live route optimisation and travel-time services |
 | Itinerary | Deterministic server builder and persisted itinerary | Richer constraint-aware alternatives |
 | Plan B per Stop | One persisted backup place per itinerary activity with revision protection | Richer alternative comparison and provider revalidation |
 | Budget | Known estimated spend with explicit unknown activity, transport and accommodation costs | External hotel, ticket and transport pricing |
@@ -394,6 +396,7 @@ The scope was intentionally narrowed to finish a coherent, deterministic journey
 ### Core / Implemented
 
 - Group/trip setup, authentication and persistence
+- Organizer-only group/trip rename and deletion; schedule-safe trip edits
 - Preferences, suggestions and voting
 - Fair Group Consensus and shortlist confirmation
 - Validation, sequence preview and itinerary

@@ -23,6 +23,7 @@ test("server Google normalization preserves authoritative identity and freshness
   assert.equal(place.id, "g-abc");
   assert.equal(place.googlePlaceId, "abc");
   assert.equal(place.rating, 4.5);
+  assert.equal(place.estimatedDurationMinutes, 120);
   assert.equal(place.openingHours.length, 1);
   assert.equal(getPlaceFreshness(place, new Date("2026-09-15T00:00:00Z")), "fresh");
   assert.equal(getPlaceFreshness(place, new Date("2026-11-01T00:00:00Z")), "stale");
