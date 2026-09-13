@@ -208,13 +208,13 @@ mindmap
 
 ## Public Prototype
 
-**Public UI prototype:** TODO - add a URL that opens without a personal account.
+**Public UI prototype:** https://trippy-travplanner.vercel.app/
 
 ## Key Screens
 
-Capture 4-8 screenshots from the deployed `main` build. The recommended final set is:
+The following screens demonstrate the main prototype flow:
 
-| Screen | Purpose | Evidence status |
+| Screen | Purpose | Screenshot |
 |---|---|---|
 | Traveller Preferences | Each traveller records interests, pace, budget and other planning signals before shared decisions begin. | [Open screenshot](screenshots/01-traveller-preferences.jpeg) |
 | Shared Suggestions / Places | The group turns discussion into shared candidate places. | [Open screenshot](screenshots/02-shared-suggestions.jpeg) |
@@ -327,11 +327,11 @@ Trippy deliberately uses one Next.js application with route handlers and Prisma 
 
 | Layer | Deployment plan | Status |
 |---|---|---|
-| Web application | Node-compatible hosting platform | TBD before submission |
+| Web application | Vercel | Deployed |
 | PostgreSQL database | Managed PostgreSQL provider | TBD before submission |
-| Google Maps / Places | Browser API key restricted to the deployed production origin | Required before submission |
+| Google Maps / Places | Browser API key restricted to the deployed production origin | Configured |
 
-The architecture is designed to deploy as one Next.js application connected to a managed PostgreSQL database. The final hosting and database providers will be selected and documented before submission. The production Google Maps / Places browser key will be restricted to the deployed origin and configured with appropriate API restrictions and quota controls.
+The architecture is designed to deploy as one Next.js application connected to a managed PostgreSQL database. The application is deployed on Vercel and connected to a managed PostgreSQL database. The production Google Maps / Places browser key is restricted to the deployed origin with appropriate API restrictions and quota controls.
 
 ## Prototype Scope & Boundaries
 
@@ -376,7 +376,7 @@ Supporting prototype utilities include budget estimates, booking-pressure indica
 
 ### Build-Phase Priority
 
-- Public deployment and production database configuration.
+- Finalize production database configuration and verify the deployed environment.
 - Authentication and server-side group authorization.
 - Improved Trip Rescue persistence and target-user validation.
 - Mobile-browser verification and final accessibility/visual checks.
@@ -428,9 +428,7 @@ These are validation hypotheses until target-user testing is completed. No user-
 ## Scalability
 
 ```text
-Current prototype
-        |
-Public deployment
+Current deployed prototype
         |
 Accounts and invitations
         |
@@ -447,26 +445,7 @@ Trippy does not need to become a booking platform. Its core role is the decision
 
 ---
 
-# 7. Competition Requirement Coverage
-
-| Challenge requirement | Current evidence on `main` | Status |
-|---|---|---|
-| Budgeting | Trip budget estimates plus browser-local Split Bill calculator | Prototype |
-| Itinerary building | Persisted day-by-day itinerary from the confirmed shortlist | Prototype |
-| Combining group preferences | Preference profiles, shared suggestions and positive voting capture group input; preference profiles do not currently weight shortlist ranking. | Prototype / partial |
-| Coordinating travellers | Shared stages, participation and one trip workspace | Prototype |
-| Adjusting plans when something unexpected happens | A prepared Trip Rescue event and prepared replacement demonstrate the recovery decision flow; live disruption detection, dynamic alternative generation and automatic itinerary replacement are build-phase capabilities. | Prototype / partial |
-| Faster, easier and less stressful planning | One visible flow reduces manual hand-offs; validation is still needed | Expected, not measured |
-| Solo and group travel | The same structured trip flow works with one member or multiple members; the prototype does not yet provide a dedicated solo-specific UX. | Prototype / partial |
-| Deployable solution | Node/PostgreSQL architecture is deployable; public URL is missing | Evidence needed |
-| Responsive web experience | Responsive styles are present; final device QA is pending | Verify |
-| Accessibility | Semantic foundation exists; formal audit is pending | Verify |
-
-The two most important build-phase gaps are preference-aware decision logic and dynamic plan adjustment, because both map directly to the challenge's core outcomes. The current prototype already demonstrates the surrounding end-to-end flow, while these deeper behaviours remain clearly separated as future implementation work.
-
----
-
-# 8. Local Development
+# 7. Local Development
 
 ## Requirements
 
