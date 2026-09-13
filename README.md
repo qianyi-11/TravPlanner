@@ -162,29 +162,71 @@ mindmap
 
 The map shows both the selected concept and alternative directions that were intentionally left outside the prototype.
 
-### Idea Evolution and User Flow
+### Idea Evolution, Pivots and Dead Ends
+
+```mermaid
+flowchart TD
+    A[Version 1: broad production travel platform]
+    A --> A1[Firebase architecture]
+    A --> A2[Flight and hotel integration]
+    A --> A3[Approval and itinerary history]
+    A1 -->|Dead end: too much infrastructure| B
+    A2 -->|Dead end: provider complexity| B
+    A3 -->|Dead end: outside core journey| B
+
+    B[Version 2: suggestions and group voting]
+    M[Mentor feedback: voting alone is common] --> B
+    B -->|Pivot: make the decision process visible| C[Version 3: preferences → votes → shortlist]
+
+    C --> C1[Availability poll]
+    C --> C2[Meeting-point recommendation]
+    C1 -->|Deferred: schedule logic outside MVP| D
+    C2 -->|Deferred: needs member-origin data| D
+
+    C --> D[Version 4: capacity-aware shortlist]
+    D --> E[Deterministic itinerary]
+    E --> F[Current main: complete planning flow + prepared Trip Rescue]
+```
+
+This diagram shows the discarded technical and product branches, the feedback that triggered the main pivot, and what survived into the current prototype. On `main`, voting remains the ranking input; richer fairness scoring is a later direction, not a current claim.
+
+### Final User Flow
 
 ```mermaid
 flowchart LR
-    A[Broad production travel platform] -->|Scope too large| B[Collaborative voting prototype]
-    B -->|Voting alone was not distinctive| C[Visible group decision flow]
-    C --> D[Capacity-aware shortlist]
-    D --> E[Deterministic itinerary]
-    E --> F[Prepared Trip Rescue]
+    A[Create group and trip] --> B[Set preferences]
+    B --> C[Suggest places]
+    C --> D[Vote]
+    D --> E[Review capacity-aware shortlist]
+    E --> F[Validate selected places]
+    F --> G[Preview proximity sequence]
+    G --> H[Build day-by-day itinerary]
+    H --> I[Review final plan and budget]
+    I --> J[Review prepared Trip Rescue event]
 ```
 
-The project moved from a broad platform to one complete, explainable journey. On `main`, voting remains the ranking input; richer fairness scoring is a later direction, not a current claim.
+The final flow shows how individual input becomes one actionable group plan. Each step corresponds to a screen in the current prototype.
 
-## 2.3 Idea Evolution
+## 2.3 Iteration and Idea Evolution
 
-| Stage | Direction | Why it changed |
-|---|---|---|
-| Initial idea | Production-oriented collaborative travel platform | Too many workflows, integrations and infrastructure concerns for the prototype period. |
-| First refinement | Suggestions and group voting | Created a demonstrable shared decision, but voting alone was not distinctive enough. |
-| Scope decision | One visible flow from opinions to itinerary | Proves the core user problem from start to finish. |
-| Technical decision | Deterministic shortlist and itinerary logic | Keeps decisions reproducible and understandable. |
-| Supporting concept | Prepared Trip Rescue | Shows the response decision without claiming live monitoring or an applied itinerary replacement. |
-| Current `main` result | Preferences → votes → capacity-aware shortlist → itinerary → prepared rescue | A complete prototype flow with explicit production limits. |
+| Iteration | Trigger / problem discovered | What changed | Direction dropped or deferred | Result |
+|---|---|---|---|---|
+| Version 1 — broad platform | Authentication, integrations, approvals and versioning made the scope too large. | Reduced the concept to one demonstrable group-planning journey. | Firebase-oriented architecture, booking integrations, approval workflow and itinerary history. | A smaller prototype that could be completed end to end. |
+| Version 2 — collaborative voting | Voting collected opinions but still left the organiser to turn winners into a practical schedule. | Connected suggestions and votes directly to shortlist creation. | Voting as a standalone feature. | Group input became a planning input rather than an isolated poll. |
+| Version 3 — visible group decisions | Mentor feedback said voting alone was common and insufficiently distinctive. | Made every transition from preferences to itinerary visible. | An opaque or instantly generated itinerary. | Reviewers can follow how the plan was formed. |
+| Version 4 — realistic shortlist | A simple top-vote list could select more places than the trip could hold. | Added deterministic capacity reasoning using days, daily hours, meals, visit duration and estimated travel. | A fixed shortlist size and AI-generated ranking. | The chosen places fit the shape of the trip and the reasoning is shown. |
+| Version 5 — focused supporting features | Availability polling and meeting-point logic required more schedule and origin data than the MVP contained. | Deferred both and kept the itinerary journey primary. | Availability poll and meeting-point recommendation. | Scope remained achievable without hiding unfinished systems. |
+| Current `main` — complete prototype | The agreed plan still needed a way to demonstrate response when circumstances change. | Added a prepared Trip Rescue event after the final plan. | Live disruption detection and automatic itinerary replacement. | Preferences → votes → capacity-aware shortlist → itinerary → prepared rescue decision. |
+
+### What the Dead Ends Taught Us
+
+| Dead end | Lesson carried into the final concept |
+|---|---|
+| Large production architecture | Prove the user journey before adding infrastructure. |
+| Voting as the differentiator | A vote matters only when it changes the resulting plan. |
+| Fixed shortlist size | Capacity should reflect the real trip window, not an arbitrary number. |
+| AI-generated itinerary | Deterministic rules are easier to explain and demonstrate reliably. |
+| Live disruption monitoring | Demonstrate the response decision honestly before adding external signals. |
 
 ## 2.4 Mentor Consultation
 
