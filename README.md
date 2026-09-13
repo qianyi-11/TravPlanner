@@ -78,6 +78,7 @@ Trip Rescue is separate from the core planning calculation. It uses a prepared d
 - Persisted day-by-day itinerary and final-plan views.
 - Prototype budget estimates and stored booking-pressure indicators; neither is live pricing.
 - Split Bill and currency-conversion calculators stored in the current browser, not a shared expense ledger.
+- Each Split Bill expense is split equally across the listed members; the recorded payer determines who owes whom, with uneven cents distributed so totals remain exact.
 - Trip Rescue prototype using a prepared disruption event and prepared replacement, with the event's resolved status persisted.
 - Prisma persistence backed by PostgreSQL.
 
