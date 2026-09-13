@@ -12,6 +12,7 @@ interface BootstrapPayload {
   tripMemberProgress: Record<string, Record<string, TripMemberProgress>>;
   currentUserId: string;
   demoAuthEnabled: boolean;
+  competitionDemo: boolean;
 }
 
 async function api(url: string, init?: RequestInit): Promise<{ ok: boolean; error?: string; [k: string]: unknown }> {
@@ -41,6 +42,7 @@ interface PlannerState {
   hydrating: boolean;
   authRequired: boolean;
   demoAuthEnabled: boolean;
+  competitionDemo: boolean;
 
   hydrate: () => Promise<void>;
   startDemoSession: () => Promise<boolean>;
@@ -70,7 +72,7 @@ interface PlannerState {
   ) => Promise<string>;
   renameTrip: (tripId: string, name: string) => Promise<boolean>;
   updateTripDetails: (tripId: string, updates: Partial<Pick<Trip, "startDate" | "endDate" | "budgetTotal" | "dailyStart" | "dailyEnd" | "transport">>) => Promise<boolean>;
-  deleteTrip: (tripId: string) => Promise<void>;
+  deleteTrip: (tripId: string) => Promise<boolean>;
 
   updateMemberPreferences: (memberId: string, prefs: MemberPreferences) => Promise<boolean>;
 
@@ -101,6 +103,7 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
   hydrating: false,
   authRequired: false,
   demoAuthEnabled: false,
+  competitionDemo: false,
 
   hydrate: async () => {
     set({ hydrating: true });
@@ -215,9 +218,10 @@ export const usePlannerStore = create<PlannerState>((set, get) => ({
     const result = await api(`/api/trips/${tripId}`, { method: "DELETE" });
     if (!result.ok) {
       set({ toast: result.error ?? "Couldn't delete trip" });
-      return;
+      return false;
     }
     await get().hydrate();
+    return true;
   },
 
   updateMemberPreferences: async (memberId, prefs) => {

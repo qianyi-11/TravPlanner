@@ -11,3 +11,7 @@ export function isDemoAuthEnabled(environment: NodeJS.ProcessEnv = process.env) 
   const env = getServerEnv(environment);
   return env.authDemoEnabled && (env.nodeEnv !== "production" || Boolean(env.authDemoMemberId));
 }
+
+export function isCompetitionDemoMember(memberId: string, environment: NodeJS.ProcessEnv = process.env) {
+  return isDemoAuthEnabled(environment) && memberId === getDemoMemberId(environment);
+}

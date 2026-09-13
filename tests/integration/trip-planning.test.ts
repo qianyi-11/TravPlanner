@@ -8,7 +8,7 @@ import { POST as submitSuggestions } from "@/app/api/trips/[tripId]/submit-sugge
 import { POST as submitVotes } from "@/app/api/trips/[tripId]/submit-votes/route";
 import { POST as toggleVote } from "@/app/api/trips/[tripId]/votes/route";
 import { POST as createTrip } from "@/app/api/trips/route";
-import { PATCH as updateTrip } from "@/app/api/trips/[tripId]/route";
+import { DELETE as deleteTrip, PATCH as updateTrip } from "@/app/api/trips/[tripId]/route";
 import { POST as updatePreferences } from "@/app/api/members/[memberId]/preferences/route";
 import { POST as addGroupMember } from "@/app/api/groups/[groupId]/members/route";
 import { GET as demoStatus, POST as setDemoSession } from "@/app/api/demo-session/route";
@@ -326,6 +326,7 @@ test("group rename is organizer-only and strictly validated", async () => {
   setAuthenticatedMemberIdForTests("member-b");
   assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("group-a"))).status, 403);
   setAuthenticatedMemberIdForTests("member-a");
+  assert.equal((await renameGroup(request({ name: "Renamed" }), groupContext("group-b"))).status, 403);
   assert.equal((await renameGroup(request({ name: "" }), groupContext("group-a"))).status, 400);
   assert.equal((await renameGroup(request({ name: "   " }), groupContext("group-a"))).status, 400);
   assert.equal((await renameGroup(request({ name: "Renamed", role: "organizer" }), groupContext("group-a"))).status, 400);
@@ -334,6 +335,8 @@ test("group rename is organizer-only and strictly validated", async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await body(response), { ok: true, name: "Renamed" });
   assert.equal((await prisma.group.findUniqueOrThrow({ where: { id: "group-a" } })).name, "Renamed");
+  const snapshot = await body(await bootstrap()) as { groups: Record<string, { name: string }> };
+  assert.equal(snapshot.groups["group-a"].name, "Renamed");
 });
 
 test("group deletion is organizer-only and preserves identities and unrelated data", async () => {
@@ -341,6 +344,25 @@ test("group deletion is organizer-only and preserves identities and unrelated da
     setAuthenticatedMemberIdForTests(actor);
     assert.equal((await deleteGroup(deleteRequest({}), groupContext("group-a"))).status, 403);
   }
+  setAuthenticatedMemberIdForTests(null);
+  assert.equal((await deleteGroup(deleteRequest({}), groupContext("group-a"))).status, 401);
+  setAuthenticatedMemberIdForTests("member-a");
+  assert.equal((await deleteGroup(deleteRequest({}), groupContext("group-b"))).status, 403);
+  assert.equal((await deleteGroup(deleteRequest({}), groupContext("missing"))).status, 404);
+
+  const tripPlace = await prisma.tripPlace.findUniqueOrThrow({
+    where: { tripId_placeId: { tripId: "trip-a", placeId: "place-a" } },
+  });
+  await prisma.tripMemberProgress.create({ data: { tripId: "trip-a", memberId: "member-a" } });
+  await prisma.suggestion.create({ data: { tripPlaceId: tripPlace.id, memberId: "member-a" } });
+  await prisma.vote.create({ data: { tripPlaceId: tripPlace.id, memberId: "member-a" } });
+  await prisma.tripChecklistItem.create({ data: { id: "group-delete-checklist", tripId: "trip-a", title: "Checklist" } });
+  await prisma.rescueEvent.create({
+    data: { id: "group-delete-rescue", tripId: "trip-a", type: "test", message: "Test", affectedActivityId: "activity" },
+  });
+  await prisma.groupInvite.create({
+    data: { groupId: "group-a", tokenHash: "group-delete-token", createdByMemberId: "member-a" },
+  });
 
   await prisma.authIdentity.create({
     data: { memberId: "member-a", provider: "google", providerAccountId: "member-a-google" },
@@ -352,6 +374,14 @@ test("group deletion is organizer-only and preserves identities and unrelated da
   assert.equal(await prisma.group.findUnique({ where: { id: "group-a" } }), null);
   assert.equal(await prisma.trip.findUnique({ where: { id: "trip-a" } }), null);
   assert.equal(await prisma.groupMember.count({ where: { groupId: "group-a" } }), 0);
+  assert.equal(await prisma.tripMemberProgress.count({ where: { tripId: "trip-a" } }), 0);
+  assert.equal(await prisma.tripPlace.count({ where: { tripId: "trip-a" } }), 0);
+  assert.equal(await prisma.suggestion.count({ where: { tripPlaceId: tripPlace.id } }), 0);
+  assert.equal(await prisma.vote.count({ where: { tripPlaceId: tripPlace.id } }), 0);
+  assert.equal(await prisma.tripChecklistItem.count({ where: { tripId: "trip-a" } }), 0);
+  assert.equal(await prisma.rescueEvent.count({ where: { tripId: "trip-a" } }), 0);
+  assert.equal(await prisma.groupInvite.count({ where: { groupId: "group-a" } }), 0);
+  assert.ok(await prisma.place.findUnique({ where: { id: "place-a" } }));
   assert.ok(await prisma.member.findUnique({ where: { id: "member-a" } }));
   assert.ok(await prisma.authIdentity.findUnique({ where: { provider_providerAccountId: { provider: "google", providerAccountId: "member-a-google" } } }));
   assert.ok(await prisma.group.findUnique({ where: { id: "group-b" } }));
@@ -359,6 +389,13 @@ test("group deletion is organizer-only and preserves identities and unrelated da
 });
 
 test("trip updates are organizer-only, strict, and preserve itinerary integrity", async () => {
+  setAuthenticatedMemberIdForTests(null);
+  assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("trip-a"))).status, 401);
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("trip-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+  assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("trip-b"))).status, 403);
+  assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("missing"))).status, 404);
   setAuthenticatedMemberIdForTests("member-b");
   assert.equal((await updateTrip(request({ name: "Renamed" }), tripContext("trip-a"))).status, 403);
   setAuthenticatedMemberIdForTests("member-a");
@@ -368,6 +405,8 @@ test("trip updates are organizer-only, strict, and preserve itinerary integrity"
     { dailyStart: "20:00", dailyEnd: "08:00" },
     { transport: "Teleport" },
     { budgetTotal: -1 },
+    { budgetTotal: 1.5 },
+    { dailyStart: "8:00" },
     { name: "" },
     { name: "Valid", groupId: "group-b" },
   ]) assert.equal((await updateTrip(request(invalid), tripContext("trip-a"))).status, 400);
@@ -377,6 +416,8 @@ test("trip updates are organizer-only, strict, and preserve itinerary integrity"
   let saved = await prisma.trip.findUniqueOrThrow({ where: { id: "trip-a" } });
   assert.equal(saved.name, "Renamed");
   assert.equal(saved.itineraryRevision, 1);
+  const snapshot = await body(await bootstrap()) as { trips: Record<string, { name: string }> };
+  assert.equal(snapshot.trips["trip-a"].name, "Renamed");
 
   response = await updateTrip(request({ startDate: "2026-10-02", budgetTotal: 0, dailyStart: "09:00", transport: "Mixed" }), tripContext("trip-a"));
   assert.equal(response.status, 200);
@@ -397,6 +438,40 @@ test("trip updates are organizer-only, strict, and preserve itinerary integrity"
   assert.equal(saved.budgetTotal, 500);
   assert.equal(saved.endDate, "2026-10-02");
   assert.equal(saved.itineraryRevision, 1);
+});
+
+test("trip deletion stays organizer-only and scoped", async () => {
+  setAuthenticatedMemberIdForTests("member-b");
+  assert.equal((await deleteTrip(deleteRequest({}), tripContext("trip-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("outsider");
+  assert.equal((await deleteTrip(deleteRequest({}), tripContext("trip-a"))).status, 403);
+  setAuthenticatedMemberIdForTests("member-a");
+  assert.equal((await deleteTrip(deleteRequest({}), tripContext("trip-b"))).status, 403);
+  assert.equal((await deleteTrip(deleteRequest({}), tripContext("missing"))).status, 404);
+  assert.equal((await deleteTrip(deleteRequest({}), tripContext("trip-a"))).status, 200);
+  assert.equal(await prisma.trip.findUnique({ where: { id: "trip-a" } }), null);
+  assert.ok(await prisma.group.findUnique({ where: { id: "group-a" } }));
+  assert.ok(await prisma.trip.findUnique({ where: { id: "trip-b" } }));
+  assert.ok(await prisma.member.findUnique({ where: { id: "member-a" } }));
+});
+
+test("competition demo protects the fixed fixture from CRUD mutations", async () => {
+  testEnv.AUTH_DEMO_ENABLED = "true";
+  testEnv.AUTH_DEMO_MEMBER_ID = "member-a";
+  setAuthenticatedMemberIdForTests("member-a");
+
+  for (const response of [
+    await renameGroup(request({ name: "Changed" }), groupContext("group-a")),
+    await deleteGroup(deleteRequest({}), groupContext("group-a")),
+    await updateTrip(request({ name: "Changed" }), tripContext("trip-a")),
+    await deleteTrip(deleteRequest({}), tripContext("trip-a")),
+  ]) {
+    assert.equal(response.status, 403);
+    assert.equal((await body(response)).code, "DEMO_FIXTURE_PROTECTED");
+  }
+
+  const snapshot = await body(await bootstrap()) as { competitionDemo: boolean };
+  assert.equal(snapshot.competitionDemo, true);
 });
 
 test("client memberId cannot spoof planning identity", async () => {

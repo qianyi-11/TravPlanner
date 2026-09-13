@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/server/prisma";
 import { ApiError, apiErrorResponse } from "@/lib/server/api-error";
-import { requireTripOrganizer } from "@/lib/server/authorization";
+import { requireCompetitionDemoSafe, requireTripOrganizer } from "@/lib/server/authorization";
 import { parseJsonObject, requireId } from "@/lib/server/validation";
 import { isValidDateRange, isValidDateString, isValidDayWindow, isValidTimeString } from "@/lib/date-time";
 import { TRANSPORT_MODES, type TransportMode } from "@/lib/types";
@@ -13,7 +13,9 @@ const PLANNING_FIELDS = ["startDate", "endDate", "dailyStart", "dailyEnd", "tran
 export async function PATCH(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
   try {
     const tripId = requireId((await params).tripId, "tripId");
-    const { trip } = await requireTripOrganizer(tripId);
+    const actor = await requireTripOrganizer(tripId);
+    const { trip } = actor;
+    requireCompetitionDemoSafe(actor.memberId);
     const body = await parseJsonObject(request);
     const fields = Object.keys(body);
     if (!fields.length || fields.some((field) => !ALLOWED_FIELDS.has(field))) {
@@ -89,7 +91,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ tr
 export async function DELETE(_req: Request, { params }: { params: Promise<{ tripId: string }> }) {
   try {
     const tripId = requireId((await params).tripId, "tripId");
-    await requireTripOrganizer(tripId);
+    const actor = await requireTripOrganizer(tripId);
+    requireCompetitionDemoSafe(actor.memberId);
 
     // Cascades away its TripPlaces (and their Suggestions/Votes) and RescueEvents.
     await prisma.trip.delete({ where: { id: tripId } });

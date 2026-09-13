@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { ApiError } from "./api-error";
 import { requireAuthenticatedActor } from "./auth";
+import { isCompetitionDemoMember } from "./demo-auth";
 
 export async function requireTrip(tripId: string) {
   const trip = await prisma.trip.findUnique({ where: { id: tripId } });
@@ -52,6 +53,12 @@ export async function requireTripOrganizer(tripId: string) {
   const actor = await requireTripActor(tripId);
   if (actor.role !== "organizer") throw new ApiError(403, "ORGANIZER_REQUIRED", "Organizer access required");
   return actor;
+}
+
+export function requireCompetitionDemoSafe(memberId: string) {
+  if (isCompetitionDemoMember(memberId)) {
+    throw new ApiError(403, "DEMO_FIXTURE_PROTECTED", "Competition demo data is protected");
+  }
 }
 
 export async function requireTripPlace(tripId: string, placeId: string) {

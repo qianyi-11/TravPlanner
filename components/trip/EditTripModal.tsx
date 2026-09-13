@@ -25,6 +25,7 @@ export function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => vo
   const [dailyEnd, setDailyEnd] = useState(trip.dailyEnd);
   const [transport, setTransport] = useState<TransportMode>(trip.transport);
   const [saving, setSaving] = useState(false);
+  const scheduleLocked = trip.itinerary.length > 0;
 
   async function save() {
     if (saving) return;
@@ -42,20 +43,25 @@ export function EditTripModal({ trip, onClose }: { trip: Trip; onClose: () => vo
   return (
     <Modal open onClose={onClose} title="Edit trip details" maxWidth="max-w-lg">
       <div className="space-y-5">
+        {scheduleLocked && (
+          <p className="rounded-xl bg-[var(--color-sand)] px-3 py-2 text-sm text-[var(--color-ink-soft)]">
+            Schedule settings are locked after the itinerary is built. You can still update the budget.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-semibold">Start date<input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none" /></label>
-          <label className="text-sm font-semibold">End date<input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none" /></label>
+          <label className="text-sm font-semibold">Start date<input disabled={scheduleLocked} type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none disabled:bg-[var(--color-sand)]" /></label>
+          <label className="text-sm font-semibold">End date<input disabled={scheduleLocked} type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none disabled:bg-[var(--color-sand)]" /></label>
         </div>
         <label className="block text-sm font-semibold">Trip budget<input type="number" min={0} step={1} value={budgetTotal} onChange={(event) => setBudgetTotal(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none" /></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-semibold">Daily start<input type="time" value={dailyStart} onChange={(event) => setDailyStart(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none" /></label>
-          <label className="text-sm font-semibold">Daily end<input type="time" value={dailyEnd} onChange={(event) => setDailyEnd(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none" /></label>
+          <label className="text-sm font-semibold">Daily start<input disabled={scheduleLocked} type="time" value={dailyStart} onChange={(event) => setDailyStart(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none disabled:bg-[var(--color-sand)]" /></label>
+          <label className="text-sm font-semibold">Daily end<input disabled={scheduleLocked} type="time" value={dailyEnd} onChange={(event) => setDailyEnd(event.target.value)} className="mt-1.5 w-full rounded-xl border border-[var(--color-border)] px-3.5 py-2.5 font-normal outline-none disabled:bg-[var(--color-sand)]" /></label>
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold">Transport preference</p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {TRANSPORT.map(({ value, icon: Icon }) => (
-              <button key={value} type="button" onClick={() => setTransport(value)} className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold ${transport === value ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)]"}`}>
+              <button disabled={scheduleLocked} key={value} type="button" onClick={() => setTransport(value)} className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold disabled:opacity-50 ${transport === value ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)]"}`}>
                 <Icon size={16} /> {value}
               </button>
             ))}

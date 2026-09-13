@@ -15,9 +15,13 @@ export function TripCard({ trip }: { trip: Trip }) {
   const members = usePlannerStore(
     useShallow((s) => trip.memberIds.map((id) => s.members[id]).filter(Boolean))
   );
+  const group = usePlannerStore((s) => s.groups[trip.groupId]);
+  const currentUserId = usePlannerStore((s) => s.currentUserId);
+  const competitionDemo = usePlannerStore((s) => s.competitionDemo);
   const deleteTrip = usePlannerStore((s) => s.deleteTrip);
   const showToast = usePlannerStore((s) => s.showToast);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
 
   return (
     <>
@@ -33,17 +37,20 @@ export function TripCard({ trip }: { trip: Trip }) {
             <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
               {trip.destinations.join(" · ")}
             </span>
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setConfirmOpen(true);
-              }}
-              title="Delete trip"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/20 text-white/90 backdrop-blur transition-colors hover:bg-[var(--color-danger)] hover:text-white"
-            >
-              <Trash2 size={13} />
-            </button>
+            {isOrganizer && !competitionDemo && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setConfirmOpen(true);
+                }}
+                title="Delete trip"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black/20 text-white/90 backdrop-blur transition-colors hover:bg-[var(--color-danger)] hover:text-white"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
           </div>
           <h3 className="font-display text-xl font-bold text-white drop-shadow-sm">{trip.name}</h3>
         </div>
@@ -110,8 +117,7 @@ export function TripCard({ trip }: { trip: Trip }) {
         confirmLabel="Delete Trip"
         danger
         onConfirm={async () => {
-          await deleteTrip(trip.id);
-          showToast(`${trip.name} was deleted`);
+          if (await deleteTrip(trip.id)) showToast(`${trip.name} was deleted`);
         }}
       />
     </>

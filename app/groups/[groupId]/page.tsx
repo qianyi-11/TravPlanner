@@ -19,6 +19,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
   const router = useRouter();
   const group = usePlannerStore((s) => s.groups[groupId]);
   const currentUserId = usePlannerStore((s) => s.currentUserId);
+  const competitionDemo = usePlannerStore((s) => s.competitionDemo);
   const members = usePlannerStore(
     useShallow((s) => (group ? group.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
   );
@@ -82,9 +83,9 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
               {group.emoji}
             </div>
             <div>
-              {isOrganizer ? (
+              {isOrganizer && !competitionDemo ? (
                 <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">
-                  <EditableTitle value={group.name} onSave={(name) => renameGroup(groupId, name)} />
+                  <EditableTitle value={group.name} onSave={(name) => renameGroup(groupId, name)} label="Rename group" />
                 </h1>
               ) : (
                 <h1 className="font-display text-2xl font-bold text-white sm:text-3xl">{group.name}</h1>
@@ -167,7 +168,7 @@ export default function GroupRoomPage({ params }: { params: Promise<{ groupId: s
         </Card>
       </div>
 
-      {isOrganizer && (
+      {isOrganizer && !competitionDemo && (
         <Card className="mt-6 border-[var(--color-danger)] p-5">
           <h2 className="font-display text-base font-bold text-[var(--color-danger)]">Danger Zone</h2>
           <p className="mt-1 text-sm text-[var(--color-ink-soft)]">Delete this group and all planning data inside it.</p>

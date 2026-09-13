@@ -19,6 +19,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
   );
   const group = usePlannerStore((state) => state.groups[trip.groupId]);
   const currentUserId = usePlannerStore((state) => state.currentUserId);
+  const competitionDemo = usePlannerStore((state) => state.competitionDemo);
   const renameTrip = usePlannerStore((state) => state.renameTrip);
   const [editOpen, setEditOpen] = useState(false);
   const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
@@ -31,13 +32,13 @@ export function TripHeader({ trip }: { trip: Trip }) {
         className="relative overflow-hidden rounded-3xl p-6 sm:p-8"
         style={{ background: trip.coverColor }}
       >
-        {isOrganizer && (
+        {isOrganizer && !competitionDemo && (
           <button type="button" onClick={() => setEditOpen(true)} title="Edit trip details" className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-full bg-black/20 text-white/90 hover:bg-black/35">
             <Settings size={16} />
           </button>
         )}
         <p className="text-sm font-medium text-white/70">{trip.destinations.join(" · ")}</p>
-        {isOrganizer ? (
+        {isOrganizer && !competitionDemo ? (
           <h1 className="mt-1 font-display text-2xl font-bold text-white sm:text-3xl">
             <EditableTitle value={trip.name} onSave={(name) => renameTrip(trip.id, name)} label="Rename trip" inputClassName="font-display text-2xl font-bold text-white sm:text-3xl" />
           </h1>
@@ -76,7 +77,7 @@ export function TripHeader({ trip }: { trip: Trip }) {
           <span className="hidden sm:inline">Split Bill</span>
         </Link>
       </div>
-      {isOrganizer && editOpen && <EditTripModal trip={trip} onClose={() => setEditOpen(false)} />}
+      {isOrganizer && !competitionDemo && editOpen && <EditTripModal trip={trip} onClose={() => setEditOpen(false)} />}
     </div>
   );
 }

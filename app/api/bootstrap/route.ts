@@ -4,7 +4,7 @@ import { mapCatalogPlace, mapGroup, mapMember, mapPlaceForTrip, mapTrip } from "
 import type { Group, Member, Place, Trip, TripMemberProgress } from "@/lib/types";
 import { apiErrorResponse } from "@/lib/server/api-error";
 import { requireAuthenticatedActor } from "@/lib/server/auth";
-import { isDemoAuthEnabled } from "@/lib/server/demo-auth";
+import { isCompetitionDemoMember, isDemoAuthEnabled } from "@/lib/server/demo-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +100,17 @@ export async function GET() {
       };
     }
 
-    return NextResponse.json({ groups, members, trips, places, tripPlaces, tripMemberProgress, currentUserId, demoAuthEnabled: isDemoAuthEnabled() });
+    return NextResponse.json({
+      groups,
+      members,
+      trips,
+      places,
+      tripPlaces,
+      tripMemberProgress,
+      currentUserId,
+      demoAuthEnabled: isDemoAuthEnabled(),
+      competitionDemo: isCompetitionDemoMember(currentUserId),
+    });
   } catch (error) {
     return apiErrorResponse(error);
   }

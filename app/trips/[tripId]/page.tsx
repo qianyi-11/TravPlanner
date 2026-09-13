@@ -77,6 +77,9 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
   const { tripId } = use(params);
   const router = useRouter();
   const trip = usePlannerStore((s) => s.trips[tripId]);
+  const group = usePlannerStore((s) => (trip ? s.groups[trip.groupId] : undefined));
+  const currentUserId = usePlannerStore((s) => s.currentUserId);
+  const competitionDemo = usePlannerStore((s) => s.competitionDemo);
   const members = usePlannerStore(
     useShallow((s) => (trip ? trip.memberIds.map((id) => s.members[id]).filter(Boolean) : []))
   );
@@ -87,6 +90,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
   const deleteTrip = usePlannerStore((s) => s.deleteTrip);
   const showToast = usePlannerStore((s) => s.showToast);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const isOrganizer = group?.organizerIds?.includes(currentUserId) ?? false;
 
   if (!trip) notFound();
 
@@ -199,7 +203,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
             </LinkButton>
           </Card>
 
-          <Card className="p-5">
+          {isOrganizer && !competitionDemo && <Card className="p-5">
             <h3 className="mb-1 font-display text-sm font-bold text-[var(--color-danger)]">Danger zone</h3>
             <p className="mb-3 text-xs text-[var(--color-ink-soft)]">
               Permanently delete this trip and everything in it. This can&apos;t be undone.
@@ -214,7 +218,7 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
             >
               Delete Trip
             </Button>
-          </Card>
+          </Card>}
         </div>
       </div>
 
@@ -226,9 +230,10 @@ export default function TripWorkspacePage({ params }: { params: Promise<{ tripId
         confirmLabel="Delete Trip"
         danger
         onConfirm={async () => {
-          await deleteTrip(trip.id);
-          showToast(`${trip.name} was deleted`);
-          router.push(`/groups/${trip.groupId}`);
+          if (await deleteTrip(trip.id)) {
+            showToast(`${trip.name} was deleted`);
+            router.push(`/groups/${trip.groupId}`);
+          }
         }}
       />
     </div>
